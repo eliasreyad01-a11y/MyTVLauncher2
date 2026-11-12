@@ -51,6 +51,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var gridManager: GridLayoutManager
     private lateinit var hero: View
     private lateinit var greeting: TextView
+    private lateinit var wallFg: android.widget.ImageView
+    private var clockTint = 0xFF9FD8EA.toInt()
     private lateinit var wallCaption: TextView
     private lateinit var infoBlock: View
     private lateinit var clockBox: View
@@ -110,6 +112,48 @@ class MainActivity : AppCompatActivity() {
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
+    /** Scroll offset at which the dock row has risen to ~40% of the screen height (the open list). */
+    private fun listOffset(): Int =
+        (grid.paddingTop - resources.displayMetrics.heightPixels * 0.40f).toInt().coerceAtLeast(dp(100))
+
+    private fun rowAlpha(): Float =
+        (grid.computeVerticalScrollOffset() / (listOffset() * 0.5f)).coerceIn(0f, 1f)
+
+    private fun applyRowAlpha() {
+        val a = rowAlpha()
+        for (i in 0 until grid.childCount) {
+            val v = grid.getChildAt(i)
+            val p = grid.getChildAdapterPosition(v)
+            v.alpha = if (p >= adapter.dockCount && adapter.dockCount > 0) a else 1f
+        }
+    }
+
+    private fun mix(a: Int, b: Int, t: Float): Int = Color.rgb(
+        (Color.red(a) + (Color.red(b) - Color.red(a)) * t).toInt(),
+        (Color.green(a) + (Color.green(b) - Color.green(a)) * t).toInt(),
+        (Color.blue(a) + (Color.blue(b) - Color.blue(a)) * t).toInt()
+    )
+
+    /** The clock is glass: white at the top, taking on the wallpaper's colour towards the bottom. */
+    private fun tintClock() {
+        clockTint = wallpaper.sampleColor() ?: 0xFF9FD8EA.toInt()
+        applyClockShader()
+    }
+
+    private fun applyClockShader() {
+        val clock = findViewById<TextClock>(R.id.clock)
+        val h = clock.height.toFloat()
+        if (h <= 0f) return
+        val t = clockTint
+        val top = (0xF2 shl 24) or (mix(Color.WHITE, t, 0.10f) and 0xFFFFFF)
+        val mid = (0xD2 shl 24) or (mix(Color.WHITE, t, 0.40f) and 0xFFFFFF)
+        val bot = (0x99 shl 24) or (mix(Color.WHITE, t, 0.75f) and 0xFFFFFF)
+        clock.paint.shader = android.graphics.LinearGradient(
+            0f, 0f, 0f, h, intArrayOf(top, mid, bot), floatArrayOf(0f, 0.5f, 1f), android.graphics.Shader.TileMode.CLAMP
+        )
+        clock.invalidate()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -153,17 +197,11 @@ class MainActivity : AppCompatActivity() {
         clockBox = findViewById(R.id.clockBox)
         dim = findViewById(R.id.dim)
         // Glass clock: white at the top fading to a translucent tint, so it blends into any wallpaper.
-        findViewById<TextClock>(R.id.clock).addOnLayoutChangeListener { v, _, t, _, bt, _, ot, _, ob ->
-            val h = (bt - t).toFloat()
-            if (h > 0f && (bt - t) != (ob - ot)) {
-                (v as TextView).paint.shader = android.graphics.LinearGradient(
-                    0f, 0f, 0f, h,
-                    intArrayOf(0xF2FFFFFF.toInt(), 0xD6D9F3FB.toInt(), 0x9990D4E8.toInt()),
-                    floatArrayOf(0f, 0.5f, 1f), android.graphics.Shader.TileMode.CLAMP
-                )
-                v.invalidate()
-            }
+        findViewById<TextClock>(R.id.clock).addOnLayoutChangeListener { _, _, t, _, bt, _, ot, _, ob ->
+            if ((bt - t) != (ob - ot)) applyClockShader()
         }
+        wallFg = findViewById(R.id.wallFg)
+        wallpaper.onImage = { tintClock() }
         ampm = findViewById(R.id.ampm)
         dateText = findViewById(R.id.dateText)
         focusTitle = findViewById(R.id.focusTitle)
@@ -221,11 +259,17 @@ class MainActivity : AppCompatActivity() {
                     val top = child.top
                     val bottom = child.bottom
                     val margin = dp(12)
-                    when {
+                    val limit = height - dp(24)
+                    var d = when {
                         top < margin -> top - margin
-                        bottom <= height - paddingBottom -> 0
-                        else -> minOf(top - margin, bottom - (height - paddingBottom))
+                        bottom <= limit -> 0
+                        else -> minOf(top - margin, bottom - limit)
                     }
+                    // The first step down from the dock opens the app list: the dock row rises to ~40% of the screen.
+                    val off = parent.computeVerticalScrollOffset()
+                    val open = listOffset()
+                    if (off < open) d = maxOf(d, open - off)
+                    d
                 }
                 if (dy == 0) return false
                 if (immediate || !prefs.animations) parent.scrollBy(0, dy) else parent.smoothScrollBy(0, dy)
@@ -241,20 +285,32 @@ class MainActivity : AppCompatActivity() {
         grid.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
                 val off = rv.computeVerticalScrollOffset()
-                val a = (1f - off / (hero.height * 0.7f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                val open = listOffset().toFloat()
+                val a = (1f - off / (open * 0.6f)).coerceIn(0f, 1f)
                 hero.alpha = a
                 infoBlock.alpha = a
                 clockBox.alpha = a
+                wallFg.alpha = a.coerceAtLeast(0f)
                 // The wallpaper sinks into darkness as the rows scroll up.
-                dim.alpha = ((off / dp(110).toFloat()).coerceIn(0f, 1f)) * 0.92f
+                dim.alpha = ((off / (open * 0.75f)).coerceIn(0f, 1f)) * 0.92f
+                applyRowAlpha()
             }
+        })
+        // At home only the dock shows; the app rows fade in as the list opens.
+        grid.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
+            override fun onChildViewAttachedToWindow(view: View) {
+                val p = grid.getChildAdapterPosition(view)
+                if (p >= adapter.dockCount && adapter.dockCount > 0) view.alpha = rowAlpha()
+                else view.alpha = 1f
+            }
+            override fun onChildViewDetachedFromWindow(view: View) {}
         })
         // Rows start just under the cards and title.
         // Everything sits low like on a TV home screen: prayer bar at ~60% of the height, dock right under it.
         val heroTop = (resources.displayMetrics.heightPixels * 0.60f).toInt()
         hero.setPadding(hero.paddingLeft, heroTop, hero.paddingRight, hero.paddingBottom)
         // The rows start under the bar from the very first layout, so nothing shifts or scrolls when the bar appears.
-        grid.setPadding(grid.paddingLeft, heroTop + dp(62) + dp(2) + dp(8), grid.paddingRight, grid.paddingBottom)
+        grid.setPadding(grid.paddingLeft, heroTop + dp(62) + dp(2) + dp(8), grid.paddingRight, (resources.displayMetrics.heightPixels * 0.22f).toInt())
         focusTitle.visibility = View.GONE
         // The padding only grows: when the prayer card or the Adhan button appears the rows move down once,
         // but they never jump back up while the user rests on the home screen.
@@ -303,6 +359,15 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         wallpaper.apply(prefs)
         wallpaper.onResume()
+        val fgRes = wallpaper.foregroundRes(prefs)
+        if (fgRes != 0) {
+            wallFg.setImageResource(fgRes)
+            wallFg.colorFilter = android.graphics.PorterDuffColorFilter(
+                Color.argb(prefs.dim.coerceIn(0, 90) * 255 / 100, 0, 0, 0), android.graphics.PorterDuff.Mode.SRC_ATOP
+            )
+            wallFg.visibility = View.VISIBLE
+        } else wallFg.visibility = View.GONE
+        wallpaper.post { tintClock() }
         val is24 = TimeFmt.is24(this, prefs)
         val clock = findViewById<TextClock>(R.id.clock)
         clock.format12Hour = if (is24) "HH:mm" else "h:mm"

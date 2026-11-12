@@ -12,6 +12,11 @@
         <item name="android:textColorSecondary">@color/text_secondary</item>
     </style>
 
+    <style name="Theme.Launcher.Glass" parent="Theme.Launcher">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+    </style>
+
     <style name="LauncherDialog" parent="Theme.AppCompat.Dialog.Alert">
         <item name="android:windowBackground">@drawable/bg_dialog</item>
         <item name="colorAccent">@color/accent</item>

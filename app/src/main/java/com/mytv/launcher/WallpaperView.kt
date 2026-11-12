@@ -55,6 +55,35 @@ class WallpaperView @JvmOverloads constructor(
     private val handler = Handler(Looper.getMainLooper())
 
     private var key: String? = null
+
+    /** Called whenever a new picture is on screen, so the clock can pick up its colours. */
+    var onImage: (() -> Unit)? = null
+
+    /** Cut-out of the mountain, drawn above the clock so the clock sits behind it (built-in photo only). */
+    fun foregroundRes(prefs: Prefs): Int =
+        if (prefs.wallpaperType == "none" && photoRes(prefs.wallpaperPreset) == R.drawable.wp_kirkjufell)
+            R.drawable.wp_kirkjufell_fg else 0
+
+    /** Average colour of the sky area behind the clock, or null when it can't be read (video). */
+    fun sampleColor(): Int? {
+        val bmp = (image.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap ?: return null
+        if (image.visibility != VISIBLE || bmp.width < 8) return null
+        var r = 0L; var g = 0L; var b = 0L; var n = 0
+        val x0 = bmp.width * 30 / 100; val x1 = bmp.width * 70 / 100
+        val y0 = bmp.height * 8 / 100; val y1 = bmp.height * 38 / 100
+        val sx = ((x1 - x0) / 24).coerceAtLeast(1); val sy = ((y1 - y0) / 14).coerceAtLeast(1)
+        var y = y0
+        while (y < y1) {
+            var x = x0
+            while (x < x1) {
+                val c = bmp.getPixel(x, y)
+                r += Color.red(c); g += Color.green(c); b += Color.blue(c); n++
+                x += sx
+            }
+            y += sy
+        }
+        return if (n == 0) null else Color.rgb((r / n).toInt(), (g / n).toInt(), (b / n).toInt())
+    }
     private var slideshowActive = false
     private var slideFiles: List<File> = emptyList()
     private var slideIndex = 0
@@ -111,6 +140,7 @@ class WallpaperView @JvmOverloads constructor(
                         if (key == newKey && bmp != null) {
                             image.setImageBitmap(bmp)
                             image.visibility = VISIBLE
+                            onImage?.invoke()
                         }
                     }
                 }.start()
@@ -125,6 +155,7 @@ class WallpaperView @JvmOverloads constructor(
                 if (res != 0) {
                     image.setImageResource(res)
                     image.visibility = VISIBLE
+                    post { onImage?.invoke() }
                 }
             }
         }
@@ -188,10 +219,12 @@ class WallpaperView @JvmOverloads constructor(
                 if (image.drawable == null) {
                     image.setImageBitmap(bmp)
                     image.visibility = VISIBLE
+                    onImage?.invoke()
                 } else {
                     image.animate().alpha(0f).setDuration(400).withEndAction {
                         image.setImageBitmap(bmp)
                         image.animate().alpha(1f).setDuration(600).start()
+                        onImage?.invoke()
                     }.start()
                 }
             }

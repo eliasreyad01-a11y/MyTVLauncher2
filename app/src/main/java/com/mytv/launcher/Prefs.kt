@@ -194,7 +194,7 @@ class Prefs(context: Context) {
         }
 
     var dim: Int
-        get() = sp.getInt("dim", 25)
+        get() = sp.getInt("dim", 0)
         set(value) {
             sp.edit().putInt("dim", value).apply()
         }

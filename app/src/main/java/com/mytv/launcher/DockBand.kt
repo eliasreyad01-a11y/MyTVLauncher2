@@ -2,24 +2,34 @@ package com.mytv.launcher
 
 import android.content.Context
 import android.graphics.Canvas
+import android.view.View
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 
-/** Draws the soft band behind the dock row (the first row of the home grid). */
+/** Draws the glass band behind the dock tiles (the first row of the home grid), hugging the tiles that exist. */
 class DockBand(context: Context, private val adapter: AppAdapter) : RecyclerView.ItemDecoration() {
     private val band = ContextCompat.getDrawable(context, R.drawable.bg_dock)
-    private val pad = (6 * context.resources.displayMetrics.density).toInt()
+    private val pad = (10 * context.resources.displayMetrics.density).toInt()
 
     override fun onDraw(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
         if (adapter.dockCount == 0) return
-        val first = parent.layoutManager?.findViewByPosition(0) ?: return
+        val lm = parent.layoutManager ?: return
+        var left = Int.MAX_VALUE
+        var right = Int.MIN_VALUE
+        var top = 0
+        var bottom = 0
+        for (p in 0 until adapter.dockCount) {
+            if (adapter.items.getOrNull(p)?.packageName?.startsWith(AppAdapter.PAD_PREFIX) == true) continue
+            val item = lm.findViewByPosition(p) ?: continue
+            val tile: View = item.findViewById(R.id.tile) ?: continue
+            left = minOf(left, item.left + tile.left)
+            right = maxOf(right, item.left + tile.right)
+            top = item.top + tile.top
+            bottom = item.top + tile.bottom
+        }
+        if (left == Int.MAX_VALUE) return
         val drawable = band ?: return
-        drawable.setBounds(
-            parent.paddingLeft - pad,
-            first.top - pad,
-            parent.width - parent.paddingRight + pad,
-            first.bottom
-        )
+        drawable.setBounds(left - pad, top - pad, right + pad, bottom + pad)
         drawable.draw(c)
     }
 }
