@@ -17,19 +17,16 @@
         android:layout_marginTop="32dp"
         android:orientation="horizontal">
 
-        <TextClock
+        <com.mytv.launcher.GlassClock
             android:id="@+id/clock"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="sans-serif"
+            android:fontFamily="sans-serif-medium"
             android:format12Hour="h:mm"
             android:format24Hour="HH:mm"
             android:includeFontPadding="false"
-            android:shadowColor="#44000000"
-            android:shadowDy="3"
-            android:shadowRadius="18"
-            android:textColor="#F2FFFFFF"
-            android:textSize="132sp" />
+            android:textColor="#E6FFFFFF"
+            android:textSize="136sp" />
 
         <TextClock
             android:id="@+id/ampm"

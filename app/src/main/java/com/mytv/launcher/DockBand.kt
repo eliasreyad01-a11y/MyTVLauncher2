@@ -22,8 +22,9 @@ class DockBand(context: Context, private val adapter: AppAdapter) : RecyclerView
             if (adapter.items.getOrNull(p)?.packageName?.startsWith(AppAdapter.PAD_PREFIX) == true) continue
             val item = lm.findViewByPosition(p) ?: continue
             val tile: View = item.findViewById(R.id.tile) ?: continue
-            left = minOf(left, item.left + tile.left)
-            right = maxOf(right, item.left + tile.right)
+            val ox = item.left + item.translationX.toInt()
+            left = minOf(left, ox + tile.left)
+            right = maxOf(right, ox + tile.right)
             top = item.top + tile.top
             bottom = item.top + tile.bottom
         }

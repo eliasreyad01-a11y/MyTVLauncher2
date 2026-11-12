@@ -119,6 +119,19 @@ class MainActivity : AppCompatActivity() {
     private fun rowAlpha(): Float =
         (grid.computeVerticalScrollOffset() / (listOffset() * 0.5f)).coerceIn(0f, 1f)
 
+    /** Fewer favourites than columns: the dock tiles stay centred instead of hugging the left edge. */
+    private fun centerDock(only: View? = null) {
+        var pads = 0
+        for (p in 0 until adapter.dockCount) {
+            if (adapter.items.getOrNull(p)?.packageName?.startsWith(AppAdapter.PAD_PREFIX) == true) pads++
+        }
+        val shift = { v: View ->
+            val p = grid.getChildAdapterPosition(v)
+            v.translationX = if (p in 0 until adapter.dockCount) pads * v.width / 2f else 0f
+        }
+        if (only != null) shift(only) else for (i in 0 until grid.childCount) shift(grid.getChildAt(i))
+    }
+
     private fun applyRowAlpha() {
         val a = rowAlpha()
         for (i in 0 until grid.childCount) {
@@ -141,17 +154,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyClockShader() {
-        val clock = findViewById<TextClock>(R.id.clock)
-        val h = clock.height.toFloat()
-        if (h <= 0f) return
         val t = clockTint
-        val top = (0xF2 shl 24) or (mix(Color.WHITE, t, 0.10f) and 0xFFFFFF)
-        val mid = (0xD2 shl 24) or (mix(Color.WHITE, t, 0.40f) and 0xFFFFFF)
-        val bot = (0x99 shl 24) or (mix(Color.WHITE, t, 0.75f) and 0xFFFFFF)
-        clock.paint.shader = android.graphics.LinearGradient(
-            0f, 0f, 0f, h, intArrayOf(top, mid, bot), floatArrayOf(0f, 0.5f, 1f), android.graphics.Shader.TileMode.CLAMP
-        )
-        clock.invalidate()
+        val top = (0xB8 shl 24) or (mix(Color.WHITE, t, 0.10f) and 0xFFFFFF)
+        val mid = (0x8C shl 24) or (mix(Color.WHITE, t, 0.45f) and 0xFFFFFF)
+        val bot = (0x66 shl 24) or (mix(Color.WHITE, t, 0.80f) and 0xFFFFFF)
+        findViewById<GlassClock>(R.id.clock).glass = intArrayOf(top, mid, bot)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -302,6 +309,7 @@ class MainActivity : AppCompatActivity() {
                 val p = grid.getChildAdapterPosition(view)
                 if (p >= adapter.dockCount && adapter.dockCount > 0) view.alpha = rowAlpha()
                 else view.alpha = 1f
+                view.post { centerDock(view) }
             }
             override fun onChildViewDetachedFromWindow(view: View) {}
         })
@@ -869,6 +877,7 @@ class MainActivity : AppCompatActivity() {
             val tile = tileOf(t)
             if (tile != null) tile.requestFocus() else grid.post { tileOf(t)?.requestFocus() }
         }
+        grid.post { centerDock() }
         grid.post(restore)
         handler.postDelayed(restore, 300)
 
