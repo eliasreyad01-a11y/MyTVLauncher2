@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipChildren="false">
+
+    <com.mytv.launcher.WallpaperView
+        android:id="@+id/wallpaper"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/scrim" />
+
+    <View
+        android:id="@+id/dim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0"
+        android:background="#F2070A12" />
+
+    <FrameLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipChildren="false">
+
+        <!-- Body: one RecyclerView (dock row first, then the apps) with the cards and title floating above it -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipChildren="true">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/grid"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:layoutDirection="ltr"
+                android:overScrollMode="never"
+                android:paddingStart="48dp"
+                android:paddingTop="200dp"
+                android:paddingEnd="48dp"
+                android:paddingBottom="24dp"
+                android:scrollbars="none" />
+
+            <LinearLayout
+                android:id="@+id/hero"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="48dp"
+                android:paddingTop="176dp"
+                android:paddingEnd="48dp">
+
+                <TextView
+                    android:id="@+id/adhanStop"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_pill"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:paddingStart="40dp"
+                    android:paddingTop="14dp"
+                    android:paddingEnd="40dp"
+                    android:paddingBottom="14dp"
+                    android:text="@string/stop_adhan"
+                    android:textColor="@color/pill_content"
+                    android:textSize="22sp"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:id="@+id/cardsRow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:baselineAligned="false"
+                    android:gravity="top"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:id="@+id/prayerCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_card"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="14dp"
+                        android:paddingTop="10dp"
+                        android:paddingEnd="14dp"
+                        android:paddingBottom="10dp"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:id="@+id/prayerRow"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="horizontal" />
+
+                        <View
+                            android:layout_width="1dp"
+                            android:layout_height="36dp"
+                            android:layout_marginStart="12dp"
+                            android:layout_marginEnd="16dp"
+                            android:background="#33FFFFFF" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/prayerLine"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:lineSpacingMultiplier="1.1"
+                                android:textColor="@color/text_primary"
+                                android:textSize="17sp" />
+
+                            <ImageView
+                                android:layout_width="28dp"
+                                android:layout_height="28dp"
+                                android:layout_marginStart="10dp"
+                                android:layout_marginEnd="4dp"
+                                android:importantForAccessibility="no"
+                                android:src="@drawable/ic_sun" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/focusTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif-light"
+                    android:maxLines="1"
+                    android:minHeight="64dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:textColor="@color/text_primary"
+                    android:textSize="44sp" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Header (overlay): date block, big glass clock, round buttons -->
+        <FrameLayout
+            android:id="@+id/header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layoutDirection="ltr"
+            android:paddingStart="48dp"
+            android:paddingTop="24dp"
+            android:paddingEnd="48dp">
+
+            <LinearLayout
+                android:id="@+id/infoBlock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|start"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/greeting"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/dateGreg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="right"
+                    android:shadowColor="#66000000"
+                    android:shadowRadius="8"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp" />
+
+                <TextView
+                    android:id="@+id/dateText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:alpha="0.9"
+                    android:gravity="right"
+                    android:maxLines="1"
+                    android:shadowColor="#66000000"
+                    android:shadowRadius="8"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/wallCaption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:alpha="0.6"
+                    android:gravity="right"
+                    android:shadowColor="#66000000"
+                    android:shadowRadius="8"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/weatherText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:alpha="0.9"
+                    android:maxLines="1"
+                    android:shadowColor="#66000000"
+                    android:shadowRadius="8"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/clockBox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|center_horizontal"
+                android:orientation="horizontal">
+
+                <TextClock
+                    android:id="@+id/clock"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-thin"
+                    android:format12Hour="h:mm"
+                    android:format24Hour="HH:mm"
+                    android:includeFontPadding="false"
+                    android:shadowColor="#55000000"
+                    android:shadowDy="3"
+                    android:shadowRadius="18"
+                    android:textColor="#F2FFFFFF"
+                    android:textSize="132sp" />
+
+                <TextClock
+                    android:id="@+id/ampm"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginBottom="20dp"
+                    android:format12Hour="a"
+                    android:format24Hour="a"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|end"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:id="@+id/btnSearch"
+                    style="@style/RoundBtn"
+                    android:contentDescription="@string/search">
+
+                    <ImageView
+                        style="@style/RoundBtnIcon"
+                        android:src="@drawable/ic_search" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/btnWifi"
+                    style="@style/RoundBtn"
+                    android:contentDescription="@string/wifi">
+
+                    <ImageView
+                        style="@style/RoundBtnIcon"
+                        android:src="@drawable/ic_wifi" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/btnNet"
+                    style="@style/RoundBtn"
+                    android:contentDescription="@string/qs_network">
+
+                    <ImageView
+                        style="@style/RoundBtnIcon"
+                        android:src="@drawable/ic_swap" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/btnSettings"
+                    style="@style/RoundBtn"
+                    android:contentDescription="@string/settings">
+
+                    <ImageView
+                        style="@style/RoundBtnIcon"
+                        android:src="@drawable/ic_settings" />
+                </LinearLayout>
+            </LinearLayout>
+        </FrameLayout>
+    </FrameLayout>
+
+    <View
+        android:id="@+id/focusGlow"
+        android:layout_width="10dp"
+        android:layout_height="10dp"
+        android:background="@drawable/bg_glow"
+        android:visibility="invisible" />
+
+    <TextView
+        android:id="@+id/glowLabel"
+        android:layout_width="10dp"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:maxLines="1"
+        android:shadowColor="#CC000000"
+        android:shadowDx="0"
+        android:shadowDy="1"
+        android:shadowRadius="4"
+        android:textColor="@color/text_primary"
+        android:textSize="13sp"
+        android:visibility="invisible" />
+
+    <!-- Clock screensaver: a still, centered clock over the wallpaper -->
+    <FrameLayout
+        android:id="@+id/screensaver"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#8C000000"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/ssBox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingStart="64dp"
+            android:paddingTop="36dp"
+            android:paddingEnd="64dp"
+            android:paddingBottom="36dp">
+
+            <TextClock
+                android:id="@+id/ssClock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-thin"
+                android:format12Hour="h:mm"
+                android:format24Hour="HH:mm"
+                android:includeFontPadding="false"
+                android:shadowColor="#99000000"
+                android:shadowDy="4"
+                android:shadowRadius="24"
+                android:textColor="#FFFFFFFF"
+                android:textSize="150sp" />
+
+            <View
+                android:layout_width="120dp"
+                android:layout_height="2dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="14dp"
+                android:alpha="0.55"
+                android:background="#FFFFFFFF" />
+
+            <TextView
+                android:id="@+id/ssDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:shadowColor="#99000000"
+                android:shadowRadius="12"
+                android:textColor="#FFFFFFFF"
+                android:textSize="26sp" />
+
+            <TextView
+                android:id="@+id/ssSub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:alpha="0.8"
+                android:shadowColor="#99000000"
+                android:shadowRadius="12"
+                android:textColor="#FFFFFFFF"
+                android:textSize="18sp" />
+        </LinearLayout>
+    </FrameLayout>
+</FrameLayout>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Floating glass: soft outer glow (tinted per app at runtime), frosted fill with a bright top half, thin rim. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <stroke android:width="8dp" android:color="#2EFFFFFF" />
+            <corners android:radius="22dp" />
+        </shape>
+    </item>
+    <item android:bottom="4dp" android:left="4dp" android:right="4dp" android:top="4dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:centerColor="#26FFFFFF"
+                android:endColor="#12FFFFFF"
+                android:startColor="#66FFFFFF" />
+            <stroke android:width="2dp" android:color="#CCFFFFFF" />
+            <corners android:radius="18dp" />
+        </shape>
+    </item>
+</layer-list>

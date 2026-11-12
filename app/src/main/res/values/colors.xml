@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ocean_dark">#061A33</color>
+    <color name="ocean_mid">#0B4F8A</color>
+    <color name="ocean_light">#1396C9</color>
+    <color name="accent">#4FC3F7</color>
+    <color name="gold">#FFC107</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B0C4D8</color>
+    <color name="ic_launcher_background">#0B4F8A</color>
+</resources>
