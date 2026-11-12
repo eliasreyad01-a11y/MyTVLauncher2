@@ -246,12 +246,15 @@ class MainActivity : AppCompatActivity() {
                 infoBlock.alpha = a
                 clockBox.alpha = a
                 // The wallpaper sinks into darkness as the rows scroll up.
-                dim.alpha = ((off / dp(240).toFloat()).coerceIn(0f, 1f)) * 0.92f
+                dim.alpha = ((off / dp(110).toFloat()).coerceIn(0f, 1f)) * 0.92f
             }
         })
         // Rows start just under the cards and title.
         // Everything sits low like on a TV home screen: prayer bar at ~60% of the height, dock right under it.
-        hero.setPadding(hero.paddingLeft, (resources.displayMetrics.heightPixels * 0.60f).toInt(), hero.paddingRight, hero.paddingBottom)
+        val heroTop = (resources.displayMetrics.heightPixels * 0.60f).toInt()
+        hero.setPadding(hero.paddingLeft, heroTop, hero.paddingRight, hero.paddingBottom)
+        // The rows start under the bar from the very first layout, so nothing shifts or scrolls when the bar appears.
+        grid.setPadding(grid.paddingLeft, heroTop + dp(62) + dp(2) + dp(8), grid.paddingRight, grid.paddingBottom)
         focusTitle.visibility = View.GONE
         // The padding only grows: when the prayer card or the Adhan button appears the rows move down once,
         // but they never jump back up while the user rests on the home screen.
@@ -760,7 +763,7 @@ class MainActivity : AppCompatActivity() {
         visibleApps = loadedApps.filter { it.packageName !in hidden }
         if (!prefs.favoritesInit && visibleApps.isNotEmpty()) {
             // First run: the first five apps become the favorites row; the user can edit it later.
-            if (prefs.favorites.isEmpty()) prefs.favorites = visibleApps.take(5).map { it.packageName }
+            if (prefs.favorites.isEmpty()) prefs.favorites = visibleApps.take(prefs.gridSpan - 1).map { it.packageName }
             prefs.favoritesInit = true
         }
         val favs = prefs.favorites.mapNotNull { pkg -> visibleApps.firstOrNull { it.packageName == pkg } }
