@@ -158,8 +158,8 @@ class MainActivity : AppCompatActivity() {
             if (h > 0f && (bt - t) != (ob - ot)) {
                 (v as TextView).paint.shader = android.graphics.LinearGradient(
                     0f, 0f, 0f, h,
-                    intArrayOf(0xF5FFFFFF.toInt(), 0xCCE3F7FF.toInt(), 0x80B9E3F2.toInt()),
-                    floatArrayOf(0f, 0.55f, 1f), android.graphics.Shader.TileMode.CLAMP
+                    intArrayOf(0xF2FFFFFF.toInt(), 0xD6D9F3FB.toInt(), 0x9990D4E8.toInt()),
+                    floatArrayOf(0f, 0.5f, 1f), android.graphics.Shader.TileMode.CLAMP
                 )
                 v.invalidate()
             }
@@ -250,6 +250,9 @@ class MainActivity : AppCompatActivity() {
             }
         })
         // Rows start just under the cards and title.
+        // Everything sits low like on a TV home screen: prayer bar at ~60% of the height, dock right under it.
+        hero.setPadding(hero.paddingLeft, (resources.displayMetrics.heightPixels * 0.60f).toInt(), hero.paddingRight, hero.paddingBottom)
+        focusTitle.visibility = View.GONE
         // The padding only grows: when the prayer card or the Adhan button appears the rows move down once,
         // but they never jump back up while the user rests on the home screen.
         hero.addOnLayoutChangeListener { v, _, t, _, b, _, ot, _, ob ->
@@ -272,14 +275,14 @@ class MainActivity : AppCompatActivity() {
         for (name in PrayerRepository.PRAYERS) {
             val chip = TextView(this).apply {
                 gravity = Gravity.CENTER
-                textSize = 16f
+                textSize = 14f
                 setTextColor(Color.WHITE)
-                setPadding(dp(8), dp(8), dp(8), dp(8))
+                setPadding(dp(16), dp(5), dp(16), dp(5))
             }
             chips[name] = chip
             prayerRow.addView(chip, LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
-            ).apply { marginEnd = dp(6) })
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { marginEnd = dp(4) })
         }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -669,7 +672,7 @@ class MainActivity : AppCompatActivity() {
             changed = true
         }
         if (changed) adapter.notifyDataSetChanged()
-        greeting.visibility = if (prefs.showGreeting) View.VISIBLE else View.GONE
+        greeting.visibility = View.GONE
         findViewById<View>(R.id.btnWifi).visibility = if (prefs.showWifiButton) View.VISIBLE else View.GONE
     }
 

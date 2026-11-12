@@ -48,7 +48,7 @@ class Prefs(context: Context) {
 
     /** Apps per row on the home grid and in the library (4..7). */
     var gridSpan: Int
-        get() = sp.getInt("grid_span", 5)
+        get() = sp.getInt("grid_span", 7)
         set(value) {
             sp.edit().putInt("grid_span", value).apply()
         }
@@ -219,7 +219,7 @@ class Prefs(context: Context) {
     // ---- General ----
     /** "system", "12" or "24". */
     var timeFormat: String
-        get() = sp.getString("time_format", "system") ?: "system"
+        get() = sp.getString("time_format", "24") ?: "24"
         set(value) = putString("time_format", value)
 
     /** "system", "ar" or "en". */

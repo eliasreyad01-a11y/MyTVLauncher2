@@ -79,35 +79,22 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:baselineAligned="false"
-                    android:gravity="top"
+                    android:gravity="top|center_horizontal"
                     android:orientation="horizontal">
 
                     <LinearLayout
                         android:id="@+id/prayerCard"
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
                         android:background="@drawable/bg_card"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:paddingStart="14dp"
-                        android:paddingTop="10dp"
-                        android:paddingEnd="14dp"
-                        android:paddingBottom="10dp"
+                        android:paddingStart="12dp"
+                        android:paddingTop="6dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="6dp"
                         android:visibility="gone">
-
-                        <LinearLayout
-                            android:id="@+id/prayerRow"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="horizontal" />
-
-                        <View
-                            android:layout_width="1dp"
-                            android:layout_height="36dp"
-                            android:layout_marginStart="12dp"
-                            android:layout_marginEnd="16dp"
-                            android:background="#33FFFFFF" />
 
                         <LinearLayout
                             android:layout_width="wrap_content"
@@ -115,22 +102,34 @@
                             android:gravity="center_vertical"
                             android:orientation="horizontal">
 
+                            <ImageView
+                                android:layout_width="26dp"
+                                android:layout_height="26dp"
+                                android:layout_marginEnd="8dp"
+                                android:importantForAccessibility="no"
+                                android:src="@drawable/ic_sun" />
+
                             <TextView
                                 android:id="@+id/prayerLine"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:lineSpacingMultiplier="1.1"
+                                android:lineSpacingMultiplier="1.05"
                                 android:textColor="@color/text_primary"
-                                android:textSize="17sp" />
-
-                            <ImageView
-                                android:layout_width="28dp"
-                                android:layout_height="28dp"
-                                android:layout_marginStart="10dp"
-                                android:layout_marginEnd="4dp"
-                                android:importantForAccessibility="no"
-                                android:src="@drawable/ic_sun" />
+                                android:textSize="15sp" />
                         </LinearLayout>
+
+                        <View
+                            android:layout_width="1dp"
+                            android:layout_height="32dp"
+                            android:layout_marginStart="14dp"
+                            android:layout_marginEnd="10dp"
+                            android:background="#33FFFFFF" />
+
+                        <LinearLayout
+                            android:id="@+id/prayerRow"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -227,17 +226,18 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="top|center_horizontal"
+                android:layout_marginTop="8dp"
                 android:orientation="horizontal">
 
                 <TextClock
                     android:id="@+id/clock"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="sans-serif-thin"
+                    android:fontFamily="sans-serif"
                     android:format12Hour="h:mm"
                     android:format24Hour="HH:mm"
                     android:includeFontPadding="false"
-                    android:shadowColor="#55000000"
+                    android:shadowColor="#44000000"
                     android:shadowDy="3"
                     android:shadowRadius="18"
                     android:textColor="#F2FFFFFF"
