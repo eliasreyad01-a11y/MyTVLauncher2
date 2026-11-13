@@ -17,7 +17,7 @@ class GlassClock @JvmOverloads constructor(
     attrs: AttributeSet? = null
 ) : TextClock(context, attrs) {
 
-    var glass: IntArray = intArrayOf(0xB3FFFFFF.toInt(), 0x8CE3F7FF.toInt(), 0x66B9E3F2)
+    var glass: IntArray = intArrayOf(0xB4DFF4FE.toInt(), 0x96A0E0F8.toInt(), 0x88B4EAF8.toInt())
         set(value) {
             field = value
             shader = null
@@ -26,7 +26,7 @@ class GlassClock @JvmOverloads constructor(
 
     private var shader: Shader? = null
     private var shaderH = 0f
-    private val rim = 2f * resources.displayMetrics.density
+    private val rim = 1.4f * resources.displayMetrics.density
 
     override fun onDraw(canvas: Canvas) {
         val p = paint

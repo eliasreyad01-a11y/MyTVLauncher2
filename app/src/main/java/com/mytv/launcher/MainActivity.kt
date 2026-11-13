@@ -155,11 +155,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyClockShader() {
-        val t = clockTint
-        val top = (0xB8 shl 24) or (mix(Color.WHITE, t, 0.10f) and 0xFFFFFF)
-        val mid = (0x8C shl 24) or (mix(Color.WHITE, t, 0.45f) and 0xFFFFFF)
-        val bot = (0x66 shl 24) or (mix(Color.WHITE, t, 0.80f) and 0xFFFFFF)
+        // Pastel version of the wallpaper's own colour (aqua on the Kirkjufell sky), like Apple's tinted glass.
+        val hsv = FloatArray(3)
+        Color.colorToHSV(clockTint, hsv)
+        val s = (hsv[1] * 0.9f).coerceIn(0.30f, 0.55f)
+        fun pastel(sat: Float) = Color.HSVToColor(floatArrayOf(hsv[0], sat, 0.98f)) and 0xFFFFFF
+        val top = (0xB4 shl 24) or pastel(s * 0.55f)
+        val mid = (0x96 shl 24) or pastel(s)
+        val bot = (0x88 shl 24) or pastel(s * 0.8f)
         findViewById<GlassClock>(R.id.clock).glass = intArrayOf(top, mid, bot)
+        // The round buttons wear the same tint.
+        val fill1 = (0x7A shl 24) or pastel(s * 0.7f)
+        val fill2 = (0x40 shl 24) or pastel(s)
+        val rim = (0xB0 shl 24) or pastel(s * 0.35f)
+        for (id in intArrayOf(R.id.btnSearch, R.id.btnWifi, R.id.btnNet, R.id.btnSettings)) {
+            val normal = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(fill1, fill2)
+            ).apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setStroke(dp(1), rim) }
+            val focused = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(Color.WHITE)
+            }
+            findViewById<View>(id).background = android.graphics.drawable.StateListDrawable().apply {
+                addState(intArrayOf(android.R.attr.state_focused), focused)
+                addState(intArrayOf(), normal)
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -1456,7 +1476,7 @@ class MainActivity : AppCompatActivity() {
                 else -> R.string.cap_kirkjufell
             }
         )
-        wallCaption.visibility = if (prefs.wallpaperType == "none") View.VISIBLE else View.GONE
+        wallCaption.visibility = View.GONE
 
         refreshWeather()
         val np = nextPrayer
