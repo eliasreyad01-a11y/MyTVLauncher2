@@ -95,24 +95,6 @@
                 android:paddingTop="176dp"
                 android:paddingEnd="48dp">
 
-                <TextView
-                    android:id="@+id/adhanStop"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_pill"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center"
-                    android:paddingStart="40dp"
-                    android:paddingTop="14dp"
-                    android:paddingEnd="40dp"
-                    android:paddingBottom="14dp"
-                    android:text="@string/stop_adhan"
-                    android:textColor="@color/pill_content"
-                    android:textSize="22sp"
-                    android:visibility="gone" />
-
                 <LinearLayout
                     android:id="@+id/cardsRow"
                     android:layout_width="match_parent"
@@ -189,6 +171,25 @@
                     android:textSize="44sp" />
             </LinearLayout>
         </FrameLayout>
+
+        <!-- Stop-Adhan button floats above the prayer bar so showing it never moves anything -->
+        <TextView
+            android:id="@+id/adhanStop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|center_horizontal"
+            android:background="@drawable/bg_pill"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:paddingStart="40dp"
+            android:paddingTop="14dp"
+            android:paddingEnd="40dp"
+            android:paddingBottom="14dp"
+            android:text="@string/stop_adhan"
+            android:textColor="@color/pill_content"
+            android:textSize="22sp"
+            android:visibility="gone" />
 
         <!-- Header (overlay): date block, big glass clock, round buttons -->
         <FrameLayout

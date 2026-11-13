@@ -17,6 +17,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.TextClock
@@ -297,6 +298,7 @@ class MainActivity : AppCompatActivity() {
                 hero.alpha = a
                 infoBlock.alpha = a
                 clockBox.alpha = a
+                adhanStop.alpha = a
                 wallFg.alpha = a.coerceAtLeast(0f)
                 // The wallpaper sinks into darkness as the rows scroll up.
                 dim.alpha = ((off / (open * 0.75f)).coerceIn(0f, 1f)) * 0.92f
@@ -320,6 +322,7 @@ class MainActivity : AppCompatActivity() {
         // The rows start under the bar from the very first layout, so nothing shifts or scrolls when the bar appears.
         grid.setPadding(grid.paddingLeft, heroTop + dp(62) + dp(2) + dp(8), grid.paddingRight, (resources.displayMetrics.heightPixels * 0.22f).toInt())
         focusTitle.visibility = View.GONE
+        (adhanStop.layoutParams as FrameLayout.LayoutParams).topMargin = heroTop - dp(70)
         // The padding only grows: when the prayer card or the Adhan button appears the rows move down once,
         // but they never jump back up while the user rests on the home screen.
         hero.addOnLayoutChangeListener { v, _, t, _, b, _, ot, _, ob ->
