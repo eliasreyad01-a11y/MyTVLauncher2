@@ -771,7 +771,7 @@ class MainActivity : AppCompatActivity() {
             changed = true
         }
         if (changed) adapter.notifyDataSetChanged()
-        greeting.visibility = View.GONE
+        greeting.visibility = if (prefs.showGreeting) View.VISIBLE else View.GONE
         findViewById<View>(R.id.btnWifi).visibility = if (prefs.showWifiButton) View.VISIBLE else View.GONE
     }
 

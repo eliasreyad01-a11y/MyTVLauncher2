@@ -213,7 +213,12 @@
                     android:id="@+id/greeting"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:visibility="gone" />
+                    android:alpha="0.85"
+                    android:gravity="right"
+                    android:shadowColor="#66000000"
+                    android:shadowRadius="8"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp" />
 
                 <TextView
                     android:id="@+id/dateGreg"
