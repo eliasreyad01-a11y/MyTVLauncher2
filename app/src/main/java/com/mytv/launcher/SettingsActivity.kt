@@ -1,15 +1,12 @@
 package com.mytv.launcher
 
 import android.Manifest
-import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.OpenableColumns
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
@@ -23,7 +20,6 @@ import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -398,15 +394,6 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun addSection(titleRes: Int) {
-        container.addView(TextView(this).apply {
-            text = getString(titleRes)
-            textSize = 20f
-            setTextColor(Color.parseColor("#F4F8FF"))
-        }, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { setMargins(0, dp(28), 0, dp(8)) })
-    }
 
     private fun addLabel(textRes: Int) {
         container.addView(TextView(this).apply {
@@ -906,47 +893,9 @@ class SettingsActivity : AppCompatActivity() {
 
     // ---------------------------------------------------------------- file helpers
 
-    private fun launchPicker(launcher: ActivityResultLauncher<Array<String>>, mimeTypes: Array<String>) {
-        try {
-            launcher.launch(mimeTypes)
-        } catch (e: ActivityNotFoundException) {
-            Toast.makeText(this, R.string.picker_missing, Toast.LENGTH_LONG).show()
-        }
-    }
 
-    private fun persist(uri: Uri) {
-        try {
-            contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        } catch (e: Exception) {
-            // Not every provider supports persistable grants.
-        }
-    }
 
-    private fun queryName(uri: Uri): String? {
-        return try {
-            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
-                if (it.moveToFirst()) it.getString(0) else null
-            } ?: uri.lastPathSegment
-        } catch (e: Exception) {
-            uri.lastPathSegment
-        }
-    }
 
-    private fun pickFromFolder(folder: String, extensions: Set<String>, onPick: (File) -> Unit) {
-        val dir = getExternalFilesDir(folder)?.also { it.mkdirs() }
-        val files = dir?.listFiles()
-            ?.filter { it.isFile && it.extension.lowercase() in extensions }
-            ?.sortedBy { it.name }
-            ?: emptyList()
-        if (files.isEmpty()) {
-            AlertDialog.Builder(this, R.style.LauncherDialog)
-                .setMessage(getString(R.string.folder_empty_fmt, dir?.absolutePath ?: "-"))
-                .setPositiveButton(R.string.ok, null)
-                .show()
-            return
-        }
-        Dialogs.showChoice(this, folder, files.map { it.name }) { which -> onPick(files[which]) }
-    }
 
     private fun rowsLabel(n: Int) = if (n >= 99) getString(R.string.all_apps_rows) else n.toString()
 }

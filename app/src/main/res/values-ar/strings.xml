@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">لانشر التلفاز</string>
-    <string name="apps_title">كل التطبيقات</string>
-    <string name="favorites_title">المفضلة</string>
     <string name="search">بحث</string>
     <string name="search_hint">ابحث عن تطبيق…</string>
     <string name="settings">الإعدادات</string>
@@ -11,14 +9,7 @@
     <string name="greeting_afternoon">مساء الخير</string>
     <string name="greeting_evening">مساء الخير</string>
 
-    <string name="menu_launcher_settings">إعدادات الواجهة الرئيسية</string>
-    <string name="menu_module_cards">بطاقات الصفحة الرئيسية</string>
-    <string name="menu_edit_dock">تعديل المفضلة</string>
-    <string name="menu_reorder">إعادة ترتيب التطبيقات</string>
-    <string name="menu_search_apps">البحث عن التطبيقات</string>
     <string name="menu_hidden_apps">التطبيقات المخفية</string>
-    <string name="menu_about">حول التطبيق · الدعم</string>
-    <string name="menu_tv_settings">إعدادات نظام التلفاز</string>
     <string name="card_prayer">بطاقة أوقات الصلاة</string>
 
     <string name="open">فتح التطبيق</string>
@@ -37,12 +28,10 @@
     <string name="prayer_asr">العصر</string>
     <string name="prayer_maghrib">المغرب</string>
     <string name="prayer_isha">العشاء</string>
-    <string name="next_prayer_fmt">الصلاة القادمة: %1$s الساعة %2$s (بعد %3$s)</string>
     <string name="duration_hm">%1$d س %2$d د</string>
     <string name="duration_m">%1$d د</string>
 
     <string name="settings_title">إعدادات الواجهة الرئيسية</string>
-    <string name="section_prayer">أوقات الصلاة والأذان</string>
     <string name="adhan_auto">تشغيل الأذان تلقائياً</string>
     <string name="prayers_to_announce">الصلوات التي يُرفع لها الأذان</string>
     <string name="on">مفعّل</string>
@@ -54,17 +43,13 @@
     <string name="adhan_sound">صوت الأذان</string>
     <string name="sound_default">الافتراضي (أذان مرفق)</string>
     <string name="sound_custom_fmt">ملف مخصص: %1$s</string>
-    <string name="choose_from_storage">اختيار من الذاكرة</string>
-    <string name="choose_from_folder">اختيار من مجلد التطبيق</string>
     <string name="reset_default">إعادة للافتراضي</string>
-    <string name="folder_empty_fmt">لا توجد ملفات. انسخ ملفاتك إلى هذا المجلد:\n\n%1$s</string>
     <string name="test_adhan">تجربة الأذان</string>
     <string name="stop_adhan">إيقاف الأذان</string>
     <string name="adhan_notif_title_fmt">أذان %1$s</string>
     <string name="stop">إيقاف</string>
     <string name="notif_channel">الأذان</string>
 
-    <string name="section_wallpaper">استوديو الخلفيات</string>
     <string name="wallpaper_builtin">خلفيات جاهزة</string>
     <string name="wallpaper_choose">اختيار صورة أو فيديو</string>
     <string name="wallpaper_image">صورة</string>
@@ -72,7 +57,6 @@
     <string name="wallpaper_slideshow">عرض شرائح الصور</string>
     <string name="slideshow_on">عرض شرائح</string>
     <string name="slideshow_start">تشغيل عرض الشرائح</string>
-    <string name="slideshow_add">إضافة صورة من الذاكرة</string>
     <string name="slideshow_delete">حذف صورة</string>
     <string name="slideshow_count_fmt">%1$d صورة</string>
     <string name="slideshow_empty_fmt">مجلد عرض الشرائح فارغ. أضف صوراً أو انسخها إلى:\n\n%1$s</string>
@@ -83,7 +67,6 @@
     <string name="wallpaper_dim">تعتيم الخلفية</string>
     <string name="dim_fmt">%1$d%%</string>
 
-    <string name="section_general">عام</string>
     <string name="language">اللغة</string>
     <string name="lang_system">لغة النظام</string>
     <string name="lang_ar">العربية</string>
@@ -93,8 +76,6 @@
     <string name="ok">موافق</string>
     <string name="cancel">إلغاء</string>
     <string name="picker_missing">لا يتوفر مدير ملفات على هذا الجهاز. استخدم استعراض التلفاز أو مجلد التطبيق.</string>
-    <string name="menu_sort_apps">فرز التطبيقات أبجدياً</string>
-    <string name="sorted_done">تم فرز التطبيقات</string>
     <string name="card_weather">الطقس</string>
     <string name="browse_photos">استعراض الصور على هذا التلفاز</string>
     <string name="slideshow_add_browse">إضافة صورة (استعراض التلفاز)</string>
@@ -106,8 +87,6 @@
     <string name="time_format">نظام الوقت</string>
     <string name="time_12">12 ساعة</string>
     <string name="time_24">24 ساعة</string>
-    <string name="wx_today">اليوم</string>
-    <string name="wx_tomorrow">غداً</string>
     <string name="wx_clear">صافٍ</string>
     <string name="wx_partly">غائم جزئياً</string>
     <string name="wx_cloudy">غائم</string>
@@ -115,11 +94,9 @@
     <string name="wx_rain">أمطار</string>
     <string name="wx_snow">ثلوج</string>
     <string name="wx_storm">عواصف رعدية</string>
-    <string name="wx_details_fmt">الإحساس %1$d° · الرطوبة %2$d%% · الرياح %3$d كم/س · احتمال المطر %4$d%%</string>
     <string name="library_title">مكتبة التطبيقات</string>
     <string name="library_title_fmt">مكتبة التطبيقات · %1$d تطبيقاً</string>
     <string name="library_hint">اضغط على التطبيق لفتحه. اضغط مطولاً لعرض الخيارات: إضافة للمفضلة، إظهار في الرئيسية، إخفاء…</string>
-    <string name="menu_library">مكتبة التطبيقات</string>
     <string name="apps_per_row">عدد التطبيقات في كل صف</string>
     <string name="rows_below_fav">الصفوف أسفل المفضلة</string>
     <string name="cat_prayer">الأذان وأوقات الصلاة</string>
@@ -136,17 +113,10 @@
     <string name="focus_animation">حركة التركيز</string>
     <string name="show_greeting">إظهار التحية</string>
     <string name="show_wifi_btn">إظهار زر الواي فاي</string>
-    <string name="show_inputs_btn">إظهار زر المصادر (HDMI)</string>
-    <string name="btn_inputs">المصادر</string>
-    <string name="menu_inputs">المصادر (HDMI)</string>
-    <string name="menu_exit_system">الخروج إلى نظام التلفاز</string>
     <string name="menu_set_home">تعيين كشاشة رئيسية افتراضية</string>
     <string name="menu_set_home_sub">ليفتح هذا اللانشر دائماً عند الضغط على Home</string>
     <string name="set_home_text">يحدد أندرويد اللانشر الذي يُفتح عند الضغط على Home. افتح الإعدادات ← التطبيقات ← التطبيقات الافتراضية ← تطبيق الشاشة الرئيسية، واختر هذا اللانشر. وإذا لم يتوفر هذا الخيار في تلفازك، فصِل جهاز كمبيوتر ونفّذ:\n\nadb shell cmd package set-home-activity com.mytv.launcher/.MainActivity\n\nوللوصول إلى نظام التلفاز استخدم "الخروج إلى نظام التلفاز" من قائمة الإعدادات.</string>
-    <string name="no_system_home">لم يتم العثور على شاشة رئيسية أخرى</string>
     <string name="preset_photo1">برج غلطة عند الغروب</string>
-    <string name="btn_system">إلى نظام التلفاز</string>
-    <string name="btn_set_home">تعيين كشاشة رئيسية</string>
     <string name="preset_photo3">برج غلطة وطائر النورس</string>
     <string name="preset_photo6">برج غلطة والنوارس</string>
     <string name="slideshow_builtin">عرض شرائح الخلفيات الجاهزة</string>
@@ -168,7 +138,6 @@
     <string name="days_fmt">%1$s يوم</string>
     <string name="screensaver">شاشة التوقف (الساعة)</string>
     <string name="off_label">إيقاف</string>
-    <string name="menu_screensaver_now">تشغيل شاشة التوقف الآن</string>
     <string name="add_apps_tile">إضافة تطبيقات</string>
     <string name="add_apps_title">إضافة تطبيقات للرئيسية</string>
     <string name="add_apps_hint">اختر التطبيق لإضافته للرئيسية. تقدر تضيف أكثر من تطبيق.</string>
@@ -191,9 +160,5 @@
     <string name="stats_device">الجهاز</string>
     <string name="next_prayer_title">الصلاة القادمة</string>
     <string name="next_prayer_short">%1$s بعد %2$s</string>
-    <string name="cap_photo1">برج غلطة · إسطنبول</string>
-    <string name="cap_photo3">برج غلطة · إسطنبول</string>
-    <string name="cap_photo6">برج غلطة · إسطنبول</string>
-    <string name="cap_kirkjufell">جبل كيركجوفيل · أيسلندا</string>
     <string name="preset_kirkjufell">جبل كيركجوفيل · أيسلندا</string>
 </resources>

@@ -10,7 +10,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.text.format.DateFormat
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
@@ -27,16 +26,12 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.view.doOnNextLayout
 import androidx.core.widget.doAfterTextChanged
 import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.text.SimpleDateFormat
 import java.time.Duration
 import java.time.Instant
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -54,7 +49,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var greeting: TextView
     private lateinit var wallFg: android.widget.ImageView
     private var clockTint = 0xFF9FD8EA.toInt()
-    private lateinit var wallCaption: TextView
     private lateinit var infoBlock: View
     private lateinit var clockBox: View
     private lateinit var dim: View
@@ -142,11 +136,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun mix(a: Int, b: Int, t: Float): Int = Color.rgb(
-        (Color.red(a) + (Color.red(b) - Color.red(a)) * t).toInt(),
-        (Color.green(a) + (Color.green(b) - Color.green(a)) * t).toInt(),
-        (Color.blue(a) + (Color.blue(b) - Color.blue(a)) * t).toInt()
-    )
 
     /** The clock is glass: white at the top, taking on the wallpaper's colour towards the bottom. */
     private fun tintClock() {
@@ -220,7 +209,6 @@ class MainActivity : AppCompatActivity() {
         grid = findViewById(R.id.grid)
         hero = findViewById(R.id.hero)
         greeting = findViewById(R.id.greeting)
-        wallCaption = findViewById(R.id.wallCaption)
         infoBlock = findViewById(R.id.infoBlock)
         clockBox = findViewById(R.id.clockBox)
         dim = findViewById(R.id.dim)
@@ -775,42 +763,11 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.btnWifi).visibility = if (prefs.showWifiButton) View.VISIBLE else View.GONE
     }
 
-    private fun isDefaultHome(): Boolean {
-        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-        val r = packageManager.resolveActivity(home, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
-        return r?.activityInfo?.packageName == packageName
-    }
 
     /** The "set as default" button only shows while the Home button still opens another launcher. */
     private fun updateHomeButtons() {
     }
 
-    /** Asks Android to make this launcher the Home app (system dialog), with fallbacks. */
-    private fun requestHomeRole() {
-        if (android.os.Build.VERSION.SDK_INT >= 29) {
-            try {
-                val rm = getSystemService(android.app.role.RoleManager::class.java)
-                if (rm != null && rm.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME) &&
-                    !rm.isRoleHeld(android.app.role.RoleManager.ROLE_HOME)
-                ) {
-                    @Suppress("DEPRECATION")
-                    startActivityForResult(rm.createRequestRoleIntent(android.app.role.RoleManager.ROLE_HOME), 77)
-                    return
-                }
-            } catch (e: Exception) {
-                // fall through to the settings page
-            }
-        }
-        try {
-            startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
-        } catch (e: Exception) {
-            AlertDialog.Builder(this, R.style.LauncherDialog)
-                .setTitle(R.string.menu_set_home)
-                .setMessage(R.string.set_home_text)
-                .setPositiveButton(R.string.ok, null)
-                .show()
-        }
-    }
 
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -819,25 +776,6 @@ class MainActivity : AppCompatActivity() {
         updateHomeButtons()
     }
 
-    /** Opens the TV's own home screen (the launcher is meant to stay on Home). */
-    private fun exitToSystem() {
-        val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-        val others = packageManager.queryIntentActivities(homeIntent, 0)
-            .map { it.activityInfo }
-            .filter { it.packageName != packageName }
-        val pick = others.firstOrNull { it.packageName == "com.google.android.tvlauncher" }
-            ?: others.firstOrNull { it.packageName.contains("launcher") }
-            ?: others.firstOrNull()
-        if (pick == null) {
-            Toast.makeText(this, R.string.no_system_home, Toast.LENGTH_LONG).show()
-            return
-        }
-        startActivitySafe(
-            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-                .setClassName(pick.packageName, pick.name)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        )
-    }
 
     private fun reload() {
         if (move != null) return
@@ -1176,12 +1114,6 @@ class MainActivity : AppCompatActivity() {
 
     // ---------------------------------------------------------------- top menu
 
-    private fun sortAppsAz() {
-        prefs.appOrder = emptyList()
-        loadedApps = AppRepository.sorted(loadedApps, emptyList())
-        applyLists()
-        Toast.makeText(this, R.string.sorted_done, Toast.LENGTH_SHORT).show()
-    }
 
     private fun refreshWeather() {
         if (!prefs.showWeather) {
@@ -1213,42 +1145,7 @@ class MainActivity : AppCompatActivity() {
         weatherText.visibility = View.VISIBLE
     }
 
-    private fun showModuleCards() {
-        val labels = arrayOf(getString(R.string.card_prayer), getString(R.string.card_weather))
-        val checked = booleanArrayOf(prefs.showPrayerCard, prefs.showWeather)
-        AlertDialog.Builder(this, R.style.LauncherDialog)
-            .setTitle(R.string.menu_module_cards)
-            .setMultiChoiceItems(labels, checked) { _, which, isChecked -> checked[which] = isChecked }
-            .setPositiveButton(R.string.ok) { _, _ ->
-                prefs.showPrayerCard = checked[0]
-                prefs.showWeather = checked[1]
-                weatherAt = 0L
-                refreshWeather()
-                nextPrayer = null
-                prayerRetryAt = 0L
-                if (checked[0]) refreshPrayerCard() else prayerCard.visibility = View.GONE
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .create().also { Dialogs.track(it) }.show()
-    }
 
-    private fun showEditDock() {
-        val apps = visibleApps
-        val labels = apps.map { it.label }.toTypedArray()
-        val inDock = prefs.favorites.toSet()
-        val checked = BooleanArray(apps.size) { apps[it].packageName in inDock }
-        AlertDialog.Builder(this, R.style.LauncherDialog)
-            .setTitle(R.string.menu_edit_dock)
-            .setMultiChoiceItems(labels, checked) { _, which, isChecked -> checked[which] = isChecked }
-            .setPositiveButton(R.string.ok) { _, _ ->
-                val chosen = apps.filterIndexed { i, _ -> checked[i] }.map { it.packageName }
-                val kept = prefs.favorites.filter { it in chosen }
-                prefs.favorites = kept + chosen.filter { it !in kept }
-                applyLists()
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .create().also { Dialogs.track(it) }.show()
-    }
 
     private fun showHiddenApps() {
         val apps = loadedApps
@@ -1266,13 +1163,6 @@ class MainActivity : AppCompatActivity() {
             .create().also { Dialogs.track(it) }.show()
     }
 
-    private fun showAbout() {
-        AlertDialog.Builder(this, R.style.LauncherDialog)
-            .setTitle(R.string.about)
-            .setMessage(R.string.about_text)
-            .setPositiveButton(R.string.ok, null)
-            .create().also { Dialogs.track(it) }.show()
-    }
 
     // ---------------------------------------------------------------- move app
 
@@ -1301,12 +1191,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun startReorder() {
-        val target = lastFocused?.takeIf { f -> visibleApps.any { it.packageName == f.packageName } }
-            ?: visibleApps.firstOrNull()
-            ?: return
-        startMove(target, adapter)
-    }
 
     private fun startMove(item: AppItem, adapter: AppAdapter) {
         val isFav = adapter.isDock(item.packageName)
@@ -1468,15 +1352,6 @@ class MainActivity : AppCompatActivity() {
         val greg = SimpleDateFormat("d MMMM yyyy", locale).apply { timeZone = cityTz }.format(Date())
         val dayMonth = SimpleDateFormat("EEEE d MMMM", locale).apply { timeZone = cityTz }.format(Date())
         findViewById<TextView>(R.id.dateGreg).text = dayMonth
-        wallCaption.text = getString(
-            when (prefs.wallpaperPreset) {
-                "photo1" -> R.string.cap_photo1
-                "photo3" -> R.string.cap_photo3
-                "photo6" -> R.string.cap_photo6
-                else -> R.string.cap_kirkjufell
-            }
-        )
-        wallCaption.visibility = View.GONE
 
         refreshWeather()
         val np = nextPrayer
@@ -1512,7 +1387,7 @@ class MainActivity : AppCompatActivity() {
         prayerCard.visibility = View.VISIBLE
         val next = nextPrayer?.name
         for ((name, chip) in chips) {
-            chip.text = "${prayerLabel(name)}\n${TimeFmt.display(today.times[name], TimeFmt.is24(this, prefs))}"
+            chip.text = latin("${prayerLabel(name)}\n${TimeFmt.display(today.times[name], TimeFmt.is24(this, prefs))}")
             if (name == next) {
                 chip.setBackgroundResource(R.drawable.bg_chip_next)
                 chip.setTextColor(Color.WHITE)
@@ -1536,14 +1411,25 @@ class MainActivity : AppCompatActivity() {
         } else {
             getString(R.string.duration_m, minutes.toInt())
         }
-        val time = TimeFmt.display(np.time.format(DateTimeFormatter.ofPattern("HH:mm")), TimeFmt.is24(this, prefs))
         val title = getString(R.string.next_prayer_title)
-        val sp = android.text.SpannableString(title + "\n" + getString(R.string.next_prayer_short, prayerLabel(np.name), remaining))
+        val sp = android.text.SpannableString(latin(title + "\n" + getString(R.string.next_prayer_short, prayerLabel(np.name), remaining)))
+        // Same text as before: leave the view alone, so the bar never re-lays out for nothing.
+        if (prayerLine.visibility == View.VISIBLE && prayerLine.text.toString() == sp.toString()) return
         sp.setSpan(android.text.style.RelativeSizeSpan(0.78f), 0, title.length, 0)
         sp.setSpan(android.text.style.ForegroundColorSpan(0xB3FFFFFF.toInt()), 0, title.length, 0)
         prayerLine.text = sp
         prayerLine.visibility = View.VISIBLE
     }
+
+    /** Arabic-Indic digits to 0-9. */
+    private fun latin(s: String): String = String(CharArray(s.length) { i ->
+        val c = s[i]
+        when (c) {
+            in '\u0660'..'\u0669' -> '0' + (c - '\u0660')
+            in '\u06F0'..'\u06F9' -> '0' + (c - '\u06F0')
+            else -> c
+        }
+    })
 
     private fun prayerLabel(name: String): String = getString(
         when (name) {

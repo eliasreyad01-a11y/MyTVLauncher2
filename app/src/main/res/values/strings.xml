@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">My TV Launcher</string>
-    <string name="apps_title">All apps</string>
-    <string name="favorites_title">Favorites</string>
     <string name="search">Search</string>
     <string name="search_hint">Search apps…</string>
     <string name="settings">Settings</string>
@@ -11,14 +9,7 @@
     <string name="greeting_afternoon">Good afternoon</string>
     <string name="greeting_evening">Good evening</string>
 
-    <string name="menu_launcher_settings">Launcher settings</string>
-    <string name="menu_module_cards">Module cards</string>
-    <string name="menu_edit_dock">Edit dock</string>
-    <string name="menu_reorder">Reorder apps</string>
-    <string name="menu_search_apps">Search apps</string>
     <string name="menu_hidden_apps">Hidden apps</string>
-    <string name="menu_about">About · Support</string>
-    <string name="menu_tv_settings">TV system settings</string>
     <string name="card_prayer">Prayer times card</string>
 
     <string name="open">Open app</string>
@@ -37,12 +28,10 @@
     <string name="prayer_asr">Asr</string>
     <string name="prayer_maghrib">Maghrib</string>
     <string name="prayer_isha">Isha</string>
-    <string name="next_prayer_fmt">Next prayer: %1$s at %2$s (in %3$s)</string>
     <string name="duration_hm">%1$dh %2$dm</string>
     <string name="duration_m">%1$dm</string>
 
     <string name="settings_title">Launcher settings</string>
-    <string name="section_prayer">Prayer times &amp; Adhan</string>
     <string name="adhan_auto">Play Adhan automatically</string>
     <string name="prayers_to_announce">Prayers to announce</string>
     <string name="on">On</string>
@@ -54,17 +43,13 @@
     <string name="adhan_sound">Adhan sound</string>
     <string name="sound_default">Default (bundled file or system alarm)</string>
     <string name="sound_custom_fmt">Custom: %1$s</string>
-    <string name="choose_from_storage">Pick from storage</string>
-    <string name="choose_from_folder">Pick from app folder</string>
     <string name="reset_default">Reset to default</string>
-    <string name="folder_empty_fmt">No files found. Copy your files to this folder:\n\n%1$s</string>
     <string name="test_adhan">Test Adhan</string>
     <string name="stop_adhan">Stop Adhan</string>
     <string name="adhan_notif_title_fmt">Adhan – %1$s</string>
     <string name="stop">Stop</string>
     <string name="notif_channel">Adhan</string>
 
-    <string name="section_wallpaper">Wallpaper Studio</string>
     <string name="wallpaper_builtin">Built-in wallpaper</string>
     <string name="wallpaper_choose">Choose image or video</string>
     <string name="wallpaper_image">Image</string>
@@ -72,7 +57,6 @@
     <string name="wallpaper_slideshow">Photo slideshow</string>
     <string name="slideshow_on">Slideshow</string>
     <string name="slideshow_start">Start slideshow</string>
-    <string name="slideshow_add">Add photo from storage</string>
     <string name="slideshow_delete">Delete a photo</string>
     <string name="slideshow_count_fmt">%1$d photos</string>
     <string name="slideshow_empty_fmt">The slideshow folder is empty. Add photos, or copy them to:\n\n%1$s</string>
@@ -83,7 +67,6 @@
     <string name="wallpaper_dim">Background dimming</string>
     <string name="dim_fmt">%1$d%%</string>
 
-    <string name="section_general">General</string>
     <string name="language">Language</string>
     <string name="lang_system">System language</string>
     <string name="lang_ar">العربية</string>
@@ -93,8 +76,6 @@
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
     <string name="picker_missing">No file picker on this device. Use the app folder instead.</string>
-    <string name="menu_sort_apps">Sort apps A–Z</string>
-    <string name="sorted_done">Apps sorted A–Z</string>
     <string name="card_weather">Weather</string>
     <string name="browse_photos">Browse photos on this TV</string>
     <string name="slideshow_add_browse">Add photo (browse this TV)</string>
@@ -106,8 +87,6 @@
     <string name="time_format">Time format</string>
     <string name="time_12">12-hour</string>
     <string name="time_24">24-hour</string>
-    <string name="wx_today">Today</string>
-    <string name="wx_tomorrow">Tomorrow</string>
     <string name="wx_clear">Clear</string>
     <string name="wx_partly">Partly cloudy</string>
     <string name="wx_cloudy">Cloudy</string>
@@ -115,11 +94,9 @@
     <string name="wx_rain">Rain</string>
     <string name="wx_snow">Snow</string>
     <string name="wx_storm">Thunderstorm</string>
-    <string name="wx_details_fmt">Feels like %1$d° · Humidity %2$d%% · Wind %3$d km/h · Rain chance %4$d%%</string>
     <string name="library_title">App library</string>
     <string name="library_title_fmt">App library · %1$d apps</string>
     <string name="library_hint">Press an app to open it. Press and hold for options: add to dock, show on home, hide…</string>
-    <string name="menu_library">App library</string>
     <string name="apps_per_row">Apps per row</string>
     <string name="rows_below_fav">Rows below favorites</string>
     <string name="cat_prayer">Adhan &amp; prayer times</string>
@@ -136,17 +113,10 @@
     <string name="focus_animation">Focus animation</string>
     <string name="show_greeting">Show greeting</string>
     <string name="show_wifi_btn">Show Wi-Fi button</string>
-    <string name="show_inputs_btn">Show sources (HDMI) button</string>
-    <string name="btn_inputs">Sources</string>
-    <string name="menu_inputs">Sources (HDMI)</string>
-    <string name="menu_exit_system">Exit to TV system</string>
     <string name="menu_set_home">Set as default home screen</string>
     <string name="menu_set_home_sub">So the Home button always opens this launcher</string>
     <string name="set_home_text">Android decides which launcher opens on Home. Open Settings > Apps > Default apps > Home screen app and choose this launcher. If your TV has no such option, connect a computer and run:\n\nadb shell cmd package set-home-activity com.mytv.launcher/.MainActivity\n\nTo reach the TV system again, use "Exit to TV system" in the settings menu.</string>
-    <string name="no_system_home">No other home screen found</string>
     <string name="preset_photo1">Galata Tower at sunset</string>
-    <string name="btn_system">To TV system</string>
-    <string name="btn_set_home">Set as Home</string>
     <string name="preset_photo3">Galata and seagull</string>
     <string name="preset_photo6">Galata and seagulls</string>
     <string name="slideshow_builtin">Built-in photos slideshow</string>
@@ -168,7 +138,6 @@
     <string name="days_fmt">%1$s days</string>
     <string name="screensaver">Clock screensaver</string>
     <string name="off_label">Off</string>
-    <string name="menu_screensaver_now">Clock screensaver now</string>
     <string name="add_apps_tile">Add apps</string>
     <string name="add_apps_title">Add apps to Home</string>
     <string name="add_apps_hint">Select an app to put it on Home. You can add several.</string>
@@ -191,9 +160,5 @@
     <string name="stats_device">Device</string>
     <string name="next_prayer_title">Next prayer</string>
     <string name="next_prayer_short">%1$s in %2$s</string>
-    <string name="cap_photo1">Galata Tower · Istanbul</string>
-    <string name="cap_photo3">Galata Tower · Istanbul</string>
-    <string name="cap_photo6">Galata Tower · Istanbul</string>
-    <string name="cap_kirkjufell">Kirkjufell · Iceland</string>
     <string name="preset_kirkjufell">Kirkjufell, Iceland</string>
 </resources>
