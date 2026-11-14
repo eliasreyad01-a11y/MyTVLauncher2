@@ -10,6 +10,30 @@ import androidx.recyclerview.widget.RecyclerView
 class DockBand(context: Context, private val adapter: AppAdapter) : RecyclerView.ItemDecoration() {
     private val band = ContextCompat.getDrawable(context, R.drawable.bg_dock)
     private val pad = (10 * context.resources.displayMetrics.density).toInt()
+    private val radius = 28 * context.resources.displayMetrics.density
+    private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    private val rect = android.graphics.RectF()
+    private val loc = IntArray(2)
+    private var shaderReady = false
+
+    /** Tiny wallpaper copy, scaled up smoothly = frosted glass. One shared shader, positioned in screen coordinates. */
+    private fun prepare(context: Context) {
+        shaderReady = true
+        try {
+            val o = android.graphics.BitmapFactory.Options().apply { inSampleSize = 32 }
+            val bmp = android.graphics.BitmapFactory.decodeResource(context.resources, R.drawable.wp_kirkjufell, o) ?: return
+            val dm = context.resources.displayMetrics
+            val sc = maxOf(dm.widthPixels / bmp.width.toFloat(), dm.heightPixels / bmp.height.toFloat())
+            val m = android.graphics.Matrix()
+            m.postScale(sc, sc)
+            m.postTranslate((dm.widthPixels - bmp.width * sc) / 2f, (dm.heightPixels - bmp.height * sc) / 2f)
+            val sh = android.graphics.BitmapShader(bmp, android.graphics.Shader.TileMode.CLAMP, android.graphics.Shader.TileMode.CLAMP)
+            sh.setLocalMatrix(m)
+            paint.shader = sh
+            paint.isFilterBitmap = true
+            paint.colorFilter = android.graphics.PorterDuffColorFilter(0x40FFFFFF, android.graphics.PorterDuff.Mode.SRC_OVER)
+        } catch (_: Throwable) { paint.shader = null }
+    }
 
     override fun onDraw(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
         if (adapter.dockCount == 0) return
@@ -30,6 +54,16 @@ class DockBand(context: Context, private val adapter: AppAdapter) : RecyclerView
         }
         if (left == Int.MAX_VALUE) return
         val drawable = band ?: return
+        if (!shaderReady) prepare(parent.context)
+        if (paint.shader != null) {
+            parent.getLocationOnScreen(loc)
+            rect.set((left - pad).toFloat(), (top - pad).toFloat(), (right + pad).toFloat(), (bottom + pad).toFloat())
+            c.save()
+            c.translate(-loc[0].toFloat(), -loc[1].toFloat())
+            rect.offset(loc[0].toFloat(), loc[1].toFloat())
+            c.drawRoundRect(rect, radius, radius, paint)
+            c.restore()
+        }
         drawable.setBounds(left - pad, top - pad, right + pad, bottom + pad)
         drawable.draw(c)
     }
