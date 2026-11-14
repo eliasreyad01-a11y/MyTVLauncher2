@@ -300,7 +300,7 @@
 
                     <ImageView
                         style="@style/RoundBtnIcon"
-                        android:src="@drawable/ic_settings" />
+                        android:src="@drawable/ic_tune" />
                 </LinearLayout>
             </LinearLayout>
         </FrameLayout>

@@ -167,15 +167,15 @@ class MainActivity : AppCompatActivity() {
         val bot = (0x88 shl 24) or pastel(s * 0.8f)
         findViewById<GlassClock>(R.id.clock).glass = intArrayOf(top, mid, bot)
         // The round buttons wear the same tint.
-        val fill1 = (0x7A shl 24) or pastel(s * 0.7f)
-        val fill2 = (0x40 shl 24) or pastel(s)
-        val rim = (0xB0 shl 24) or pastel(s * 0.35f)
+        val fill1 = 0x4DFFFFFF
+        val fill2 = 0x1FFFFFFF
+        val rim = 0x99FFFFFF.toInt()
         for (id in intArrayOf(R.id.btnSearch, R.id.btnWifi, R.id.btnNet, R.id.btnSettings)) {
             val normal = android.graphics.drawable.GradientDrawable(
                 android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(fill1, fill2)
             ).apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setStroke(dp(1), rim) }
             val focused = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(Color.WHITE)
+                shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(Color.WHITE); setStroke(dp(4), 0x66FFFFFF)
             }
             findViewById<View>(id).background = android.graphics.drawable.StateListDrawable().apply {
                 addState(intArrayOf(android.R.attr.state_focused), focused)
