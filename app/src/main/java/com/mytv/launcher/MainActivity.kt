@@ -1151,7 +1151,7 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { popup.dismiss(); action() }
             layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) }
         }
-        val cw = dp(112); val ch = dp(60)
+        val cw = dp(112); val ch = dp(68)
         val left = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(tile(R.drawable.ic_wifi, getString(R.string.qs_network), null, cw, ch, false) { open(Intent(Settings.ACTION_WIFI_SETTINGS)) })
@@ -1193,7 +1193,7 @@ class MainActivity : AppCompatActivity() {
         popup.elevation = dp(12).toFloat()
         popup.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         menuPopup = popup
-        popup.showAsDropDown(btnSettings, 0, dp(8), Gravity.START)
+        popup.showAsDropDown(btnSettings, 0, dp(8), Gravity.LEFT)
         left.getChildAt(0)?.requestFocus()
     }
 
