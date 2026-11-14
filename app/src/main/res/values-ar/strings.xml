@@ -167,4 +167,7 @@
     <string name="qs_min">د</string>
     <string name="qs_power">إيقاف التشغيل</string>
     <string name="qs_bluetooth">البلوتوث</string>
+    <string name="accounts_title">الحسابات المسجّلة</string>
+    <string name="accounts_none">ما في حسابات ظاهرة للانشر. أندرويد ممكن يخفي بعض الحسابات عن التطبيقات.</string>
+    <string name="accounts_manage">إعدادات الحسابات</string>
 </resources>

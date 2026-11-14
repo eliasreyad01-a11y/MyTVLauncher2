@@ -182,9 +182,9 @@ class MainActivity : AppCompatActivity() {
         Color.colorToHSV(clockTint, hsv)
         val s = (hsv[1] * 0.9f).coerceIn(0.30f, 0.55f)
         fun pastel(sat: Float) = Color.HSVToColor(floatArrayOf(hsv[0], sat, 0.98f)) and 0xFFFFFF
-        val top = (0xB4 shl 24) or pastel(s * 0.55f)
-        val mid = (0x96 shl 24) or pastel(s)
-        val bot = (0x88 shl 24) or pastel(s * 0.8f)
+        val top = (0xB0 shl 24) or pastel(s * 0.25f)
+        val mid = (0x66 shl 24) or pastel(s * 0.6f)
+        val bot = (0x44 shl 24) or pastel(s * 0.8f)
         findViewById<GlassClock>(R.id.clock).glass = intArrayOf(top, mid, bot)
     }
 
@@ -347,7 +347,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        findViewById<View>(R.id.btnProfile).setOnClickListener { openAccounts() }
+        findViewById<View>(R.id.btnProfile).setOnClickListener { showAccounts(false) }
         findViewById<View>(R.id.btnHome).setOnClickListener {
             grid.scrollToPosition(0)
             grid.post { updateScrollEffects(); tileOf(0)?.requestFocus() }
@@ -910,6 +910,28 @@ class MainActivity : AppCompatActivity() {
         Intent(Settings.ACTION_SETTINGS)
     )
 
+    private fun showAccounts(asked: Boolean) {
+        val perm = android.Manifest.permission.GET_ACCOUNTS
+        if (!asked && checkSelfPermission(perm) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(perm), 77)
+            return
+        }
+        val list = try { android.accounts.AccountManager.get(this).accounts.toList() } catch (e: Exception) { emptyList() }
+        val text = if (list.isEmpty()) getString(R.string.accounts_none)
+        else list.joinToString("\n") { "\u2022 " + it.name + "   (" + (if (it.type == "com.google") "Google" else it.type) + ")" }
+        AlertDialog.Builder(this, R.style.LauncherDialog)
+            .setTitle(R.string.accounts_title)
+            .setMessage(text)
+            .setPositiveButton(R.string.ok, null)
+            .setNeutralButton(R.string.accounts_manage) { _, _ -> openAccounts() }
+            .create().also { Dialogs.track(it) }.show()
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 77) showAccounts(true)
+    }
+
     private fun openAccounts() = openFirst(
         Intent(Settings.ACTION_SYNC_SETTINGS),
         Intent(Settings.ACTION_ADD_ACCOUNT).putExtra(Settings.EXTRA_ACCOUNT_TYPES, arrayOf("com.google")),
@@ -1104,16 +1126,16 @@ class MainActivity : AppCompatActivity() {
             val box = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = if (big) Gravity.BOTTOM else Gravity.CENTER_VERTICAL
-                setPadding(dp(12), dp(8), dp(12), dp(8))
+                setPadding(dp(12), dp(6), dp(12), dp(6))
                 isFocusable = true; isClickable = true
                 setBackgroundResource(R.drawable.bg_ctl_tile)
                 val img = ImageView(this@MainActivity).apply {
                     setImageResource(icon); imageTintList = tint; isDuplicateParentStateEnabled = true
                 }
                 if (big) addView(img, LinearLayout.LayoutParams(dp(52), dp(52)).apply { gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = dp(12) })
-                else addView(img, LinearLayout.LayoutParams(dp(22), dp(22)))
+                else addView(img, LinearLayout.LayoutParams(dp(20), dp(20)))
                 addView(TextView(this@MainActivity).apply { text = title; textSize = 13f; setTextColor(tint); typeface = Typeface.DEFAULT_BOLD; isDuplicateParentStateEnabled = true }.also { t ->
-                    if (!big) t.setPadding(0, dp(4), 0, 0)
+                    if (!big) t.setPadding(0, dp(2), 0, 0)
                 })
                 addView(sublabel)
                 setOnClickListener { action(sublabel) }
@@ -1129,7 +1151,7 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { popup.dismiss(); action() }
             layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) }
         }
-        val cw = dp(108); val ch = dp(50)
+        val cw = dp(112); val ch = dp(60)
         val left = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(tile(R.drawable.ic_wifi, getString(R.string.qs_network), null, cw, ch, false) { open(Intent(Settings.ACTION_WIFI_SETTINGS)) })
@@ -1147,8 +1169,7 @@ class MainActivity : AppCompatActivity() {
         }
         val right = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            addView(tile(R.drawable.ic_power, getString(R.string.qs_power), null, cw, ch * 2 + dp(8), true) { popup.dismiss(); startScreensaver() })
-            addView(tile(R.drawable.ic_bluetooth, getString(R.string.qs_bluetooth), null, cw, ch, false) { popup.dismiss(); openBluetooth() })
+            addView(tile(R.drawable.ic_power, getString(R.string.qs_power), null, cw, ch * 3 + dp(16), true) { popup.dismiss(); startScreensaver() })
         }
         val cols = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; addView(left); addView(right)
@@ -1165,36 +1186,6 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setBackgroundResource(R.drawable.bg_ctl_panel)
             setPadding(dp(8), dp(8), dp(8), dp(8))
-            addView(LinearLayout(this@MainActivity).apply {
-                orientation = LinearLayout.HORIZONTAL
-                layoutDirection = View.LAYOUT_DIRECTION_RTL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(4), dp(2), dp(8), dp(6))
-                fun mini(icon: Int, selected: Boolean, action: (() -> Unit)?) = ImageView(this@MainActivity).apply {
-                    setImageResource(icon)
-                    imageTintList = if (selected) android.content.res.ColorStateList.valueOf(0xFF1B1F24.toInt()) else tint
-                    setPadding(dp(6), dp(6), dp(6), dp(6))
-                    if (selected) setBackgroundResource(R.drawable.bg_mini_sel)
-                    else if (action != null) { isFocusable = true; isClickable = true; setBackgroundResource(R.drawable.bg_mini); setOnClickListener { popup.dismiss(); action() } }
-                    layoutParams = LinearLayout.LayoutParams(dp(30), dp(30)).apply { marginEnd = dp(8) }
-                }
-                addView(mini(R.drawable.ic_person, false) { openAccounts() })
-                addView(mini(R.drawable.ic_tune, true, null))
-                addView(mini(R.drawable.ic_home, false) { })
-                addView(mini(R.drawable.ic_wave, false) { startActivitySafe(Intent(Settings.ACTION_SOUND_SETTINGS)) })
-                addView(mini(R.drawable.ic_bluetooth, false) { openBluetooth() })
-                addView(View(this@MainActivity), LinearLayout.LayoutParams(0, 1, 1f))
-                addView(TextClock(this@MainActivity).apply {
-                    format12Hour = "h:mm a"; format24Hour = "HH:mm"; textSize = 14f
-                    setTextColor(Color.WHITE)
-                })
-            })
-            val info = listOf<View?>(findViewById(R.id.dateGreg), dateText, weatherText)
-                .map { ((it as? TextView)?.text ?: "").toString().trim() }.filter { it.isNotEmpty() }.joinToString("  •  ")
-            if (info.isNotEmpty()) addView(TextView(this@MainActivity).apply {
-                text = info; textSize = 12f; setTextColor(Color.WHITE); alpha = 0.85f
-                setPadding(dp(8), 0, dp(8), dp(6))
-            })
             addView(cols); addView(rounds)
         }
         panel.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
@@ -1202,7 +1193,7 @@ class MainActivity : AppCompatActivity() {
         popup.elevation = dp(12).toFloat()
         popup.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         menuPopup = popup
-        popup.showAsDropDown(btnSettings, 0, dp(8), Gravity.END)
+        popup.showAsDropDown(btnSettings, 0, dp(8), Gravity.START)
         left.getChildAt(0)?.requestFocus()
     }
 
@@ -1458,15 +1449,15 @@ class MainActivity : AppCompatActivity() {
                 else -> R.string.greeting_evening
             }
         )
-        greeting.text = if (isArabic) greet else greet.uppercase(locale)
+        greeting.text = latin(if (isArabic) greet else greet.uppercase(locale))
 
         val weekday = SimpleDateFormat("EEEE", locale).apply { timeZone = cityTz }.format(Date())
         val hijri = HijriDate.format(this, PrayerRepository.cityToday(this), locale)
         val hijriLine = hijri.ifEmpty { weekday }
-        dateText.text = if (isArabic) hijriLine else hijriLine.uppercase(locale)
+        dateText.text = latin(if (isArabic) hijriLine else hijriLine.uppercase(locale))
         val greg = SimpleDateFormat("d MMMM yyyy", locale).apply { timeZone = cityTz }.format(Date())
         val dayMonth = SimpleDateFormat("EEEE d MMMM", locale).apply { timeZone = cityTz }.format(Date())
-        findViewById<TextView>(R.id.dateGreg).text = dayMonth
+        findViewById<TextView>(R.id.dateGreg).text = latin(dayMonth)
         val is24 = TimeFmt.is24(this, prefs)
         val tm = SimpleDateFormat(if (is24) "HH:mm" else "h:mm a", Locale.US).apply { timeZone = cityTz }.format(Date())
         findViewById<TextView>(R.id.headerTime).text = tm.replace("AM", "ص").replace("PM", "م")

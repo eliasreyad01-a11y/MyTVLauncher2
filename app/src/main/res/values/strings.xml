@@ -167,4 +167,7 @@
     <string name="qs_min">min</string>
     <string name="qs_power">Sleep</string>
     <string name="qs_bluetooth">Bluetooth</string>
+    <string name="accounts_title">Signed-in accounts</string>
+    <string name="accounts_none">No accounts are visible to the launcher. Android may hide some accounts from apps.</string>
+    <string name="accounts_manage">Account settings</string>
 </resources>
