@@ -273,6 +273,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun build() {
         val section = intent.getStringExtra("section")
+        if (section == "a_general" || section == "a_video" || section == "a_audio") { buildApple(section); return }
         titleView.text = getString(
             when (section) {
                 "prayer" -> R.string.cat_prayer
@@ -295,11 +296,61 @@ class SettingsActivity : AppCompatActivity() {
         startActivity(Intent(this, SettingsActivity::class.java).putExtra("section", name))
     }
 
+    private fun sys(vararg actions: String) {
+        for (a in actions) {
+            try { startActivity(Intent(a).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return } catch (_: Exception) {}
+        }
+        Toast.makeText(this, "Not available on this device", Toast.LENGTH_SHORT).show()
+    }
+
     private fun buildCategories() {
-        addRow(getString(R.string.cat_prayer), getString(R.string.cat_prayer_sub)) { openSection("prayer") }
-        addRow(getString(R.string.cat_wallpaper), getString(R.string.cat_wallpaper_sub)) { openSection("wallpaper") }
-        addRow(getString(R.string.cat_home), getString(R.string.cat_home_sub)) { openSection("home") }
-        addRow(getString(R.string.cat_general), getString(R.string.cat_general_sub)) { openSection("general") }
+        titleView.text = "Settings"
+        descView.text = "Apple TV"
+        addRow("General", null) { openSection("a_general") }
+        addRow("Profiles and Accounts", null) { sys(android.provider.Settings.ACTION_SYNC_SETTINGS, android.provider.Settings.ACTION_ADD_ACCOUNT) }
+        addRow("Video and Audio", null) { openSection("a_video") }
+        addRow("Screen Saver", null) { sys(android.provider.Settings.ACTION_DREAM_SETTINGS, android.provider.Settings.ACTION_DISPLAY_SETTINGS) }
+        addRow("Notifications", null) {
+            try { startActivity(Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, packageName)) } catch (_: Exception) { sys(android.provider.Settings.ACTION_SETTINGS) }
+        }
+        addRow("AirPlay and Apple Home", null) { sys(android.provider.Settings.ACTION_CAST_SETTINGS, android.provider.Settings.ACTION_SETTINGS) }
+        addRow("Remotes and Devices", null) { sys(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS) }
+        addRow("Accessibility", null) { sys(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS) }
+        addRow("Apps", null) { sys(android.provider.Settings.ACTION_APPLICATION_SETTINGS, android.provider.Settings.ACTION_MANAGE_ALL_APPLICATIONS_SETTINGS) }
+        addRow("Network", null) { sys(android.provider.Settings.ACTION_WIFI_SETTINGS) }
+        addRow("System", null) { sys(android.provider.Settings.ACTION_SETTINGS) }
+        addRow("Power Off", null, false) {
+            Dialogs.showChoice(this, "Power Off", listOf("Sleep Now", "Cancel")) { i ->
+                if (i == 0) Toast.makeText(this, "Press the power button on your remote", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun buildApple(section: String) {
+        val d = android.provider.Settings.ACTION_DISPLAY_SETTINGS
+        val snd = android.provider.Settings.ACTION_SOUND_SETTINGS
+        when (section) {
+            "a_general" -> {
+                titleView.text = "General"
+                addRow("Appearance", "Automatic") { sys(d) }
+                addRow("Sounds and Music", null) { sys(snd) }
+                addRow("Screen Saver", null) { sys(android.provider.Settings.ACTION_DREAM_SETTINGS, d) }
+                addRow("Language and Region", null) { sys(android.provider.Settings.ACTION_LOCALE_SETTINGS) }
+                addRow("Date and Time", null) { sys(android.provider.Settings.ACTION_DATE_SETTINGS) }
+                addRow("Keyboard", null) { sys(android.provider.Settings.ACTION_INPUT_METHOD_SETTINGS) }
+                addRow("Storage", null) { sys(android.provider.Settings.ACTION_INTERNAL_STORAGE_SETTINGS) }
+                addRow("About", null) { sys(android.provider.Settings.ACTION_DEVICE_INFO_SETTINGS) }
+            }
+            else -> {
+                titleView.text = "Video and Audio"
+                addLabel("VIDEO")
+                for (t in listOf("Enable Dolby Vision", "Aspect Ratio", "Format", "HDMI Output", "Chroma", "Match Content", "Check HDMI Connection", "Tap-to-Zoom Video", "Reset Video Settings"))
+                    addRow(t, null) { sys(d) }
+                addLabel("AUDIO")
+                for (t in listOf("Audio Output", "Audio Format", "Sound Effects and Music", "Reduce Loud Sounds", "Default Audio Output"))
+                    addRow(t, null) { sys(snd) }
+            }
+        }
     }
 
     private fun buildPrayer() {
@@ -433,9 +484,11 @@ class SettingsActivity : AppCompatActivity() {
     }
 
 
-    private fun addLabel(textRes: Int) {
+    private fun addLabel(textRes: Int) = addLabel(getString(textRes))
+
+    private fun addLabel(label: String) {
         container.addView(TextView(this).apply {
-            text = getString(textRes).uppercase(Locale.getDefault())
+            text = label.uppercase(Locale.getDefault())
             textSize = 14f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             setTextColor(Color.parseColor("#99C0D4E1"))

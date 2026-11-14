@@ -395,7 +395,7 @@ class MainActivity : AppCompatActivity() {
                     Color.argb(prefs.dim.coerceIn(0, 90) * 255 / 100, 0, 0, 0), android.graphics.PorterDuff.Mode.SRC_ATOP
                 )
             }
-            wallFg.visibility = View.VISIBLE
+            wallFg.visibility = View.GONE
         } else wallFg.visibility = View.GONE
         wallpaper.post { tintClock() }
         val is24 = TimeFmt.is24(this, prefs)
@@ -791,7 +791,7 @@ class MainActivity : AppCompatActivity() {
             changed = true
         }
         if (changed) adapter.notifyDataSetChanged()
-        greeting.visibility = if (prefs.showGreeting) View.VISIBLE else View.GONE
+        greeting.visibility = View.GONE
     }
 
 
@@ -1493,7 +1493,7 @@ class MainActivity : AppCompatActivity() {
             prayerCard.visibility = View.GONE
             return
         }
-        prayerCard.visibility = View.VISIBLE
+        prayerCard.visibility = View.GONE
         val next = nextPrayer?.name
         for ((name, chip) in chips) {
             chip.text = latin("${prayerLabel(name)}\n${TimeFmt.display(today.times[name], TimeFmt.is24(this, prefs))}")
