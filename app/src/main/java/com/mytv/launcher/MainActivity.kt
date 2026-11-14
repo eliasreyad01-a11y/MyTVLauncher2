@@ -175,22 +175,6 @@ class MainActivity : AppCompatActivity() {
         val mid = (0x96 shl 24) or pastel(s)
         val bot = (0x88 shl 24) or pastel(s * 0.8f)
         findViewById<GlassClock>(R.id.clock).glass = intArrayOf(top, mid, bot)
-        // The round buttons wear the same tint.
-        val fill1 = 0x4DFFFFFF
-        val fill2 = 0x1FFFFFFF
-        val rim = 0x99FFFFFF.toInt()
-        for (id in intArrayOf(R.id.btnSearch, R.id.btnWifi, R.id.btnNet, R.id.btnSettings)) {
-            val normal = android.graphics.drawable.GradientDrawable(
-                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(fill1, fill2)
-            ).apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setStroke(dp(1), rim) }
-            val focused = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(Color.WHITE); setStroke(dp(4), 0x66FFFFFF)
-            }
-            findViewById<View>(id).background = android.graphics.drawable.StateListDrawable().apply {
-                addState(intArrayOf(android.R.attr.state_focused), focused)
-                addState(intArrayOf(), normal)
-            }
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -571,6 +555,7 @@ class MainActivity : AppCompatActivity() {
         screensaverOn = true
         // Same wallpaper as the home page: only the apps and cards fade away, the clock drifts over it.
         findViewById<View>(R.id.content).animate().alpha(0f).setDuration(400).start()
+        clockBox.animate().alpha(0f).setDuration(400).start()
         glow.visibility = View.INVISIBLE
         glowLabel.visibility = View.INVISIBLE
         findViewById<TextView>(R.id.ssDate).text = dateText.text
@@ -589,6 +574,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.ssBox).animate().cancel()
         screensaver.visibility = View.GONE
         findViewById<View>(R.id.content).animate().alpha(1f).setDuration(150).start()
+        clockBox.animate().alpha(if (lastScrollAlpha < 0f) 1f else lastScrollAlpha).setDuration(150).start()
         focusedTile?.let { placeGlow(it, false) }
         resetIdle()
     }
@@ -1098,7 +1084,7 @@ class MainActivity : AppCompatActivity() {
         val tint = ContextCompat.getColorStateList(this, R.color.menu_text)!!
         fun tile(icon: Int, title: String, sub: String?, w: Int, h: Int, big: Boolean, action: (TextView) -> Unit): View {
             val sublabel = TextView(this).apply {
-                text = sub ?: ""; textSize = 12f; setTextColor(tint); alpha = 0.7f
+                text = sub ?: ""; textSize = 12f; setTextColor(tint); alpha = 0.7f; isDuplicateParentStateEnabled = true
                 visibility = if (sub == null) View.GONE else View.VISIBLE
             }
             val box = LinearLayout(this).apply {
@@ -1108,11 +1094,11 @@ class MainActivity : AppCompatActivity() {
                 isFocusable = true; isClickable = true
                 setBackgroundResource(R.drawable.bg_ctl_tile)
                 val img = ImageView(this@MainActivity).apply {
-                    setImageResource(icon); imageTintList = tint
+                    setImageResource(icon); imageTintList = tint; isDuplicateParentStateEnabled = true
                 }
                 if (big) addView(img, LinearLayout.LayoutParams(dp(64), dp(64)).apply { gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = dp(18) })
                 else addView(img, LinearLayout.LayoutParams(dp(22), dp(22)))
-                addView(TextView(this@MainActivity).apply { text = title; textSize = 14f; setTextColor(tint); typeface = Typeface.DEFAULT_BOLD }.also { t ->
+                addView(TextView(this@MainActivity).apply { text = title; textSize = 14f; setTextColor(tint); typeface = Typeface.DEFAULT_BOLD; isDuplicateParentStateEnabled = true }.also { t ->
                     if (!big) t.setPadding(0, dp(4), 0, 0)
                 })
                 addView(sublabel)
@@ -1187,6 +1173,12 @@ class MainActivity : AppCompatActivity() {
                     format12Hour = "h:mm a"; format24Hour = "HH:mm"; textSize = 14f
                     setTextColor(Color.WHITE)
                 })
+            })
+            val info = listOf(findViewById<TextView>(R.id.dateGreg).text, findViewById<TextView>(R.id.dateText).text, findViewById<TextView>(R.id.weatherText).text)
+                .map { it.toString().trim() }.filter { it.isNotEmpty() }.joinToString("  •  ")
+            if (info.isNotEmpty()) addView(TextView(this@MainActivity).apply {
+                text = info; textSize = 12f; setTextColor(Color.WHITE); alpha = 0.85f
+                setPadding(dp(8), 0, dp(8), dp(6))
             })
             addView(cols); addView(rounds)
         }

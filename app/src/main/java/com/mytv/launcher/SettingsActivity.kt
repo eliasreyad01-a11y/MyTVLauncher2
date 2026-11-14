@@ -72,10 +72,7 @@ class SettingsActivity : AppCompatActivity() {
     )
 
     private val presets = listOf(
-        "kirkjufell" to R.string.preset_kirkjufell,
-        "photo1" to R.string.preset_photo1,
-        "photo3" to R.string.preset_photo3,
-        "photo6" to R.string.preset_photo6
+        "kirkjufell" to R.string.preset_kirkjufell
     )
 
     private val audioExts = setOf("mp3", "ogg", "m4a", "wav", "aac", "opus")
@@ -284,13 +281,6 @@ class SettingsActivity : AppCompatActivity() {
             showPresetDialog()
         }
         wallpaperRow = addRow(getString(R.string.wallpaper_choose), wallpaperSummary()) { showWallpaperDialog() }
-        builtinSlideRow = addRow(getString(R.string.slideshow_builtin), slideBuiltinSummary()) {
-            prefs.wallpaperType = "slideshow_builtin"
-            prefs.dim = 0
-            prefs.wallpaperStamp = System.currentTimeMillis()
-            if (::dimRow.isInitialized) dimRow.sub.text = getString(R.string.dim_fmt, prefs.dim)
-            refreshWallpaperRows()
-        }
         intervalRow = addRow(getString(R.string.slide_interval), intervalLabel()) { showIntervalDialog() }
         slideRow = addRow(getString(R.string.wallpaper_slideshow), slideSummary()) { showSlideshowDialog() }
         addRow(getString(R.string.wallpaper_reset), null) {

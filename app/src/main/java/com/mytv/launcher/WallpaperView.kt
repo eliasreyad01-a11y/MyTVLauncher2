@@ -177,9 +177,6 @@ class WallpaperView @JvmOverloads constructor(
     /** Only the Galata Tower / seagull photos are bundled; a removed preset falls back to the first Galata photo. */
     private fun photoRes(preset: String): Int = when (preset) {
         "kirkjufell" -> R.drawable.wp_kirkjufell
-        "photo1" -> R.drawable.wp_photo1
-        "photo3" -> R.drawable.wp_photo3
-        "photo6" -> R.drawable.wp_photo6
         else -> R.drawable.wp_kirkjufell
     }
 
@@ -265,9 +262,7 @@ class WallpaperView @JvmOverloads constructor(
     }
 
     companion object {
-        private val PHOTOS = intArrayOf(
-            R.drawable.wp_kirkjufell, R.drawable.wp_photo1, R.drawable.wp_photo3, R.drawable.wp_photo6
-        )
+        private val PHOTOS = intArrayOf(R.drawable.wp_kirkjufell)
     }
 }
 
