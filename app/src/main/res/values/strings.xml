@@ -161,4 +161,10 @@
     <string name="next_prayer_title">Next prayer</string>
     <string name="next_prayer_short">%1$s in %2$s</string>
     <string name="preset_kirkjufell">Kirkjufell, Iceland</string>
+    <string name="qs_dnd">Do not disturb</string>
+    <string name="qs_sleep_timer">Sleep timer</string>
+    <string name="qs_off">Off</string>
+    <string name="qs_min">min</string>
+    <string name="qs_power">Sleep</string>
+    <string name="qs_bluetooth">Bluetooth</string>
 </resources>

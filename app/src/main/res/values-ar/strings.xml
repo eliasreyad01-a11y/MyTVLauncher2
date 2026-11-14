@@ -161,4 +161,10 @@
     <string name="next_prayer_title">الصلاة القادمة</string>
     <string name="next_prayer_short">%1$s بعد %2$s</string>
     <string name="preset_kirkjufell">جبل كيركجوفيل · أيسلندا</string>
+    <string name="qs_dnd">عدم الإزعاج</string>
+    <string name="qs_sleep_timer">مؤقت النوم</string>
+    <string name="qs_off">متوقف</string>
+    <string name="qs_min">د</string>
+    <string name="qs_power">إيقاف التشغيل</string>
+    <string name="qs_bluetooth">البلوتوث</string>
 </resources>

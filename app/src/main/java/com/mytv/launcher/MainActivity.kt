@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Rect
+import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
@@ -17,6 +18,7 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.TextClock
@@ -1038,57 +1040,87 @@ class MainActivity : AppCompatActivity() {
 
     // ---------------------------------------------------------------- quick settings
 
+    private var sleepMinutes = 0
+    private val sleepRunnable = Runnable { sleepMinutes = 0; startScreensaver() }
+
     private fun showQuickSettings() {
-        val entries: List<Pair<Int, () -> Unit>> = listOf(
-            R.string.qs_network to { startActivitySafe(Intent(Settings.ACTION_WIFI_SETTINGS)) },
-            R.string.qs_display to { startActivitySafe(Intent(Settings.ACTION_DISPLAY_SETTINGS)) },
-            R.string.qs_sound to { startActivitySafe(Intent(Settings.ACTION_SOUND_SETTINGS)) },
-            R.string.qs_apps to { startActivitySafe(Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS)) },
-            R.string.qs_hidden to { showHiddenApps() },
-            R.string.qs_stats to { showStats() },
-            R.string.qs_tv to { startActivitySafe(Intent(Settings.ACTION_SETTINGS)) },
-            R.string.qs_launcher to { startActivity(Intent(this, SettingsActivity::class.java)) }
-        )
-        val content = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundResource(R.drawable.bg_menu)
-            setPadding(dp(6), dp(6), dp(6), dp(6))
-        }
         lateinit var popup: PopupWindow
-        for ((res, action) in entries) {
-            content.addView(TextView(this).apply {
-                text = getString(res)
-                textSize = 16f
-                setTextColor(ContextCompat.getColorStateList(this@MainActivity, R.color.menu_text)!!)
-                setPadding(dp(16), dp(10), dp(16), dp(10))
-                isFocusable = true
-                isClickable = true
-                setBackgroundResource(R.drawable.bg_menu_item)
-                setOnClickListener {
-                    popup.dismiss()
-                    action()
+        val tint = ContextCompat.getColorStateList(this, R.color.menu_text)!!
+        fun tile(icon: Int, title: String, sub: String?, w: Int, h: Int, big: Boolean, action: (TextView) -> Unit): View {
+            val sublabel = TextView(this).apply {
+                text = sub ?: ""; textSize = 12f; setTextColor(tint); alpha = 0.7f
+                visibility = if (sub == null) View.GONE else View.VISIBLE
+            }
+            val box = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = if (big) Gravity.BOTTOM else Gravity.CENTER_VERTICAL
+                setPadding(dp(14), dp(10), dp(14), dp(12))
+                isFocusable = true; isClickable = true
+                setBackgroundResource(R.drawable.bg_ctl_tile)
+                val img = ImageView(this@MainActivity).apply {
+                    setImageResource(icon); imageTintList = tint
                 }
-            }, LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ))
+                if (big) addView(img, LinearLayout.LayoutParams(dp(64), dp(64)).apply { gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = dp(18) })
+                else addView(img, LinearLayout.LayoutParams(dp(22), dp(22)))
+                addView(TextView(this@MainActivity).apply { text = title; textSize = 14f; setTextColor(tint); typeface = Typeface.DEFAULT_BOLD }.also { t ->
+                    if (!big) t.setPadding(0, dp(4), 0, 0)
+                })
+                addView(sublabel)
+                setOnClickListener { action(sublabel) }
+            }
+            return box.also { it.layoutParams = LinearLayout.LayoutParams(w, h).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) } }
         }
-        // Long list: it scrolls inside a panel no taller than the screen.
-        val maxH = (resources.displayMetrics.heightPixels * 0.78f).toInt()
-        content.measure(
-            View.MeasureSpec.makeMeasureSpec(dp(250), View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        )
-        val scroller = android.widget.ScrollView(this).apply {
-            isVerticalScrollBarEnabled = false
-            overScrollMode = View.OVER_SCROLL_NEVER
-            addView(content)
+        fun open(i: Intent) { popup.dismiss(); startActivitySafe(i) }
+        fun round(icon: Int, desc: String, action: () -> Unit): View = ImageView(this).apply {
+            setImageResource(icon); imageTintList = tint; contentDescription = desc
+            setPadding(dp(13), dp(13), dp(13), dp(13))
+            isFocusable = true; isClickable = true
+            setBackgroundResource(R.drawable.bg_round)
+            setOnClickListener { popup.dismiss(); action() }
+            layoutParams = LinearLayout.LayoutParams(dp(60), dp(60)).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) }
         }
-        popup = PopupWindow(scroller, dp(250), minOf(content.measuredHeight, maxH), true)
+        val cw = dp(130); val ch = dp(62)
+        val left = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(tile(R.drawable.ic_wifi, getString(R.string.qs_network), null, cw, ch, false) { open(Intent(Settings.ACTION_WIFI_SETTINGS)) })
+            addView(tile(R.drawable.ic_moon, getString(R.string.qs_dnd), null, cw, ch, false) {
+                open(Intent("android.settings.ZEN_MODE_SETTINGS"))
+            })
+            addView(tile(R.drawable.ic_timer, getString(R.string.qs_sleep_timer),
+                if (sleepMinutes == 0) getString(R.string.qs_off) else "$sleepMinutes ${getString(R.string.qs_min)}", cw, ch, false) { lbl ->
+                sleepMinutes = when (sleepMinutes) { 0 -> 15; 15 -> 30; 30 -> 60; else -> 0 }
+                handler.removeCallbacks(sleepRunnable)
+                if (sleepMinutes > 0) handler.postDelayed(sleepRunnable, sleepMinutes * 60_000L)
+                lbl.visibility = View.VISIBLE
+                lbl.text = if (sleepMinutes == 0) getString(R.string.qs_off) else "$sleepMinutes ${getString(R.string.qs_min)}"
+            })
+        }
+        val right = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(tile(R.drawable.ic_power, getString(R.string.qs_power), null, cw, ch * 2 + dp(8), true) { popup.dismiss(); startScreensaver() })
+            addView(tile(R.drawable.ic_bluetooth, getString(R.string.qs_bluetooth), null, cw, ch, false) { open(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) })
+        }
+        val cols = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; addView(left); addView(right) }
+        val rounds = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(round(R.drawable.ic_search, getString(R.string.search)) { showSearch() })
+            addView(round(R.drawable.ic_lock, getString(R.string.qs_hidden)) { showHiddenApps() })
+            addView(round(R.drawable.ic_access, getString(R.string.qs_tv)) { startActivitySafe(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) })
+            addView(round(R.drawable.ic_settings, getString(R.string.qs_launcher)) { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) })
+        }
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundResource(R.drawable.bg_ctl_panel)
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            addView(cols); addView(rounds)
+        }
+        panel.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+        popup = PopupWindow(panel, panel.measuredWidth, panel.measuredHeight, true)
         popup.elevation = dp(12).toFloat()
         popup.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         menuPopup = popup
         popup.showAsDropDown(btnSettings, 0, dp(8), Gravity.END)
-        content.getChildAt(0)?.requestFocus()
+        left.getChildAt(0)?.requestFocus()
     }
 
     /** Memory, storage and device facts, like Secreto's stats. */
