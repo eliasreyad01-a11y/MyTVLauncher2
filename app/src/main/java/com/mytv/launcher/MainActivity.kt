@@ -182,9 +182,9 @@ class MainActivity : AppCompatActivity() {
         Color.colorToHSV(clockTint, hsv)
         val s = (hsv[1] * 0.9f).coerceIn(0.30f, 0.55f)
         fun pastel(sat: Float) = Color.HSVToColor(floatArrayOf(hsv[0], sat, 0.98f)) and 0xFFFFFF
-        val top = (0x96 shl 24) or pastel(s * 0.55f)
-        val mid = (0x5A shl 24) or pastel(s)
-        val bot = (0x40 shl 24) or pastel(s * 0.8f)
+        val top = (0xB4 shl 24) or pastel(s * 0.55f)
+        val mid = (0x96 shl 24) or pastel(s)
+        val bot = (0x88 shl 24) or pastel(s * 0.8f)
         findViewById<GlassClock>(R.id.clock).glass = intArrayOf(top, mid, bot)
     }
 
@@ -347,13 +347,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        findViewById<View>(R.id.btnProfile).setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
+        findViewById<View>(R.id.btnProfile).setOnClickListener { openAccounts() }
         findViewById<View>(R.id.btnHome).setOnClickListener {
             grid.scrollToPosition(0)
             grid.post { updateScrollEffects(); tileOf(0)?.requestFocus() }
         }
         findViewById<View>(R.id.btnWave).setOnClickListener { startActivitySafe(Intent(Settings.ACTION_SOUND_SETTINGS)) }
-        findViewById<View>(R.id.btnBt).setOnClickListener { startActivitySafe(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) }
+        findViewById<View>(R.id.btnBt).setOnClickListener { openBluetooth() }
         btnSettings.setOnClickListener { showQuickSettings() }
 
         val prayerRow = findViewById<LinearLayout>(R.id.prayerRow)
@@ -895,6 +895,27 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Tries each intent in turn (TV firmwares differ in which settings screens exist). */
+    private fun openFirst(vararg intents: Intent) {
+        for (i in intents) {
+            try { startActivity(i); return } catch (e: Exception) { }
+        }
+        Toast.makeText(this, R.string.cannot_launch, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun openBluetooth() = openFirst(
+        Intent(Settings.ACTION_BLUETOOTH_SETTINGS),
+        Intent().setClassName("com.android.tv.settings", "com.android.tv.settings.accessories.AddAccessoryActivity"),
+        Intent().setClassName("com.android.settings", "com.android.settings.bluetooth.BluetoothSettings"),
+        Intent(Settings.ACTION_SETTINGS)
+    )
+
+    private fun openAccounts() = openFirst(
+        Intent(Settings.ACTION_SYNC_SETTINGS),
+        Intent(Settings.ACTION_ADD_ACCOUNT).putExtra(Settings.EXTRA_ACCOUNT_TYPES, arrayOf("com.google")),
+        Intent(Settings.ACTION_SETTINGS)
+    )
+
     private fun startActivitySafe(intent: Intent) {
         try {
             startActivity(intent)
@@ -1127,7 +1148,7 @@ class MainActivity : AppCompatActivity() {
         val right = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(tile(R.drawable.ic_power, getString(R.string.qs_power), null, cw, ch * 2 + dp(8), true) { popup.dismiss(); startScreensaver() })
-            addView(tile(R.drawable.ic_bluetooth, getString(R.string.qs_bluetooth), null, cw, ch, false) { open(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) })
+            addView(tile(R.drawable.ic_bluetooth, getString(R.string.qs_bluetooth), null, cw, ch, false) { popup.dismiss(); openBluetooth() })
         }
         val cols = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; addView(left); addView(right)
@@ -1146,6 +1167,7 @@ class MainActivity : AppCompatActivity() {
             setPadding(dp(8), dp(8), dp(8), dp(8))
             addView(LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.HORIZONTAL
+                layoutDirection = View.LAYOUT_DIRECTION_RTL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(4), dp(2), dp(8), dp(6))
                 fun mini(icon: Int, selected: Boolean, action: (() -> Unit)?) = ImageView(this@MainActivity).apply {
@@ -1156,11 +1178,11 @@ class MainActivity : AppCompatActivity() {
                     else if (action != null) { isFocusable = true; isClickable = true; setBackgroundResource(R.drawable.bg_mini); setOnClickListener { popup.dismiss(); action() } }
                     layoutParams = LinearLayout.LayoutParams(dp(30), dp(30)).apply { marginEnd = dp(8) }
                 }
-                addView(mini(R.drawable.ic_person, false) { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) })
+                addView(mini(R.drawable.ic_person, false) { openAccounts() })
                 addView(mini(R.drawable.ic_tune, true, null))
                 addView(mini(R.drawable.ic_home, false) { })
                 addView(mini(R.drawable.ic_wave, false) { startActivitySafe(Intent(Settings.ACTION_SOUND_SETTINGS)) })
-                addView(mini(R.drawable.ic_bluetooth, false) { startActivitySafe(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) })
+                addView(mini(R.drawable.ic_bluetooth, false) { openBluetooth() })
                 addView(View(this@MainActivity), LinearLayout.LayoutParams(0, 1, 1f))
                 addView(TextClock(this@MainActivity).apply {
                     format12Hour = "h:mm a"; format24Hour = "HH:mm"; textSize = 14f
