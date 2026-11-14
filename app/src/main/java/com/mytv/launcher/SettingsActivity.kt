@@ -343,14 +343,14 @@ class SettingsActivity : AppCompatActivity() {
     private fun buildHome() {
         spanRow = addRow(getString(R.string.apps_per_row), prefs.gridSpan.toString()) {
             val values = listOf(4, 5, 6, 7)
-            Dialogs.showChoice(this, getString(R.string.apps_per_row), values.map { it.toString() }) { which ->
+            Dialogs.showChoice(this, getString(R.string.apps_per_row), values.map { it.toString() }, values.indexOf(prefs.gridSpan)) { which ->
                 prefs.gridSpan = values[which]
                 spanRow.sub.text = prefs.gridSpan.toString()
             }
         }
         rowsRow = addRow(getString(R.string.rows_below_fav), rowsLabel(prefs.homeRows)) {
             val values = listOf(0, 1, 2, 3, 4, 5, 6, 8, 99)
-            Dialogs.showChoice(this, getString(R.string.rows_below_fav), values.map { rowsLabel(it) }) { which ->
+            Dialogs.showChoice(this, getString(R.string.rows_below_fav), values.map { rowsLabel(it) }, values.indexOf(prefs.homeRows)) { which ->
                 prefs.homeRows = values[which]
                 rowsRow.sub.text = rowsLabel(prefs.homeRows)
             }
@@ -373,7 +373,8 @@ class SettingsActivity : AppCompatActivity() {
         val values = listOf(0, 5, 10, 30, 60)
         Dialogs.showChoice(
             this, getString(R.string.screensaver),
-            values.map { if (it == 0) getString(R.string.off_label) else getString(R.string.minutes_fmt, it) }
+            values.map { if (it == 0) getString(R.string.off_label) else getString(R.string.minutes_fmt, it) },
+            values.indexOf(prefs.screensaverMinutes)
         ) { which ->
             prefs.screensaverMinutes = values[which]
             ssRow.sub.text = screensaverLabel()
@@ -425,7 +426,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun showVolumeDialog() {
         val values = listOf(20, 40, 60, 80, 100)
-        Dialogs.showChoice(this, getString(R.string.adhan_volume), values.map { "$it%" }) { which ->
+        Dialogs.showChoice(this, getString(R.string.adhan_volume), values.map { "$it%" }, values.indexOf(prefs.adhanVolume)) { which ->
             prefs.adhanVolume = values[which]
             volumeRow.sub.text = "${prefs.adhanVolume}%"
         }
@@ -590,7 +591,7 @@ class SettingsActivity : AppCompatActivity() {
         methods.firstOrNull { it.first == prefs.method }?.second ?: "#${prefs.method}"
 
     private fun showMethodDialog() {
-        Dialogs.showChoice(this, getString(R.string.calc_method), methods.map { it.second }) { which ->
+        Dialogs.showChoice(this, getString(R.string.calc_method), methods.map { it.second }, methods.indexOfFirst { it.first == prefs.method }) { which ->
             prefs.method = methods[which].first
             methodRow.sub.text = methodLabel()
             AdhanScheduler.reschedule(this)
@@ -930,7 +931,7 @@ class SettingsActivity : AppCompatActivity() {
     private fun showTimeFormatDialog() {
         val codes = listOf("system", "12", "24")
         val labels = listOf(getString(R.string.lang_system), getString(R.string.time_12), getString(R.string.time_24))
-        Dialogs.showChoice(this, getString(R.string.time_format), labels) { which ->
+        Dialogs.showChoice(this, getString(R.string.time_format), labels, codes.indexOf(prefs.timeFormat)) { which ->
             prefs.timeFormat = codes[which]
             timeRow.sub.text = timeFormatLabel()
         }
@@ -939,7 +940,7 @@ class SettingsActivity : AppCompatActivity() {
     private fun showLanguageDialog() {
         val codes = listOf("system", "ar", "en")
         val labels = listOf(getString(R.string.lang_system), getString(R.string.lang_ar), getString(R.string.lang_en))
-        Dialogs.showChoice(this, getString(R.string.language), labels) { which ->
+        Dialogs.showChoice(this, getString(R.string.language), labels, codes.indexOf(prefs.language)) { which ->
             val code = codes[which]
             prefs.language = code
             AppCompatDelegate.setApplicationLocales(
