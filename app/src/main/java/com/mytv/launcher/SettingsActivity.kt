@@ -427,6 +427,10 @@ class SettingsActivity : AppCompatActivity() {
         }
         box.addView(titleView)
         box.addView(subView)
+        box.setOnFocusChangeListener { _, f ->
+            titleView.setTextColor(Color.parseColor(if (f) "#10151B" else "#F4F8FF"))
+            subView.setTextColor(Color.parseColor(if (f) "#4A5560" else "#C0D4E1"))
+        }
         container.addView(box, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
         ).apply { setMargins(0, dp(4), 0, dp(4)) })
