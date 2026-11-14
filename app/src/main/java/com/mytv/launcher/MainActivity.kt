@@ -130,18 +130,29 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var wallFgKey = 0
-    private var wallBlurred = false
+    private fun updateScrollEffects() {
+                val off = grid.computeVerticalScrollOffset()
+                val open = listOffset().toFloat()
+                val a = (1f - off / (open * 0.6f)).coerceIn(0f, 1f)
+                if (a != lastScrollAlpha) {
+                    lastScrollAlpha = a
+                    hero.alpha = a
+                    infoBlock.alpha = a
+                    clockBox.alpha = a
+                    adhanStop.alpha = a
+                    wallFg.alpha = a
+                }
+                // The wallpaper sinks into darkness as the rows scroll up.
+                val p = (off / (open * 0.75f)).coerceIn(0f, 1f)
+                if (p != lastScrollDim) {
+                    lastScrollDim = p
+                    dim.alpha = p * 0.75f
+                    applyRowAlpha()
+                }
+            }
+
     private var lastScrollAlpha = -1f
     private var lastScrollDim = -1f
-
-    /** tvOS-style frosted wallpaper behind the app list (Android 12+; older boxes keep the plain dim). */
-    private fun setWallBlur(on: Boolean) {
-        if (on == wallBlurred || android.os.Build.VERSION.SDK_INT < 31) return
-        wallBlurred = on
-        findViewById<View>(R.id.wallpaper).setRenderEffect(
-            if (on) android.graphics.RenderEffect.createBlurEffect(40f, 40f, android.graphics.Shader.TileMode.CLAMP) else null
-        )
-    }
 
     private fun applyRowAlpha() {
         val a = rowAlpha()
@@ -307,27 +318,7 @@ class MainActivity : AppCompatActivity() {
         grid.addItemDecoration(DockBand(this, adapter))
         // The cards and title above the dock fade away as the rows scroll up over them.
         grid.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
-                val off = rv.computeVerticalScrollOffset()
-                val open = listOffset().toFloat()
-                val a = (1f - off / (open * 0.6f)).coerceIn(0f, 1f)
-                if (a != lastScrollAlpha) {
-                    lastScrollAlpha = a
-                    hero.alpha = a
-                    infoBlock.alpha = a
-                    clockBox.alpha = a
-                    adhanStop.alpha = a
-                    wallFg.alpha = a
-                }
-                // The wallpaper sinks into darkness as the rows scroll up.
-                val p = (off / (open * 0.75f)).coerceIn(0f, 1f)
-                if (p != lastScrollDim) {
-                    lastScrollDim = p
-                    dim.alpha = p * 0.55f
-                    setWallBlur(p > 0.5f)
-                    applyRowAlpha()
-                }
-            }
+            override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) = updateScrollEffects()
         })
         // At home only the dock shows; the app rows fade in as the list opens.
         grid.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
@@ -505,6 +496,9 @@ class MainActivity : AppCompatActivity() {
         menuPopup?.let { try { it.dismiss() } catch (e: Exception) { } }
         menuPopup = null
         grid.scrollToPosition(0)
+        lastScrollAlpha = -1f
+        lastScrollDim = -1f
+        grid.post { updateScrollEffects() }
         val adhan = intent.getBooleanExtra("adhan_stop", false)
         updateAdhanStop(adhan)
         if (!adhan) {
@@ -1174,8 +1168,8 @@ class MainActivity : AppCompatActivity() {
                     setTextColor(Color.WHITE)
                 })
             })
-            val info = listOf(findViewById<TextView>(R.id.dateGreg).text, findViewById<TextView>(R.id.dateText).text, findViewById<TextView>(R.id.weatherText).text)
-                .map { it.toString().trim() }.filter { it.isNotEmpty() }.joinToString("  •  ")
+            val info = listOf<View?>(findViewById(R.id.dateGreg), dateText, weatherText)
+                .map { ((it as? TextView)?.text ?: "").toString().trim() }.filter { it.isNotEmpty() }.joinToString("  •  ")
             if (info.isNotEmpty()) addView(TextView(this@MainActivity).apply {
                 text = info; textSize = 12f; setTextColor(Color.WHITE); alpha = 0.85f
                 setPadding(dp(8), 0, dp(8), dp(6))
