@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -36,6 +37,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private lateinit var prefs: Prefs
     private lateinit var container: LinearLayout
+    private lateinit var titleView: TextView
     private lateinit var cityRow: Row
     private lateinit var methodRow: Row
     private lateinit var soundRow: Row
@@ -200,15 +202,44 @@ class SettingsActivity : AppCompatActivity() {
         prefs = Prefs(this)
 
         val scroll = ScrollView(this).apply {
-            isFillViewport = true
-            setBackgroundResource(R.drawable.bg_settings)
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
         }
         container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(72), dp(38), dp(72), dp(38))
+            setPadding(0, dp(8), dp(8), dp(40))
         }
         scroll.addView(container)
-        setContentView(scroll)
+        titleView = TextView(this).apply {
+            textSize = 32f
+            setTextColor(Color.parseColor("#B3F4F8FF"))
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            gravity = android.view.Gravity.CENTER
+        }
+        val tile = android.widget.FrameLayout(this).apply {
+            setBackgroundResource(R.drawable.bg_settings_tile)
+            addView(android.widget.ImageView(this@SettingsActivity).apply {
+                setImageResource(R.drawable.ic_tune)
+                imageTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#66FFFFFF"))
+            }, android.widget.FrameLayout.LayoutParams(dp(120), dp(120), android.view.Gravity.CENTER))
+        }
+        val left = android.widget.FrameLayout(this).apply {
+            addView(tile, android.widget.FrameLayout.LayoutParams(dp(230), dp(230), android.view.Gravity.CENTER))
+        }
+        val body = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(left, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
+            addView(scroll, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1.25f))
+        }
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutDirection = View.LAYOUT_DIRECTION_LTR
+            setBackgroundResource(R.drawable.bg_settings)
+            setPadding(dp(64), dp(28), dp(64), 0)
+            addView(titleView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(18) })
+            addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        }
+        setContentView(root)
         build()
     }
 
@@ -221,19 +252,15 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun build() {
         val section = intent.getStringExtra("section")
-        container.addView(TextView(this).apply {
-            text = getString(
-                when (section) {
-                    "prayer" -> R.string.cat_prayer
-                    "wallpaper" -> R.string.cat_wallpaper
-                    "home" -> R.string.cat_home
-                    "general" -> R.string.cat_general
-                    else -> R.string.settings_title
-                }
-            )
-            textSize = 34f
-            setTextColor(Color.parseColor("#F4F8FF"))
-        })
+        titleView.text = getString(
+            when (section) {
+                "prayer" -> R.string.cat_prayer
+                "wallpaper" -> R.string.cat_wallpaper
+                "home" -> R.string.cat_home
+                "general" -> R.string.cat_general
+                else -> R.string.settings_title
+            }
+        )
         when (section) {
             "prayer" -> buildPrayer()
             "wallpaper" -> buildWallpaper()
@@ -310,7 +337,6 @@ class SettingsActivity : AppCompatActivity() {
         addToggle(getString(R.string.glossy_tiles), prefs.glossy) { prefs.glossy = it }
         addToggle(getString(R.string.focus_animation), prefs.animations) { prefs.animations = it }
         addToggle(getString(R.string.show_greeting), prefs.showGreeting) { prefs.showGreeting = it }
-        addToggle(getString(R.string.show_wifi_btn), prefs.showWifiButton) { prefs.showWifiButton = it }
         addToggle(getString(R.string.card_prayer), prefs.showPrayerCard) { prefs.showPrayerCard = it }
         addToggle(getString(R.string.card_weather), prefs.showWeather) { prefs.showWeather = it }
         timeRow = addRow(getString(R.string.time_format), timeFormatLabel()) { showTimeFormatDialog() }
@@ -387,50 +413,65 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun addLabel(textRes: Int) {
         container.addView(TextView(this).apply {
-            text = getString(textRes)
+            text = getString(textRes).uppercase(Locale.getDefault())
             textSize = 14f
-            setTextColor(Color.parseColor("#ACB8C1"))
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#99C0D4E1"))
         }, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { setMargins(dp(4), dp(4), 0, dp(2)) })
+        ).apply { setMargins(dp(14), dp(22), 0, dp(6)) })
     }
 
-    private fun addRow(title: String, subtitle: String?, onClick: () -> Unit): Row {
+    private fun addRow(title: String, subtitle: String?, chevron: Boolean = true, onClick: () -> Unit): Row {
         val box = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
             isFocusable = true
             isClickable = true
+            minimumHeight = dp(54)
             setBackgroundResource(R.drawable.bg_row)
-            setPadding(dp(20), dp(12), dp(20), dp(12))
+            setPadding(dp(18), dp(10), dp(14), dp(10))
             setOnClickListener { onClick() }
         }
         val titleView = TextView(this).apply {
             text = title
-            textSize = 20f
+            textSize = 19f
+            textAlignment = View.TEXT_ALIGNMENT_VIEW_START
             setTextColor(Color.parseColor("#F4F8FF"))
         }
         val subView = TextView(this).apply {
             text = subtitle ?: ""
-            textSize = 14f
-            setTextColor(Color.parseColor("#C0D4E1"))
+            textSize = 16f
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            maxWidth = (resources.displayMetrics.widthPixels * 0.22f).toInt()
+            setTextColor(Color.parseColor("#B8C6D2"))
             visibility = if (subtitle == null) View.GONE else View.VISIBLE
         }
-        box.addView(titleView)
-        box.addView(subView)
+        val arrow = TextView(this).apply {
+            text = "\u203A"
+            textSize = 26f
+            setTextColor(Color.parseColor("#B8C6D2"))
+            visibility = if (chevron) View.VISIBLE else View.GONE
+        }
+        box.addView(titleView, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        box.addView(subView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(10) })
+        box.addView(arrow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(10) })
         box.setOnFocusChangeListener { _, f ->
             titleView.setTextColor(Color.parseColor(if (f) "#10151B" else "#F4F8FF"))
-            subView.setTextColor(Color.parseColor(if (f) "#4A5560" else "#C0D4E1"))
+            subView.setTextColor(Color.parseColor(if (f) "#4A5560" else "#B8C6D2"))
+            arrow.setTextColor(Color.parseColor(if (f) "#4A5560" else "#B8C6D2"))
         }
         container.addView(box, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { setMargins(0, dp(4), 0, dp(4)) })
+        ).apply { setMargins(0, dp(3), 0, dp(3)) })
         return Row(titleView, subView)
     }
 
     private fun addToggle(title: String, initial: Boolean, onChange: (Boolean) -> Unit) {
         var state = initial
         lateinit var row: Row
-        row = addRow(title, onOff(state)) {
+        row = addRow(title, onOff(state), false) {
             state = !state
             row.sub.text = onOff(state)
             onChange(state)

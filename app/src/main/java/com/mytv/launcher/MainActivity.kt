@@ -182,9 +182,9 @@ class MainActivity : AppCompatActivity() {
         Color.colorToHSV(clockTint, hsv)
         val s = (hsv[1] * 0.9f).coerceIn(0.30f, 0.55f)
         fun pastel(sat: Float) = Color.HSVToColor(floatArrayOf(hsv[0], sat, 0.98f)) and 0xFFFFFF
-        val top = (0xB4 shl 24) or pastel(s * 0.55f)
-        val mid = (0x96 shl 24) or pastel(s)
-        val bot = (0x88 shl 24) or pastel(s * 0.8f)
+        val top = (0x96 shl 24) or pastel(s * 0.55f)
+        val mid = (0x5A shl 24) or pastel(s)
+        val bot = (0x40 shl 24) or pastel(s * 0.8f)
         findViewById<GlassClock>(R.id.clock).glass = intArrayOf(top, mid, bot)
     }
 
@@ -347,13 +347,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        findViewById<View>(R.id.btnWifi).setOnClickListener {
-            startActivitySafe(Intent(Settings.ACTION_WIFI_SETTINGS))
+        findViewById<View>(R.id.btnProfile).setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
+        findViewById<View>(R.id.btnHome).setOnClickListener {
+            grid.scrollToPosition(0)
+            grid.post { updateScrollEffects(); tileOf(0)?.requestFocus() }
         }
-        findViewById<View>(R.id.btnNet).setOnClickListener {
-            startActivitySafe(Intent(Settings.ACTION_WIRELESS_SETTINGS))
-        }
-        findViewById<View>(R.id.btnSearch).setOnClickListener { showSearch() }
+        findViewById<View>(R.id.btnWave).setOnClickListener { startActivitySafe(Intent(Settings.ACTION_SOUND_SETTINGS)) }
+        findViewById<View>(R.id.btnBt).setOnClickListener { startActivitySafe(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) }
         btnSettings.setOnClickListener { showQuickSettings() }
 
         val prayerRow = findViewById<LinearLayout>(R.id.prayerRow)
@@ -792,7 +792,6 @@ class MainActivity : AppCompatActivity() {
         }
         if (changed) adapter.notifyDataSetChanged()
         greeting.visibility = if (prefs.showGreeting) View.VISIBLE else View.GONE
-        findViewById<View>(R.id.btnWifi).visibility = if (prefs.showWifiButton) View.VISIBLE else View.GONE
     }
 
 
@@ -1084,15 +1083,15 @@ class MainActivity : AppCompatActivity() {
             val box = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = if (big) Gravity.BOTTOM else Gravity.CENTER_VERTICAL
-                setPadding(dp(14), dp(10), dp(14), dp(12))
+                setPadding(dp(12), dp(8), dp(12), dp(8))
                 isFocusable = true; isClickable = true
                 setBackgroundResource(R.drawable.bg_ctl_tile)
                 val img = ImageView(this@MainActivity).apply {
                     setImageResource(icon); imageTintList = tint; isDuplicateParentStateEnabled = true
                 }
-                if (big) addView(img, LinearLayout.LayoutParams(dp(64), dp(64)).apply { gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = dp(18) })
+                if (big) addView(img, LinearLayout.LayoutParams(dp(52), dp(52)).apply { gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = dp(12) })
                 else addView(img, LinearLayout.LayoutParams(dp(22), dp(22)))
-                addView(TextView(this@MainActivity).apply { text = title; textSize = 14f; setTextColor(tint); typeface = Typeface.DEFAULT_BOLD; isDuplicateParentStateEnabled = true }.also { t ->
+                addView(TextView(this@MainActivity).apply { text = title; textSize = 13f; setTextColor(tint); typeface = Typeface.DEFAULT_BOLD; isDuplicateParentStateEnabled = true }.also { t ->
                     if (!big) t.setPadding(0, dp(4), 0, 0)
                 })
                 addView(sublabel)
@@ -1103,13 +1102,13 @@ class MainActivity : AppCompatActivity() {
         fun open(i: Intent) { popup.dismiss(); startActivitySafe(i) }
         fun round(icon: Int, desc: String, action: () -> Unit): View = ImageView(this).apply {
             setImageResource(icon); imageTintList = tint; contentDescription = desc
-            setPadding(dp(13), dp(13), dp(13), dp(13))
+            setPadding(dp(11), dp(11), dp(11), dp(11))
             isFocusable = true; isClickable = true
             setBackgroundResource(R.drawable.bg_round)
             setOnClickListener { popup.dismiss(); action() }
-            layoutParams = LinearLayout.LayoutParams(dp(60), dp(60)).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) }
+            layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) }
         }
-        val cw = dp(130); val ch = dp(62)
+        val cw = dp(108); val ch = dp(50)
         val left = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(tile(R.drawable.ic_wifi, getString(R.string.qs_network), null, cw, ch, false) { open(Intent(Settings.ACTION_WIFI_SETTINGS)) })
@@ -1132,7 +1131,7 @@ class MainActivity : AppCompatActivity() {
         }
         val cols = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; addView(left); addView(right)
-            addView(VolumePill(this@MainActivity), LinearLayout.LayoutParams(dp(56), ViewGroup.LayoutParams.MATCH_PARENT).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) })
+            addView(VolumePill(this@MainActivity), LinearLayout.LayoutParams(dp(44), ViewGroup.LayoutParams.MATCH_PARENT).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) })
         }
         val rounds = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -1446,6 +1445,9 @@ class MainActivity : AppCompatActivity() {
         val greg = SimpleDateFormat("d MMMM yyyy", locale).apply { timeZone = cityTz }.format(Date())
         val dayMonth = SimpleDateFormat("EEEE d MMMM", locale).apply { timeZone = cityTz }.format(Date())
         findViewById<TextView>(R.id.dateGreg).text = dayMonth
+        val is24 = TimeFmt.is24(this, prefs)
+        val tm = SimpleDateFormat(if (is24) "HH:mm" else "h:mm a", Locale.US).apply { timeZone = cityTz }.format(Date())
+        findViewById<TextView>(R.id.headerTime).text = tm.replace("AM", "ص").replace("PM", "م")
 
         refreshWeather()
         val np = nextPrayer

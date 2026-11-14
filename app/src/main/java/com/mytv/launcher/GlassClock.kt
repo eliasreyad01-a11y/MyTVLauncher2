@@ -26,7 +26,7 @@ class GlassClock @JvmOverloads constructor(
 
     private var shader: Shader? = null
     private var shaderH = 0f
-    private val rim = 1.4f * resources.displayMetrics.density
+    private val rim = 2f * resources.displayMetrics.density
 
     override fun onDraw(canvas: Canvas) {
         val p = paint
