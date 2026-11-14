@@ -236,11 +236,22 @@ class SettingsActivity : AppCompatActivity() {
             layoutDirection = View.LAYOUT_DIRECTION_LTR
             setBackgroundResource(R.drawable.bg_settings)
             setPadding(dp(64), dp(28), dp(64), 0)
+            try {
+                val o = android.graphics.BitmapFactory.Options().apply { inSampleSize = 24 }
+                val small = android.graphics.BitmapFactory.decodeResource(resources, R.drawable.wp_kirkjufell, o)
+                if (small != null) {
+                    val bd = android.graphics.drawable.BitmapDrawable(resources, small).apply { isFilterBitmap = true; gravity = android.view.Gravity.FILL }
+                    val shade = android.graphics.drawable.ColorDrawable(Color.parseColor("#7A0E1A1F"))
+                    background = android.graphics.drawable.LayerDrawable(arrayOf(bd, shade))
+                }
+            } catch (_: Throwable) {}
             addView(titleView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(18) })
             addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         }
         setContentView(root)
         build()
+        body.alpha = 0f; body.translationX = dp(40).toFloat()
+        body.animate().alpha(1f).translationX(0f).setDuration(320).start()
     }
 
     override fun onPause() {
@@ -428,7 +439,7 @@ class SettingsActivity : AppCompatActivity() {
             gravity = android.view.Gravity.CENTER_VERTICAL
             isFocusable = true
             isClickable = true
-            minimumHeight = dp(54)
+            minimumHeight = dp(56)
             setBackgroundResource(R.drawable.bg_row)
             setPadding(dp(18), dp(10), dp(14), dp(10))
             setOnClickListener { onClick() }
@@ -458,6 +469,7 @@ class SettingsActivity : AppCompatActivity() {
         box.addView(subView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(10) })
         box.addView(arrow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(10) })
         box.setOnFocusChangeListener { _, f ->
+            box.animate().scaleX(if (f) 1.03f else 1f).scaleY(if (f) 1.03f else 1f).setDuration(140).start()
             titleView.setTextColor(Color.parseColor(if (f) "#10151B" else "#F4F8FF"))
             subView.setTextColor(Color.parseColor(if (f) "#4A5560" else "#B8C6D2"))
             arrow.setTextColor(Color.parseColor(if (f) "#4A5560" else "#B8C6D2"))
