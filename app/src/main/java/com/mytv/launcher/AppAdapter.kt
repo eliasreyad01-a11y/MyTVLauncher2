@@ -48,6 +48,7 @@ class AppAdapter(
 
     class VH(view: View) : RecyclerView.ViewHolder(view) {
         var fgRes = 0
+        var item: AppItem? = null
         val tile: View = view.findViewById(R.id.tile)
         val banner: ImageView = view.findViewById(R.id.banner)
         val iconBox: View = view.findViewById(R.id.iconBox)
@@ -57,7 +58,22 @@ class AppAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_app, parent, false)
-        return VH(view)
+        val holder = VH(view)
+        // Listeners are set once per view, not on every bind (binds happen while the rows scroll).
+        holder.tile.setOnClickListener {
+            val it2 = holder.item
+            if (it2 != null && movingPackage == null) onClick(it2)
+        }
+        holder.tile.setOnLongClickListener {
+            val it2 = holder.item
+            if (it2 != null && movingPackage == null) onLongClick(it2, this)
+            true
+        }
+        holder.tile.setOnFocusChangeListener { _, hasFocus ->
+            val it2 = holder.item
+            if (hasFocus && it2 != null) onFocus?.invoke(it2)
+        }
+        return holder
     }
 
     override fun getItemCount(): Int = items.size
@@ -67,6 +83,7 @@ class AppAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = items[position]
+        holder.item = item
         val pad = item.packageName.startsWith(PAD_PREFIX)
         holder.itemView.visibility = if (pad) View.INVISIBLE else View.VISIBLE
         holder.tile.isFocusable = !pad
@@ -90,17 +107,6 @@ class AppAdapter(
         if (holder.fgRes != fgRes) {
             holder.fgRes = fgRes
             holder.tile.foreground = androidx.core.content.ContextCompat.getDrawable(holder.tile.context, fgRes)
-        }
-
-        holder.tile.setOnClickListener {
-            if (movingPackage == null) onClick(item)
-        }
-        holder.tile.setOnLongClickListener {
-            if (movingPackage == null) onLongClick(item, this)
-            true
-        }
-        holder.tile.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) onFocus?.invoke(item)
         }
     }
 

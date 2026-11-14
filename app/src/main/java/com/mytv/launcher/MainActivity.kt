@@ -129,7 +129,10 @@ class MainActivity : AppCompatActivity() {
         if (only != null) shift(only) else for (i in 0 until grid.childCount) shift(grid.getChildAt(i))
     }
 
+    private var wallFgKey = 0
     private var wallBlurred = false
+    private var lastScrollAlpha = -1f
+    private var lastScrollDim = -1f
 
     /** tvOS-style frosted wallpaper behind the app list (Android 12+; older boxes keep the plain dim). */
     private fun setWallBlur(on: Boolean) {
@@ -145,14 +148,20 @@ class MainActivity : AppCompatActivity() {
         for (i in 0 until grid.childCount) {
             val v = grid.getChildAt(i)
             val p = grid.getChildAdapterPosition(v)
-            v.alpha = if (p >= adapter.dockCount && adapter.dockCount > 0) a else 1f
+            val t = if (p >= adapter.dockCount && adapter.dockCount > 0) a else 1f
+            if (v.alpha != t) v.alpha = t
         }
     }
 
 
     /** The clock is glass: white at the top, taking on the wallpaper's colour towards the bottom. */
+    private var clockShaderApplied = false
+
     private fun tintClock() {
-        clockTint = wallpaper.sampleColor() ?: 0xFF9FD8EA.toInt()
+        val t = wallpaper.sampleColor() ?: 0xFF9FD8EA.toInt()
+        if (t == clockTint && clockShaderApplied) return
+        clockTint = t
+        clockShaderApplied = true
         applyClockShader()
     }
 
@@ -308,6 +317,8 @@ class MainActivity : AppCompatActivity() {
         grid.layoutManager = gridManager
         grid.adapter = adapter
         grid.setHasFixedSize(true)
+        grid.setItemViewCacheSize(span * 2)
+        grid.recycledViewPool.setMaxRecycledViews(0, span * 4)
         grid.itemAnimator = null
         grid.addItemDecoration(DockBand(this, adapter))
         // The cards and title above the dock fade away as the rows scroll up over them.
@@ -316,16 +327,22 @@ class MainActivity : AppCompatActivity() {
                 val off = rv.computeVerticalScrollOffset()
                 val open = listOffset().toFloat()
                 val a = (1f - off / (open * 0.6f)).coerceIn(0f, 1f)
-                hero.alpha = a
-                infoBlock.alpha = a
-                clockBox.alpha = a
-                adhanStop.alpha = a
-                wallFg.alpha = a.coerceAtLeast(0f)
+                if (a != lastScrollAlpha) {
+                    lastScrollAlpha = a
+                    hero.alpha = a
+                    infoBlock.alpha = a
+                    clockBox.alpha = a
+                    adhanStop.alpha = a
+                    wallFg.alpha = a
+                }
                 // The wallpaper sinks into darkness as the rows scroll up.
                 val p = (off / (open * 0.75f)).coerceIn(0f, 1f)
-                dim.alpha = p * 0.55f
-                setWallBlur(p > 0.5f)
-                applyRowAlpha()
+                if (p != lastScrollDim) {
+                    lastScrollDim = p
+                    dim.alpha = p * 0.55f
+                    setWallBlur(p > 0.5f)
+                    applyRowAlpha()
+                }
             }
         })
         // At home only the dock shows; the app rows fade in as the list opens.
@@ -395,10 +412,14 @@ class MainActivity : AppCompatActivity() {
         wallpaper.onResume()
         val fgRes = wallpaper.foregroundRes(prefs)
         if (fgRes != 0) {
-            wallFg.setImageResource(fgRes)
-            wallFg.colorFilter = android.graphics.PorterDuffColorFilter(
-                Color.argb(prefs.dim.coerceIn(0, 90) * 255 / 100, 0, 0, 0), android.graphics.PorterDuff.Mode.SRC_ATOP
-            )
+            val fgKey = fgRes * 1000 + prefs.dim.coerceIn(0, 90)
+            if (fgKey != wallFgKey) {
+                wallFgKey = fgKey
+                wallFg.setImageResource(fgRes)
+                wallFg.colorFilter = android.graphics.PorterDuffColorFilter(
+                    Color.argb(prefs.dim.coerceIn(0, 90) * 255 / 100, 0, 0, 0), android.graphics.PorterDuff.Mode.SRC_ATOP
+                )
+            }
             wallFg.visibility = View.VISIBLE
         } else wallFg.visibility = View.GONE
         wallpaper.post { tintClock() }
@@ -630,7 +651,24 @@ class MainActivity : AppCompatActivity() {
     private val glowTileLoc = IntArray(2)
     private val glowRootLoc = IntArray(2)
 
+    private var lastLocX = Int.MIN_VALUE
+    private var lastLocY = 0
+    private var lastTW = 0
+    private var lastTH = 0
+    private var lastSX = 0f
+    private var lastTag: Any? = null
+    private var lastItem: Any? = null
+
     private fun placeGlow(tile: View, glide: Boolean) {
+        // Runs before every frame: when the focused tile has not moved, resized or changed there is nothing to do.
+        tile.getLocationInWindow(glowTileLoc)
+        if (!glide && glowOffX == 0f && glowOffY == 0f && tile === glowTile && glow.visibility == View.VISIBLE &&
+            glowTileLoc[0] == lastLocX && glowTileLoc[1] == lastLocY && tile.width == lastTW && tile.height == lastTH &&
+            tile.scaleX == lastSX && tile.tag === lastTag && tile.getTag(R.id.tile) === lastItem
+        ) return
+        lastLocX = glowTileLoc[0]; lastLocY = glowTileLoc[1]
+        lastTW = tile.width; lastTH = tile.height; lastSX = tile.scaleX
+        lastTag = tile.tag; lastItem = tile.getTag(R.id.tile)
         val visible = glowVisible
         if (!tile.isShown || !tile.getGlobalVisibleRect(visible) || visible.height() < tile.height * 0.5f) {
             glow.visibility = View.INVISIBLE
@@ -639,7 +677,6 @@ class MainActivity : AppCompatActivity() {
         }
         val tileLoc = glowTileLoc
         val rootLoc = glowRootLoc
-        tile.getLocationInWindow(tileLoc)
         (glow.parent as View).getLocationInWindow(rootLoc)
         // getLocationInWindow includes the tile's current scale, so recover its centre first.
         val cx = tileLoc[0] - rootLoc[0] + tile.width * tile.scaleX / 2f

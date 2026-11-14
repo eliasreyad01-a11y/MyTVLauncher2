@@ -20,30 +20,44 @@ object AppRepository {
     /** Lists every launchable app (TV and regular launcher entries), without duplicates. */
     fun load(context: Context): List<AppItem> {
         val pm = context.packageManager
-        val result = LinkedHashMap<String, AppItem>()
+        val res = context.resources
+        // 1) cheap pass: which apps exist (TV entries win over plain launcher entries)
+        class Entry(val pkg: String, val info: android.content.pm.ResolveInfo, val category: String)
+        val entries = LinkedHashMap<String, Entry>()
         for (category in listOf(Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER)) {
             val query = Intent(Intent.ACTION_MAIN).addCategory(category)
             for (info in pm.queryIntentActivities(query, 0)) {
                 val pkg = info.activityInfo.packageName
-                if (pkg == context.packageName || result.containsKey(pkg)) continue
-                val intent = Intent(Intent.ACTION_MAIN)
-                    .addCategory(category)
-                    .setClassName(pkg, info.activityInfo.name)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
-                val banner = try {
-                    info.activityInfo.loadBanner(pm)
-                } catch (e: Exception) {
-                    null
-                }
-                // Pre-scaled to the size they are shown at: big original banners would cost memory and slow
-                // the first scroll (the GPU has to upload each full-size image).
-                val res = context.resources
-                val smallBanner = banner?.let { scaled(res, it, 320, 180) }
-                val smallIcon = scaled(res, info.loadIcon(pm), 96, 96)
-                result[pkg] = AppItem(pkg, info.loadLabel(pm).toString(), smallIcon, smallBanner, intent)
+                if (pkg == context.packageName || entries.containsKey(pkg)) continue
+                entries[pkg] = Entry(pkg, info, category)
             }
         }
-        return result.values.toList()
+        // 2) the slow part (label, icon, banner, scaling) runs on a few threads at once; order is kept.
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(4)
+        try {
+            val futures = entries.values.map { e ->
+                pool.submit<AppItem> {
+                    val info = e.info
+                    val intent = Intent(Intent.ACTION_MAIN)
+                        .addCategory(e.category)
+                        .setClassName(e.pkg, info.activityInfo.name)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                    val banner = try {
+                        info.activityInfo.loadBanner(pm)
+                    } catch (ex: Exception) {
+                        null
+                    }
+                    // Pre-scaled to the size they are shown at: big original banners would cost memory and slow
+                    // the first scroll (the GPU has to upload each full-size image).
+                    val smallBanner = banner?.let { scaled(res, it, 320, 180) }
+                    val smallIcon = scaled(res, info.loadIcon(pm), 96, 96)
+                    AppItem(e.pkg, info.loadLabel(pm).toString(), smallIcon, smallBanner, intent)
+                }
+            }
+            return futures.map { it.get() }
+        } finally {
+            pool.shutdown()
+        }
     }
 
     /** Draws [d] into a w×h bitmap, centre-cropped (same as the tile's centerCrop), so the tile shows it 1:1. */
