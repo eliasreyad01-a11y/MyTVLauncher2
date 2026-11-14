@@ -129,6 +129,17 @@ class MainActivity : AppCompatActivity() {
         if (only != null) shift(only) else for (i in 0 until grid.childCount) shift(grid.getChildAt(i))
     }
 
+    private var wallBlurred = false
+
+    /** tvOS-style frosted wallpaper behind the app list (Android 12+; older boxes keep the plain dim). */
+    private fun setWallBlur(on: Boolean) {
+        if (on == wallBlurred || android.os.Build.VERSION.SDK_INT < 31) return
+        wallBlurred = on
+        findViewById<View>(R.id.wallpaper).setRenderEffect(
+            if (on) android.graphics.RenderEffect.createBlurEffect(40f, 40f, android.graphics.Shader.TileMode.CLAMP) else null
+        )
+    }
+
     private fun applyRowAlpha() {
         val a = rowAlpha()
         for (i in 0 until grid.childCount) {
@@ -311,7 +322,9 @@ class MainActivity : AppCompatActivity() {
                 adhanStop.alpha = a
                 wallFg.alpha = a.coerceAtLeast(0f)
                 // The wallpaper sinks into darkness as the rows scroll up.
-                dim.alpha = ((off / (open * 0.75f)).coerceIn(0f, 1f)) * 0.92f
+                val p = (off / (open * 0.75f)).coerceIn(0f, 1f)
+                dim.alpha = p * 0.55f
+                setWallBlur(p > 0.5f)
                 applyRowAlpha()
             }
         })
@@ -1112,6 +1125,11 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setBackgroundResource(R.drawable.bg_ctl_panel)
             setPadding(dp(8), dp(8), dp(8), dp(8))
+            addView(TextClock(this@MainActivity).apply {
+                format12Hour = "h:mm"; format24Hour = "HH:mm"; textSize = 26f
+                setTextColor(Color.WHITE); typeface = Typeface.DEFAULT_BOLD
+                setPadding(dp(12), dp(4), dp(12), dp(4))
+            })
             addView(cols); addView(rounds)
         }
         panel.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
