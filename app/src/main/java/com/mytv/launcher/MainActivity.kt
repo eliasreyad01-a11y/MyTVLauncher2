@@ -1113,7 +1113,10 @@ class MainActivity : AppCompatActivity() {
             addView(tile(R.drawable.ic_power, getString(R.string.qs_power), null, cw, ch * 2 + dp(8), true) { popup.dismiss(); startScreensaver() })
             addView(tile(R.drawable.ic_bluetooth, getString(R.string.qs_bluetooth), null, cw, ch, false) { open(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) })
         }
-        val cols = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; addView(left); addView(right) }
+        val cols = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL; addView(left); addView(right)
+            addView(VolumePill(this@MainActivity), LinearLayout.LayoutParams(dp(56), ViewGroup.LayoutParams.MATCH_PARENT).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) })
+        }
         val rounds = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             addView(round(R.drawable.ic_search, getString(R.string.search)) { showSearch() })
