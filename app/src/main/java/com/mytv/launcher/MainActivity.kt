@@ -1128,10 +1128,28 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setBackgroundResource(R.drawable.bg_ctl_panel)
             setPadding(dp(8), dp(8), dp(8), dp(8))
-            addView(TextClock(this@MainActivity).apply {
-                format12Hour = "h:mm"; format24Hour = "HH:mm"; textSize = 26f
-                setTextColor(Color.WHITE); typeface = Typeface.DEFAULT_BOLD
-                setPadding(dp(12), dp(4), dp(12), dp(4))
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(4), dp(2), dp(8), dp(6))
+                fun mini(icon: Int, selected: Boolean, action: (() -> Unit)?) = ImageView(this@MainActivity).apply {
+                    setImageResource(icon)
+                    imageTintList = if (selected) android.content.res.ColorStateList.valueOf(0xFF1B1F24.toInt()) else tint
+                    setPadding(dp(6), dp(6), dp(6), dp(6))
+                    if (selected) setBackgroundResource(R.drawable.bg_mini_sel)
+                    else if (action != null) { isFocusable = true; isClickable = true; setBackgroundResource(R.drawable.bg_mini); setOnClickListener { popup.dismiss(); action() } }
+                    layoutParams = LinearLayout.LayoutParams(dp(30), dp(30)).apply { marginEnd = dp(8) }
+                }
+                addView(mini(R.drawable.ic_person, false) { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) })
+                addView(mini(R.drawable.ic_tune, true, null))
+                addView(mini(R.drawable.ic_home, false) { })
+                addView(mini(R.drawable.ic_wave, false) { startActivitySafe(Intent(Settings.ACTION_SOUND_SETTINGS)) })
+                addView(mini(R.drawable.ic_bluetooth, false) { startActivitySafe(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) })
+                addView(View(this@MainActivity), LinearLayout.LayoutParams(0, 1, 1f))
+                addView(TextClock(this@MainActivity).apply {
+                    format12Hour = "h:mm a"; format24Hour = "HH:mm"; textSize = 14f
+                    setTextColor(Color.WHITE)
+                })
             })
             addView(cols); addView(rounds)
         }
