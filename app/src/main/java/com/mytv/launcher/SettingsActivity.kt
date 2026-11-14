@@ -38,6 +38,7 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var prefs: Prefs
     private lateinit var container: LinearLayout
     private lateinit var titleView: TextView
+    private lateinit var descView: TextView
     private lateinit var cityRow: Row
     private lateinit var methodRow: Row
     private lateinit var soundRow: Row
@@ -223,8 +224,17 @@ class SettingsActivity : AppCompatActivity() {
                 imageTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#66FFFFFF"))
             }, android.widget.FrameLayout.LayoutParams(dp(120), dp(120), android.view.Gravity.CENTER))
         }
-        val left = android.widget.FrameLayout(this).apply {
-            addView(tile, android.widget.FrameLayout.LayoutParams(dp(230), dp(230), android.view.Gravity.CENTER))
+        descView = TextView(this).apply {
+            textSize = 15f
+            maxLines = 3
+            gravity = android.view.Gravity.CENTER
+            setTextColor(Color.parseColor("#CCF4F8FF"))
+        }
+        val left = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER
+            addView(tile, LinearLayout.LayoutParams(dp(230), dp(230)))
+            addView(descView, LinearLayout.LayoutParams(dp(300), ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(18) })
         }
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -469,6 +479,7 @@ class SettingsActivity : AppCompatActivity() {
         box.addView(subView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(10) })
         box.addView(arrow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(10) })
         box.setOnFocusChangeListener { _, f ->
+            if (f) descView.text = listOfNotNull(title, subtitle).joinToString(" — ")
             box.animate().scaleX(if (f) 1.03f else 1f).scaleY(if (f) 1.03f else 1f).setDuration(140).start()
             titleView.setTextColor(Color.parseColor(if (f) "#10151B" else "#F4F8FF"))
             subView.setTextColor(Color.parseColor(if (f) "#4A5560" else "#B8C6D2"))
