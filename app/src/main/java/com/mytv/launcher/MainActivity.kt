@@ -182,9 +182,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun applyClockShader() {
         // Pastel version of the wallpaper's own colour (aqua on the Kirkjufell sky), like Apple's tinted glass.
-        val hsv = FloatArray(3)
-        Color.colorToHSV(clockTint, hsv)
-        val s = (hsv[1] * 0.9f).coerceIn(0.30f, 0.55f)
         val theme = GlassTheme.current(this).tint
         fun mix(x: Int, y: Int, t: Float) = Color.rgb(
             (Color.red(x) * (1 - t) + Color.red(y) * t).toInt(),
@@ -1695,7 +1692,6 @@ class MainActivity : AppCompatActivity() {
         val hijri = HijriDate.format(this, PrayerRepository.cityToday(this), locale)
         val hijriLine = hijri.ifEmpty { weekday }
         dateText.text = latin(if (isArabic) hijriLine else hijriLine.uppercase(locale))
-        val greg = SimpleDateFormat("d MMMM yyyy", locale).apply { timeZone = cityTz }.format(Date())
         val dayMonth = SimpleDateFormat("EEEE d MMMM", locale).apply { timeZone = cityTz }.format(Date())
         findViewById<TextView>(R.id.dateGreg).text = latin(dayMonth)
         val is24 = TimeFmt.is24(this, prefs)

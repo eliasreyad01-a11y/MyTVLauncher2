@@ -287,7 +287,6 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun build() {
         val section = intent.getStringExtra("section")
-        if (section == "a_general" || section == "a_video" || section == "a_audio") { buildApple(section); return }
         titleView.text = getString(
             when (section) {
                 "prayer" -> R.string.cat_prayer
@@ -370,33 +369,6 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun addRow(title: String, onClick: () -> Unit): Row = addRow(title, null, true, onClick)
-
-    private fun buildApple(section: String) {
-        val d = android.provider.Settings.ACTION_DISPLAY_SETTINGS
-        val snd = android.provider.Settings.ACTION_SOUND_SETTINGS
-        when (section) {
-            "a_general" -> {
-                titleView.text = "General"
-                addRow("Appearance", "Automatic") { sys(d) }
-                addRow("Sounds and Music", null) { sys(snd) }
-                addRow("Screen Saver", null) { sys(android.provider.Settings.ACTION_DREAM_SETTINGS, d) }
-                addRow("Language and Region", null) { sys(android.provider.Settings.ACTION_LOCALE_SETTINGS) }
-                addRow("Date and Time", null) { sys(android.provider.Settings.ACTION_DATE_SETTINGS) }
-                addRow("Keyboard", null) { sys(android.provider.Settings.ACTION_INPUT_METHOD_SETTINGS) }
-                addRow("Storage", null) { sys(android.provider.Settings.ACTION_INTERNAL_STORAGE_SETTINGS) }
-                addRow("About", null) { sys(android.provider.Settings.ACTION_DEVICE_INFO_SETTINGS) }
-            }
-            else -> {
-                titleView.text = "Video and Audio"
-                addLabel("VIDEO")
-                for (t in listOf("Enable Dolby Vision", "Aspect Ratio", "Format", "HDMI Output", "Chroma", "Match Content", "Check HDMI Connection", "Tap-to-Zoom Video", "Reset Video Settings"))
-                    addRow(t, null) { sys(d) }
-                addLabel("AUDIO")
-                for (t in listOf("Audio Output", "Audio Format", "Sound Effects and Music", "Reduce Loud Sounds", "Default Audio Output"))
-                    addRow(t, null) { sys(snd) }
-            }
-        }
-    }
 
     private fun buildPrayer() {
         addToggle(getString(R.string.adhan_auto), prefs.adhanEnabled) { on ->
