@@ -491,6 +491,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var settingsSig = ""
+    private var adapterStale = false
     private var appsDirty = true
     private var appsLoadedAt = 0L
 
@@ -583,8 +584,13 @@ class MainActivity : AppCompatActivity() {
         clockBox.animate().alpha(0f).setDuration(400).start()
         glow.visibility = View.INVISIBLE
         glowLabel.visibility = View.INVISIBLE
-        findViewById<TextView>(R.id.ssDate).text = dateText.text
-        findViewById<TextView>(R.id.ssSub).text = findViewById<TextView>(R.id.dateGreg).text
+        // The screensaver follows the date setting: Gregorian only, Hijri only, or both (Hijri line + Gregorian line).
+        val gregText = findViewById<TextView>(R.id.dateGreg).text
+        val dateMode = prefs.dateMode
+        val ssSub = findViewById<TextView>(R.id.ssSub)
+        findViewById<TextView>(R.id.ssDate).text = if (dateMode == 1) gregText else dateText.text
+        ssSub.text = gregText
+        ssSub.visibility = if (dateMode == 0) View.VISIBLE else View.GONE
         val box = findViewById<View>(R.id.ssBox)
         box.alpha = 0f
         box.scaleX = 0.96f
@@ -621,10 +627,16 @@ class MainActivity : AppCompatActivity() {
     /** Shows the Stop button next to the weather and prayer times while the Adhan plays. */
     private fun updateAdhanStop(focus: Boolean) {
         val playing = AdhanService.isPlaying
+        val hadFocus = adhanStop.hasFocus()
         adhanStop.visibility = if (playing) View.VISIBLE else View.GONE
         if (playing && focus) {
             grid.scrollToPosition(0)
             adhanStop.requestFocus()
+        } else if (!playing && hadFocus) {
+            // The Stop button vanished under the focus: give it back to the tile the user was on.
+            val last = lastFocused?.packageName
+            val idx = if (last == null) 0 else adapter.items.indexOfFirst { it.packageName == last }.coerceAtLeast(0)
+            grid.post { (tileOf(idx) ?: tileOf(0))?.requestFocus() }
         }
     }
 
@@ -849,6 +861,8 @@ class MainActivity : AppCompatActivity() {
                 loadedApps = sorted
                 appsDirty = false
                 appsLoadedAt = System.currentTimeMillis()
+                // Same package names but fresh icons / labels / intents (an app was updated): rebind the tiles.
+                adapterStale = true
                 applyLists()
             }
         }.start()
@@ -898,7 +912,8 @@ class MainActivity : AppCompatActivity() {
         val focusIdx = lastFocused?.let { oldNames.indexOf(it.packageName) } ?: -1
         val focusName = lastFocused?.packageName
         adapter.dockCount = dockList.size
-        if (oldNames != all.map { it.packageName }) {
+        if (oldNames != all.map { it.packageName } || adapterStale) {
+            adapterStale = false
             adapter.submit(all)
         }
         // If the focused tile was removed or moved away, focus stays at the same place (the tile that took its spot).

@@ -264,8 +264,22 @@ class SettingsActivity : AppCompatActivity() {
         body.animate().alpha(1f).translationX(0f).setDuration(320).start()
     }
 
+    override fun onResume() {
+        super.onResume()
+        // The "Test Adhan" row follows the real playback state (it also changes when the Adhan ends by itself).
+        AdhanService.onChanged = { runOnUiThread { syncTestRow() } }
+        syncTestRow()
+    }
+
+    private fun syncTestRow() {
+        if (::testRow.isInitialized) {
+            testRow.title.text = getString(if (AdhanService.isPlaying) R.string.stop_adhan else R.string.test_adhan)
+        }
+    }
+
     override fun onPause() {
         super.onPause()
+        AdhanService.onChanged = null
         AdhanScheduler.reschedule(this)
     }
 
@@ -300,11 +314,11 @@ class SettingsActivity : AppCompatActivity() {
         for (a in actions) {
             try { startActivity(Intent(a).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return } catch (_: Exception) {}
         }
-        Toast.makeText(this, "Not available on this device", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show()
     }
 
     private fun dateModeLabel() = dateModes()[prefs.dateMode.coerceIn(0, 2)]
-    private fun dateModes() = if (prefs.language != "en") listOf("ميلادي وهجري", "ميلادي", "هجري") else listOf("Gregorian and Hijri", "Gregorian", "Hijri")
+    private fun dateModes() = if (ar) listOf("ميلادي وهجري", "ميلادي", "هجري") else listOf("Gregorian and Hijri", "Gregorian", "Hijri")
 
     private fun showDateModeDialog() {
         Dialogs.showChoice(this, tr("Date", "التاريخ"), dateModes(), prefs.dateMode) { i ->
@@ -329,7 +343,8 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private val ar get() = prefs.language != "en"
+    /** Arabic when it was chosen, or when "system" is chosen and the TV itself is Arabic: the same rule the string resources follow. */
+    private val ar get() = prefs.language == "ar" || (prefs.language == "system" && Locale.getDefault().language == "ar")
     private fun tr(en: String, arb: String) = if (ar) arb else en
 
     private fun buildCategories() {

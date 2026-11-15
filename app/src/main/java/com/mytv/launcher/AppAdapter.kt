@@ -38,8 +38,8 @@ class AppAdapter(
             override fun getOldListSize() = old.size
             override fun getNewListSize() = newItems.size
             override fun areItemsTheSame(o: Int, n: Int) = old[o].packageName == newItems[n].packageName
-            override fun areContentsTheSame(o: Int, n: Int) =
-                old[o].label == newItems[n].label && old[o].packageName == newItems[n].packageName
+            // Identity: a reloaded app list brings new icons/labels/intents, which must be rebound.
+            override fun areContentsTheSame(o: Int, n: Int) = old[o] === newItems[n]
         }, false)
         items.clear()
         items.addAll(newItems)

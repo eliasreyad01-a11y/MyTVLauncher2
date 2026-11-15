@@ -281,7 +281,7 @@
                 <LinearLayout
                     android:id="@+id/btnWifi"
                     style="@style/MiniBtn"
-                    android:contentDescription="@string/settings_title">
+                    android:contentDescription="@string/wifi">
 
                     <ImageView
                         style="@style/MiniIcon"
@@ -291,7 +291,7 @@
                 <LinearLayout
                     android:id="@+id/btnHome"
                     style="@style/MiniBtn"
-                    android:contentDescription="@string/settings_title">
+                    android:contentDescription="@string/home_btn">
 
                     <ImageView
                         style="@style/MiniIcon"

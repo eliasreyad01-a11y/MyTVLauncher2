@@ -54,7 +54,10 @@ object AppRepository {
                     AppItem(e.pkg, info.loadLabel(pm).toString(), smallIcon, smallBanner, intent)
                 }
             }
-            return futures.map { it.get() }
+            // One broken app (bad icon, missing label) must not take the whole home screen down: skip just that one.
+            return futures.mapNotNull { f ->
+                try { f.get() } catch (e: Exception) { null }
+            }
         } finally {
             pool.shutdown()
         }

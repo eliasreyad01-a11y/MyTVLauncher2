@@ -162,10 +162,10 @@
     <string name="next_prayer_short">%1$s in %2$s</string>
     <string name="preset_kirkjufell">Kirkjufell, Iceland</string>
     <string name="qs_dnd">Do not disturb</string>
-    <string name="qs_sleep_timer">Sleep timer</string>
+    <string name="qs_sleep_timer">Screen saver timer</string>
     <string name="qs_off">Off</string>
     <string name="qs_min">min</string>
-    <string name="qs_power">Sleep</string>
+    <string name="qs_power">Screen saver</string>
     <string name="qs_bluetooth">Bluetooth</string>
     <string name="accounts_title">Signed-in accounts</string>
     <string name="accounts_none">No accounts are visible to the launcher. Android may hide some accounts from apps.</string>
@@ -177,4 +177,6 @@
     <string name="folder_delete">Delete folder</string>
     <string name="folder_default">Folder</string>
     <string name="qs_on">On</string>
+    <string name="not_available">Not available on this device</string>
+    <string name="home_btn">Home</string>
 </resources>

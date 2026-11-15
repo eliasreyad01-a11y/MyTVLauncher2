@@ -68,7 +68,8 @@ object PhotoBrowser {
     }
 
     private val pool = Executors.newFixedThreadPool(2)
-    private val cache = object : LruCache<Long, Bitmap>(48) {}
+    // Keyed by the full URI: photo and video ids come from different MediaStore tables and can be equal.
+    private val cache = object : LruCache<String, Bitmap>(48) {}
 
     private fun queryPhotos(context: Context, kind: Kind): List<Uri> {
         val out = ArrayList<Uri>()
@@ -173,7 +174,7 @@ object PhotoBrowser {
             override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
                 val iv = holder.itemView as ImageView
                 val uri = photos[position]
-                val id = ContentUris.parseId(uri)
+                val id = uri.toString()
                 iv.tag = id
                 iv.setImageBitmap(cache.get(id))
                 iv.setOnClickListener {

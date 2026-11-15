@@ -162,10 +162,10 @@
     <string name="next_prayer_short">%1$s بعد %2$s</string>
     <string name="preset_kirkjufell">جبل كيركجوفيل · أيسلندا</string>
     <string name="qs_dnd">عدم الإزعاج</string>
-    <string name="qs_sleep_timer">مؤقت النوم</string>
+    <string name="qs_sleep_timer">مؤقت شاشة التوقف</string>
     <string name="qs_off">متوقف</string>
     <string name="qs_min">د</string>
-    <string name="qs_power">إيقاف التشغيل</string>
+    <string name="qs_power">شاشة التوقف</string>
     <string name="qs_bluetooth">البلوتوث</string>
     <string name="accounts_title">الحسابات المسجّلة</string>
     <string name="accounts_none">ما في حسابات ظاهرة للانشر. أندرويد ممكن يخفي بعض الحسابات عن التطبيقات.</string>
@@ -177,4 +177,6 @@
     <string name="folder_delete">حذف المجلد</string>
     <string name="folder_default">مجلد</string>
     <string name="qs_on">يعمل</string>
+    <string name="not_available">غير متوفر على هذا الجهاز</string>
+    <string name="home_btn">الرئيسية</string>
 </resources>

@@ -197,6 +197,8 @@ class AdhanService : Service() {
     fun finishPlayback() {
         releasePlayer()
         dropAudioFocus()
+        // Playback is over from this moment: listeners (home Stop button, settings test button) must see isPlaying = false.
+        if (instance === this) instance = null
         onChanged?.invoke()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
