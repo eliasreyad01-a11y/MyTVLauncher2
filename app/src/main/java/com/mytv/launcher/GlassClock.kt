@@ -37,7 +37,9 @@ class GlassClock @JvmOverloads constructor(
         }
         p.style = Paint.Style.FILL
         p.shader = shader
+        p.setShadowLayer(18f * resources.displayMetrics.density, 0f, 4f * resources.displayMetrics.density, 0x66001828)
         super.onDraw(canvas)
+        p.clearShadowLayer()
         p.shader = null
         val baseColor = p.color
         p.style = Paint.Style.STROKE

@@ -192,9 +192,10 @@ class MainActivity : AppCompatActivity() {
             return Color.rgb((Color.red(w) + Color.red(theme)) / 2, (Color.green(w) + Color.green(theme)) / 2, (Color.blue(w) + Color.blue(theme)) / 2)
         }
         // Mostly see-through: the wallpaper (and the mountain) shows through the digits, only the rim and a soft top sheen stay bright.
-        val top = (0xCC shl 24) or pastel(s * 0.25f)
-        val mid = (0x8C shl 24) or pastel(s * 0.6f)
-        val bot = (0x70 shl 24) or pastel(s * 0.8f)
+        val op = GlassTheme.opacity(this)
+        val top = ((0xE6 * op).toInt() shl 24) or pastel(s * 0.2f)
+        val mid = ((0xB0 * op).toInt() shl 24) or pastel(s * 0.45f)
+        val bot = ((0x99 * op).toInt() shl 24) or pastel(s * 0.7f)
         findViewById<GlassClock>(R.id.clock).glass = intArrayOf(top, mid, bot)
     }
 
@@ -399,7 +400,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyGlass() {
-        val i = GlassTheme.index(this)
+        val i = GlassTheme.key(this)
         if (i == appliedGlass) return
         appliedGlass = i
         prayerCard.background = android.graphics.drawable.LayerDrawable(arrayOf(FrostDrawable(this, 26f, 0x1C), GlassTheme.drawable(this, R.drawable.bg_card)))

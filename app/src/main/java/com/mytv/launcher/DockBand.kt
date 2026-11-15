@@ -10,7 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 /** Draws the glass band behind the dock tiles (the first row of the home grid), hugging the tiles that exist. */
 class DockBand(context: Context, private val adapter: AppAdapter) : RecyclerView.ItemDecoration() {
     private var band: Drawable? = GlassTheme.drawable(context, R.drawable.bg_dock)
-    private var themeIdx = GlassTheme.index(context)
+    private var themeIdx = GlassTheme.key(context)
     private val pad = (10 * context.resources.displayMetrics.density).toInt()
     private val radius = 28 * context.resources.displayMetrics.density
     private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
@@ -41,6 +41,7 @@ class DockBand(context: Context, private val adapter: AppAdapter) : RecyclerView
         val t = GlassTheme.current(context)
         val c = ((t.frostAlpha / 2) shl 24) or (t.tint and 0xFFFFFF)
         paint.colorFilter = android.graphics.PorterDuffColorFilter(c, android.graphics.PorterDuff.Mode.SRC_OVER)
+        paint.alpha = (255 * GlassTheme.opacity(context)).toInt()
     }
 
     override fun onDraw(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
@@ -63,7 +64,7 @@ class DockBand(context: Context, private val adapter: AppAdapter) : RecyclerView
         if (left == Int.MAX_VALUE) return
         val drawable = band ?: return
         if (!shaderReady) prepare(parent.context)
-        val ti = GlassTheme.index(parent.context)
+        val ti = GlassTheme.key(parent.context)
         if (ti != themeIdx) { themeIdx = ti; band = GlassTheme.drawable(parent.context, R.drawable.bg_dock); applyTheme(parent.context) }
         if (paint.shader != null) {
             parent.getLocationOnScreen(loc)

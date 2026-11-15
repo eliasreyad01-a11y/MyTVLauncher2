@@ -232,6 +232,11 @@ class Prefs(context: Context) {
         get() = sp.getInt("glass_theme", 2)
         set(value) { sp.edit().putInt("glass_theme", value).apply() }
 
+    /** Glass opacity in percent (30..100): lower = more see-through. */
+    var glassOpacity: Int
+        get() = sp.getInt("glass_opacity", 100).coerceIn(30, 100)
+        set(value) { sp.edit().putInt("glass_opacity", value.coerceIn(30, 100)).apply() }
+
     /** 0 = Gregorian + Hijri, 1 = Gregorian only, 2 = Hijri only. */
     var dateMode: Int
         get() = sp.getInt("date_mode", 0)

@@ -19,22 +19,27 @@ object GlassTheme {
         T("Smoke Gray", 0xFF8A8F98.toInt(), 0x5A)
     )
 
+    fun opacity(ctx: Context): Float = Prefs(ctx).glassOpacity / 100f
+    /** Changes whenever theme or transparency changes. */
+    fun key(ctx: Context): Int = index(ctx) * 1000 + Prefs(ctx).glassOpacity
+
     fun index(ctx: Context): Int = Prefs(ctx).glassTheme.coerceIn(0, all.size - 1)
     fun current(ctx: Context): T = all[index(ctx)]
 
     /** Mixes ~35% of the theme colour into the glass (keeps the glass's own transparency, darkness and rim). */
-    private fun apply(d: Drawable, tint: Int) {
+    private fun apply(ctx: Context, d: Drawable, tint: Int) {
+        d.alpha = (255 * opacity(ctx)).toInt()
         d.setTintMode(android.graphics.PorterDuff.Mode.SRC_ATOP)
         d.setTintList(android.content.res.ColorStateList.valueOf((0x5A shl 24) or (tint and 0xFFFFFF)))
     }
 
     /** A private copy of a glass drawable, tinted with the current theme (alpha of every layer is kept). */
     fun drawable(ctx: Context, res: Int): Drawable? =
-        ctx.getDrawable(res)?.mutate()?.also { apply(it, current(ctx).tint) }
+        ctx.getDrawable(res)?.mutate()?.also { apply(ctx, it, current(ctx).tint) }
 
     /** Re-tints a view's existing glass background without touching shape, size or state selectors. */
     fun retint(ctx: Context, v: View?) {
         val bg = v?.background ?: return
-        v.background = bg.mutate().also { apply(it, current(ctx).tint) }
+        v.background = bg.mutate().also { apply(ctx, it, current(ctx).tint) }
     }
 }

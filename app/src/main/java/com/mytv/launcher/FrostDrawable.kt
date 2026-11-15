@@ -18,10 +18,11 @@ class FrostDrawable(private val ctx: Context, private val radiusDp: Float, priva
     init { paint.isFilterBitmap = true }
 
     private fun ensure() {
-        val idx = GlassTheme.index(ctx)
+        val idx = GlassTheme.key(ctx)
         if (paint.shader == null) paint.shader = Frost.shader(ctx)
         if (idx != themeIdx) {
             themeIdx = idx
+            paint.alpha = (255 * GlassTheme.opacity(ctx)).toInt()
             val t = GlassTheme.current(ctx)
             paint.colorFilter = PorterDuffColorFilter((overlayAlpha shl 24) or (t.tint and 0xFFFFFF), PorterDuff.Mode.SRC_OVER)
         }

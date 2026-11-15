@@ -313,6 +313,15 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    private fun showOpacityDialog() {
+        val levels = listOf(30, 45, 60, 80, 100)
+        val names = levels.map { "$it%" + if (it == 30) tr("  (most transparent)", "  (الأكثر شفافية)") else if (it == 100) tr("  (default)", "  (الافتراضي)") else "" }
+        Dialogs.showChoice(this, tr("Glass Transparency", "شفافية الزجاج"), names, levels.indexOf(prefs.glassOpacity).let { if (it < 0) 4 else it }) { i ->
+            prefs.glassOpacity = levels[i]
+            recreate()
+        }
+    }
+
     private fun showGlassDialog() {
         Dialogs.showChoice(this, tr("Glass Theme", "الثيم الزجاجي"), GlassTheme.all.map { it.name }, GlassTheme.index(this)) { i ->
             prefs.glassTheme = i
@@ -328,6 +337,7 @@ class SettingsActivity : AppCompatActivity() {
         descView.text = ""
         val d = android.provider.Settings.ACTION_DISPLAY_SETTINGS
         addRow(tr("Glass Theme", "الثيم الزجاجي"), GlassTheme.current(this).name) { showGlassDialog() }
+        addRow(tr("Glass Transparency", "شفافية الزجاج"), "${prefs.glassOpacity}%") { showOpacityDialog() }
         addRow(tr("Date", "التاريخ"), dateModeLabel()) { showDateModeDialog() }
         addRow(tr("Adhan and Prayer Times", "الأذان والمواقيت")) { openSection("prayer") }
         addRow(tr("Wallpaper", "الخلفية")) { openSection("wallpaper") }
