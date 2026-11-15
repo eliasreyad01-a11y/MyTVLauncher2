@@ -2,13 +2,15 @@ package com.mytv.launcher
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.drawable.Drawable
 import android.view.View
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 
 /** Draws the glass band behind the dock tiles (the first row of the home grid), hugging the tiles that exist. */
 class DockBand(context: Context, private val adapter: AppAdapter) : RecyclerView.ItemDecoration() {
-    private val band = ContextCompat.getDrawable(context, R.drawable.bg_dock)
+    private var band: Drawable? = GlassTheme.drawable(context, R.drawable.bg_dock)
+    private var themeIdx = GlassTheme.index(context)
     private val pad = (10 * context.resources.displayMetrics.density).toInt()
     private val radius = 28 * context.resources.displayMetrics.density
     private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
@@ -31,8 +33,14 @@ class DockBand(context: Context, private val adapter: AppAdapter) : RecyclerView
             sh.setLocalMatrix(m)
             paint.shader = sh
             paint.isFilterBitmap = true
-            paint.colorFilter = android.graphics.PorterDuffColorFilter(0x40FFFFFF, android.graphics.PorterDuff.Mode.SRC_OVER)
+            applyTheme(context)
         } catch (_: Throwable) { paint.shader = null }
+    }
+
+    private fun applyTheme(context: Context) {
+        val t = GlassTheme.current(context)
+        val c = (t.frostAlpha shl 24) or (t.tint and 0xFFFFFF)
+        paint.colorFilter = android.graphics.PorterDuffColorFilter(c, android.graphics.PorterDuff.Mode.SRC_OVER)
     }
 
     override fun onDraw(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
@@ -55,6 +63,8 @@ class DockBand(context: Context, private val adapter: AppAdapter) : RecyclerView
         if (left == Int.MAX_VALUE) return
         val drawable = band ?: return
         if (!shaderReady) prepare(parent.context)
+        val ti = GlassTheme.index(parent.context)
+        if (ti != themeIdx) { themeIdx = ti; band = GlassTheme.drawable(parent.context, R.drawable.bg_dock); applyTheme(parent.context) }
         if (paint.shader != null) {
             parent.getLocationOnScreen(loc)
             rect.set((left - pad).toFloat(), (top - pad).toFloat(), (right + pad).toFloat(), (bottom + pad).toFloat())

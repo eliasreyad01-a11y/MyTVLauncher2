@@ -208,6 +208,16 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("animations", true)
         set(value) { sp.edit().putBoolean("animations", value).apply() }
 
+    /** Index into GlassTheme.all. */
+    var glassTheme: Int
+        get() = sp.getInt("glass_theme", 2)
+        set(value) { sp.edit().putInt("glass_theme", value).apply() }
+
+    /** 0 = Gregorian + Hijri, 1 = Gregorian only, 2 = Hijri only. */
+    var dateMode: Int
+        get() = sp.getInt("date_mode", 0)
+        set(value) { sp.edit().putInt("date_mode", value).apply() }
+
     var showGreeting: Boolean
         get() = sp.getBoolean("show_greeting", true)
         set(value) { sp.edit().putBoolean("show_greeting", value).apply() }

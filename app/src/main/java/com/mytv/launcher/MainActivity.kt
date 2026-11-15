@@ -381,8 +381,27 @@ class MainActivity : AppCompatActivity() {
         AdhanScheduler.reschedule(this)
     }
 
+    private var appliedGlass = -1
+    private fun applyDateMode() {
+        val mode = prefs.dateMode
+        findViewById<View>(R.id.dateGreg).visibility = if (mode == 2) View.GONE else View.VISIBLE
+        dateText.visibility = if (mode == 1) View.GONE else View.VISIBLE
+    }
+
+    private fun applyGlass() {
+        val i = GlassTheme.index(this)
+        if (i == appliedGlass) return
+        appliedGlass = i
+        prayerCard.background = GlassTheme.drawable(this, R.drawable.bg_card)
+        for (v in listOf<View?>(findViewById(R.id.btnProfile), btnSettings, findViewById(R.id.btnHome), findViewById(R.id.btnWave), findViewById(R.id.btnBt))) GlassTheme.retint(this, v)
+        grid.invalidateItemDecorations()
+        grid.invalidate()
+    }
+
     override fun onResume() {
         super.onResume()
+        applyGlass()
+        applyDateMode()
         wallpaper.apply(prefs)
         wallpaper.onResume()
         val fgRes = wallpaper.foregroundRes(prefs)
@@ -395,7 +414,7 @@ class MainActivity : AppCompatActivity() {
                     Color.argb(prefs.dim.coerceIn(0, 90) * 255 / 100, 0, 0, 0), android.graphics.PorterDuff.Mode.SRC_ATOP
                 )
             }
-            wallFg.visibility = View.GONE
+            wallFg.visibility = View.VISIBLE
         } else wallFg.visibility = View.GONE
         wallpaper.post { tintClock() }
         val is24 = TimeFmt.is24(this, prefs)
@@ -791,7 +810,7 @@ class MainActivity : AppCompatActivity() {
             changed = true
         }
         if (changed) adapter.notifyDataSetChanged()
-        greeting.visibility = View.GONE
+        greeting.visibility = if (prefs.showGreeting) View.VISIBLE else View.GONE
     }
 
 
@@ -1128,7 +1147,7 @@ class MainActivity : AppCompatActivity() {
                 gravity = if (big) Gravity.BOTTOM else Gravity.CENTER_VERTICAL
                 setPadding(dp(12), dp(6), dp(12), dp(6))
                 isFocusable = true; isClickable = true
-                setBackgroundResource(R.drawable.bg_ctl_tile)
+                background = GlassTheme.drawable(this@MainActivity, R.drawable.bg_ctl_tile)
                 val img = ImageView(this@MainActivity).apply {
                     setImageResource(icon); imageTintList = tint; isDuplicateParentStateEnabled = true
                 }
@@ -1147,7 +1166,7 @@ class MainActivity : AppCompatActivity() {
             setImageResource(icon); imageTintList = tint; contentDescription = desc
             setPadding(dp(11), dp(11), dp(11), dp(11))
             isFocusable = true; isClickable = true
-            setBackgroundResource(R.drawable.bg_round)
+            background = GlassTheme.drawable(this@MainActivity, R.drawable.bg_round)
             setOnClickListener { popup.dismiss(); action() }
             layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) }
         }
@@ -1184,7 +1203,7 @@ class MainActivity : AppCompatActivity() {
         }
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundResource(R.drawable.bg_ctl_panel)
+            background = GlassTheme.drawable(this@MainActivity, R.drawable.bg_ctl_panel)
             setPadding(dp(8), dp(8), dp(8), dp(8))
             addView(cols); addView(rounds)
         }
@@ -1493,12 +1512,12 @@ class MainActivity : AppCompatActivity() {
             prayerCard.visibility = View.GONE
             return
         }
-        prayerCard.visibility = View.GONE
+        prayerCard.visibility = View.VISIBLE
         val next = nextPrayer?.name
         for ((name, chip) in chips) {
             chip.text = latin("${prayerLabel(name)}\n${TimeFmt.display(today.times[name], TimeFmt.is24(this, prefs))}")
             if (name == next) {
-                chip.setBackgroundResource(R.drawable.bg_chip_next)
+                chip.background = GlassTheme.drawable(this, R.drawable.bg_chip_next)
                 chip.setTextColor(Color.WHITE)
             } else {
                 chip.background = null

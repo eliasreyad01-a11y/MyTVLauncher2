@@ -303,9 +303,31 @@ class SettingsActivity : AppCompatActivity() {
         Toast.makeText(this, "Not available on this device", Toast.LENGTH_SHORT).show()
     }
 
+    private fun dateModeLabel() = listOf("Gregorian and Hijri", "Gregorian", "Hijri")[prefs.dateMode.coerceIn(0, 2)]
+
+    private fun showDateModeDialog() {
+        Dialogs.showChoice(this, "Date", listOf("Gregorian and Hijri", "Gregorian", "Hijri"), prefs.dateMode) { i ->
+            prefs.dateMode = i
+            recreate()
+        }
+    }
+
+    private fun showGlassDialog() {
+        Dialogs.showChoice(this, "Glass Theme", GlassTheme.all.map { it.name }, GlassTheme.index(this)) { i ->
+            prefs.glassTheme = i
+            recreate()
+        }
+    }
+
     private fun buildCategories() {
         titleView.text = "Settings"
         descView.text = "Apple TV"
+        addRow("Glass Theme", GlassTheme.current(this).name) { showGlassDialog() }
+        addRow("Date", dateModeLabel()) { showDateModeDialog() }
+        addRow("Adhan and Prayer Times", null) { openSection("prayer") }
+        addRow("Wallpaper", null) { openSection("wallpaper") }
+        addRow("Home Screen", null) { openSection("home") }
+        addRow("Launcher", null) { openSection("general") }
         addRow("General", null) { openSection("a_general") }
         addRow("Profiles and Accounts", null) { sys(android.provider.Settings.ACTION_SYNC_SETTINGS, android.provider.Settings.ACTION_ADD_ACCOUNT) }
         addRow("Video and Audio", null) { openSection("a_video") }
