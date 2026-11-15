@@ -63,6 +63,10 @@ android {
 
 tasks.withType<Test>().configureEach {
     maxHeapSize = "1536m"
+    testLogging {
+        events("passed", "failed", "skipped")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
 }
 
 dependencies {
