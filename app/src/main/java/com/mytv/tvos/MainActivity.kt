@@ -20,6 +20,11 @@ class MainActivity : Activity() {
     private lateinit var clock: TextView
     private lateinit var dock: RecyclerView
     private lateinit var grid: RecyclerView
+    private lateinit var dimView: View
+    private var lastDim = 0.15f
+
+    /** Like tvOS: the wallpaper darkens when you move down into the app rows or open Control Center. */
+    private fun dim(a: Float) { lastDim = a; dimView.animate().alpha(a).setDuration(250).start() }
     private lateinit var controlCenter: View
     private val handler = Handler(Looper.getMainLooper())
     private val ticker = object : Runnable {
@@ -37,18 +42,22 @@ class MainActivity : Activity() {
         dock = findViewById(R.id.dock)
         grid = findViewById(R.id.grid)
         controlCenter = findViewById(R.id.controlCenter)
+        dimView = findViewById(R.id.dim)
 
         dock.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         val apps = loadApps()
         val dockApps = apps.take(6)
-        dock.adapter = AppsAdapter(dockApps, { }, { item -> launch(item.packageName) })
+        dock.adapter = AppsAdapter(dockApps, { dim(0.15f) }, { item -> launch(item.packageName) })
         grid.layoutManager = androidx.recyclerview.widget.GridLayoutManager(this, 5)
-        grid.adapter = AppsAdapter(apps.drop(6), { }, { item -> launch(item.packageName) })
+        grid.adapter = AppsAdapter(apps.drop(6), { dim(0.55f) }, { item -> launch(item.packageName) })
         dock.post { dock.getChildAt(0)?.requestFocus() }
 
-        findViewById<View>(R.id.ccWifi).setOnClickListener { start(Settings.ACTION_WIFI_SETTINGS) }
-        findViewById<View>(R.id.ccBt).setOnClickListener { start(Settings.ACTION_BLUETOOTH_SETTINGS) }
-        findViewById<View>(R.id.ccSound).setOnClickListener { start(Settings.ACTION_SOUND_SETTINGS) }
+        findViewById<View>(R.id.ccNet).setOnClickListener { start(Settings.ACTION_WIFI_SETTINGS) }
+        findViewById<View>(R.id.ccDnd).setOnClickListener { start(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS) }
+        findViewById<View>(R.id.ccSleep).setOnClickListener { start(Settings.ACTION_DISPLAY_SETTINGS) }
+        findViewById<View>(R.id.ccPower).setOnClickListener { start(Settings.ACTION_DREAM_SETTINGS) }
+        findViewById<View>(R.id.ccSearch).setOnClickListener { start(Intent.ACTION_ASSIST) }
+        findViewById<View>(R.id.ccApps).setOnClickListener { start(Settings.ACTION_APPLICATION_SETTINGS) }
         findViewById<View>(R.id.ccAccess).setOnClickListener { start(Settings.ACTION_ACCESSIBILITY_SETTINGS) }
         findViewById<View>(R.id.ccSettings).setOnClickListener { openSettings() }
     }
@@ -78,8 +87,10 @@ class MainActivity : Activity() {
     }
 
     private fun toggleControlCenter() {
-        controlCenter.visibility = if (controlCenter.visibility == View.VISIBLE) View.GONE else View.VISIBLE
-        if (controlCenter.visibility == View.VISIBLE) controlCenter.findViewById<View>(R.id.ccWifi).requestFocus()
+        val open = controlCenter.visibility != View.VISIBLE
+        controlCenter.visibility = if (open) View.VISIBLE else View.GONE
+        if (open) { controlCenter.findViewById<View>(R.id.ccNet).requestFocus(); dimView.animate().alpha(0.6f).setDuration(250).start() }
+        else dimView.animate().alpha(lastDim).setDuration(250).start()
     }
 
     private fun openSettings() {
@@ -104,7 +115,7 @@ class MainActivity : Activity() {
     private fun launch(pkg: String) {
         val intent = packageManager.getLeanbackLaunchIntentForPackage(pkg)
             ?: packageManager.getLaunchIntentForPackage(pkg)
-        if (intent != null) startActivity(intent) else start(Settings.ACTION_APPLICATION_SETTINGS)
+        if (intent != null) { startActivity(intent); overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out) } else start(Settings.ACTION_APPLICATION_SETTINGS)
     }
 
     private fun start(action: String) {
