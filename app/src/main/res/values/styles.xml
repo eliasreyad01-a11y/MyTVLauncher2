@@ -31,4 +31,26 @@
         <item name="android:padding">16dp</item>
         <item name="android:gravity">bottom|start</item>
     </style>
+    <style name="CcTab">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">6dp</item>
+        <item name="android:layout_marginEnd">6dp</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:paddingEnd">20dp</item>
+        <item name="android:paddingTop">10dp</item>
+        <item name="android:paddingBottom">10dp</item>
+        <item name="android:background">@drawable/bg_row</item>
+        <item name="android:focusable">true</item>
+        <item name="android:textColor">@color/row_text_sel</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+    <style name="CcPage">
+        <item name="android:layout_width">440dp</item>
+        <item name="android:layout_height">150dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">#B3FFFFFF</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:visibility">gone</item>
+    </style>
 </resources>
