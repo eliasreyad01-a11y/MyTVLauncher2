@@ -39,8 +39,7 @@ class DockBand(context: Context, private val adapter: AppAdapter) : RecyclerView
 
     private fun applyTheme(context: Context) {
         val t = GlassTheme.current(context)
-        val c = ((t.frostAlpha / 2) shl 24) or (t.tint and 0xFFFFFF)
-        paint.colorFilter = android.graphics.PorterDuffColorFilter(c, android.graphics.PorterDuff.Mode.SRC_OVER)
+        paint.colorFilter = Frost.filter(t.tint, t.frostAlpha / 2)
         paint.alpha = (255 * GlassTheme.opacity(context)).toInt()
     }
 

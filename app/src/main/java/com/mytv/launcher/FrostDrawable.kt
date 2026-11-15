@@ -24,7 +24,7 @@ class FrostDrawable(private val ctx: Context, private val radiusDp: Float, priva
             themeIdx = idx
             paint.alpha = (255 * GlassTheme.opacity(ctx)).toInt()
             val t = GlassTheme.current(ctx)
-            paint.colorFilter = PorterDuffColorFilter((overlayAlpha shl 24) or (t.tint and 0xFFFFFF), PorterDuff.Mode.SRC_OVER)
+            paint.colorFilter = Frost.filter(t.tint, overlayAlpha)
         }
     }
 
@@ -52,6 +52,20 @@ class FrostDrawable(private val ctx: Context, private val radiusDp: Float, priva
 
 object Frost {
     private var bmp: Bitmap? = null
+
+    /** Brighter, slightly more saturated frost: pale clear glass like the iOS / tvOS reference, not a grey plate. */
+    fun filter(tint: Int, overlayAlpha: Int): ColorFilter {
+        val a = (overlayAlpha / 255f * 2.2f).coerceIn(0.10f, 0.45f)
+        val cm = ColorMatrix().apply { setSaturation(1.45f) }
+        val mix = ColorMatrix(floatArrayOf(
+            1f - a, 0f, 0f, 0f, Color.red(tint) * a + 16f,
+            0f, 1f - a, 0f, 0f, Color.green(tint) * a + 16f,
+            0f, 0f, 1f - a, 0f, Color.blue(tint) * a + 16f,
+            0f, 0f, 0f, 1f, 0f
+        ))
+        cm.postConcat(mix)
+        return ColorMatrixColorFilter(cm)
+    }
     fun shader(ctx: Context): Shader? {
       return try {
         val b = bmp ?: run {
