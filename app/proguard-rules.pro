@@ -1,2 +1,0 @@
--keep class com.mytv.launcher.** { *; }
--dontwarn **

@@ -4,15 +4,15 @@ plugins {
 }
 
 android {
-    namespace = "com.mytv.launcher"
+    namespace = "com.mytv.tvos"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.mytv.glass"
+        applicationId = "com.mytv.tvos"
         minSdk = 26
         targetSdk = 34
-        versionCode = 28
-        versionName = "2.9.0"
+        versionCode = 1
+        versionName = "1.0.0"
     }
 
     signingConfigs {
@@ -24,23 +24,10 @@ android {
         }
     }
 
-    // Private release key: supplied by CI secrets; falls back to the debug key for local builds.
-    val releaseKey = rootProject.file("release.jks")
-    if (releaseKey.exists() && System.getenv("KEYSTORE_PASSWORD") != null) {
-        signingConfigs.create("release") {
-            storeFile = releaseKey
-            storePassword = System.getenv("KEYSTORE_PASSWORD")
-            keyAlias = System.getenv("KEY_ALIAS") ?: "mytv"
-            keyPassword = System.getenv("KEY_PASSWORD")
-        }
-    }
-
     buildTypes {
         release {
-            // Optimised build: R8 shrinks and optimises the code, so the launcher starts and runs faster.
-            isMinifyEnabled = true
-            isShrinkResources = true
-            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -49,13 +36,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
+    kotlinOptions { jvmTarget = "17" }
 }
 
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
 }
