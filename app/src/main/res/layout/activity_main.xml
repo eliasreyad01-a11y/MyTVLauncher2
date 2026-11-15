@@ -219,8 +219,8 @@
                 android:id="@+id/infoBlock"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="top|center_horizontal"
-                android:layout_marginTop="50dp"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="46dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
@@ -299,6 +299,16 @@
                         android:src="@drawable/ic_home" />
                 </LinearLayout>
 
+
+                <LinearLayout
+                    android:id="@+id/btnWave"
+                    style="@style/MiniBtn"
+                    android:contentDescription="@string/qs_sound">
+
+                    <ImageView
+                        style="@style/MiniIcon"
+                        android:src="@drawable/ic_wave" />
+                </LinearLayout>
 
                 <LinearLayout
                     android:id="@+id/btnBt"

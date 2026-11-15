@@ -176,4 +176,5 @@
     <string name="folder_rename">Rename folder</string>
     <string name="folder_delete">Delete folder</string>
     <string name="folder_default">Folder</string>
+    <string name="qs_on">On</string>
 </resources>

@@ -356,6 +356,7 @@ class MainActivity : AppCompatActivity() {
             grid.scrollToPosition(0)
             grid.post { updateScrollEffects(); tileOf(0)?.requestFocus() }
         }
+        findViewById<View>(R.id.btnWave).setOnClickListener { startActivitySafe(Intent(Settings.ACTION_SOUND_SETTINGS)) }
         findViewById<View>(R.id.btnBt).setOnClickListener { openBluetooth() }
         btnSettings.setOnClickListener { showQuickSettings() }
 
@@ -396,7 +397,7 @@ class MainActivity : AppCompatActivity() {
         if (i == appliedGlass) return
         appliedGlass = i
         prayerCard.background = GlassTheme.drawable(this, R.drawable.bg_card)
-        for (v in listOf<View?>(findViewById(R.id.btnWifi), btnSettings, findViewById(R.id.btnHome), findViewById(R.id.btnBt))) GlassTheme.retint(this, v)
+        for (v in listOf<View?>(findViewById(R.id.btnWifi), btnSettings, findViewById(R.id.btnHome), findViewById(R.id.btnWave), findViewById(R.id.btnBt))) GlassTheme.retint(this, v)
         grid.invalidateItemDecorations()
         grid.invalidate()
     }
@@ -1233,48 +1234,74 @@ class MainActivity : AppCompatActivity() {
         Dialogs.showChoice(this, name, entries.map { it.first }) { entries[it].second() }
     }
 
-    /** tvOS-style folder: a frosted rounded panel that zooms open over the dimmed home screen. */
+    /** tvOS-style folder: blurred home behind, a frosted rounded panel that grows out of the folder tile. */
     private fun showFolder(name: String) {
         val apps = (prefs.folders[name] ?: return).mapNotNull { pk -> visibleApps.firstOrNull { it.packageName == pk } }
         if (apps.isEmpty()) return
         val dialog = Dialogs.track(android.app.Dialog(this, R.style.LauncherPlainDialog))
+        val src = focusedTile
+        val srcLoc = IntArray(2)
+        src?.getLocationOnScreen(srcLoc)
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             background = android.graphics.drawable.GradientDrawable().apply {
-                setColor(Color.parseColor("#B3262B33")); cornerRadius = dp(36).toFloat()
-                setStroke(dp(1), Color.parseColor("#55FFFFFF"))
+                setColor(Color.parseColor("#4DFFFFFF")); cornerRadius = dp(34).toFloat()
+                setStroke(dp(1), Color.parseColor("#66FFFFFF"))
             }
-            setPadding(dp(32), dp(22), dp(32), dp(18))
+            setPadding(dp(30), dp(18), dp(30), dp(14))
         }
         root.addView(TextView(this).apply {
-            text = name; textSize = 26f; setTextColor(Color.WHITE)
+            text = name; textSize = 24f; setTextColor(Color.WHITE)
             setTypeface(typeface, Typeface.BOLD); gravity = Gravity.CENTER
+            setShadowLayer(8f, 0f, 2f, Color.parseColor("#66000000"))
         })
-        val span = minOf(apps.size, 4).coerceAtLeast(2)
+        val span = 3
         val rv = RecyclerView(this).apply {
             layoutManager = GridLayoutManager(this@MainActivity, span)
             clipToPadding = false; clipChildren = false
-            setPadding(0, dp(12), 0, dp(8))
+            setPadding(0, dp(10), 0, dp(4))
+        }
+        val nameLabel = TextView(this).apply {
+            textSize = 16f; setTextColor(Color.WHITE); gravity = Gravity.CENTER
+            setShadowLayer(6f, 0f, 2f, Color.parseColor("#66000000"))
         }
         val ad = AppAdapter(
             onClick = { item -> dialog.dismiss(); launchApp(item) },
-            onLongClick = { item, a -> showAppMenu(item, a, inFolder = name) { dialog.dismiss() } }
+            onLongClick = { item, a -> showAppMenu(item, a, inFolder = name) { dialog.dismiss() } },
+            onFocus = { nameLabel.text = it.label }
         )
-        ad.focusRing = true
+        ad.glossy = true
         ad.items.addAll(apps)
         rv.adapter = ad
         val dm = resources.displayMetrics
-        root.addView(rv, LinearLayout.LayoutParams((dm.widthPixels * 0.14f * span).toInt().coerceAtLeast(dp(360)), ViewGroup.LayoutParams.WRAP_CONTENT))
+        root.addView(rv, LinearLayout.LayoutParams((dm.widthPixels * 0.54f).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT))
+        root.addView(nameLabel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(2) })
         dialog.setContentView(root)
         dialog.window?.apply {
             setBackgroundDrawableResource(android.R.color.transparent)
-            setDimAmount(0.55f)
+            setDimAmount(0.25f)
             addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         }
-        root.scaleX = 0.8f; root.scaleY = 0.8f; root.alpha = 0f
+        // Blur the home screen behind the folder (Android 12+); the effect is removed again when the folder closes.
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            try {
+                window.decorView.setRenderEffect(android.graphics.RenderEffect.createBlurEffect(28f, 28f, android.graphics.Shader.TileMode.CLAMP))
+                dialog.setOnDismissListener { window.decorView.setRenderEffect(null) }
+            } catch (_: Throwable) { }
+        }
+        root.alpha = 0f
         dialog.show()
-        root.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(220).start()
+        root.post {
+            val rl = IntArray(2); root.getLocationOnScreen(rl)
+            if (src != null) {
+                root.pivotX = (srcLoc[0] + src.width / 2f - rl[0]).coerceIn(0f, root.width.toFloat())
+                root.pivotY = (srcLoc[1] + src.height / 2f - rl[1]).coerceIn(0f, root.height.toFloat())
+            }
+            root.scaleX = 0.25f; root.scaleY = 0.25f
+            root.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(260)
+                .setInterpolator(android.view.animation.DecelerateInterpolator(1.6f)).start()
+        }
         rv.post { rv.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() }
     }
 
@@ -1329,8 +1356,24 @@ class MainActivity : AppCompatActivity() {
         val cw = dp(112); val ch = dp(68); val ch2 = (3 * (ch + dp(8))) / 2 - dp(8)
         val left = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            addView(tile(R.drawable.ic_moon, getString(R.string.qs_dnd), null, cw, ch2, false) {
-                open(Intent("android.settings.ZEN_MODE_SETTINGS"))
+            val nm = getSystemService(android.app.NotificationManager::class.java)
+            fun dndOn() = try { nm.isNotificationPolicyAccessGranted && nm.currentInterruptionFilter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL } catch (_: Exception) { false }
+            fun dndLabel() = getString(if (dndOn()) R.string.qs_on else R.string.qs_off)
+            addView(tile(R.drawable.ic_moon, getString(R.string.qs_dnd), dndLabel(), cw, ch2, false) { lbl ->
+                try {
+                    if (nm.isNotificationPolicyAccessGranted) {
+                        nm.setInterruptionFilter(
+                            if (dndOn()) android.app.NotificationManager.INTERRUPTION_FILTER_ALL
+                            else android.app.NotificationManager.INTERRUPTION_FILTER_NONE
+                        )
+                        lbl.visibility = View.VISIBLE
+                        lbl.text = dndLabel()
+                    } else {
+                        open(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+                    }
+                } catch (_: Exception) {
+                    open(Intent("android.settings.ZEN_MODE_SETTINGS"))
+                }
             })
             addView(tile(R.drawable.ic_timer, getString(R.string.qs_sleep_timer),
                 if (sleepMinutes == 0) getString(R.string.qs_off) else "$sleepMinutes ${getString(R.string.qs_min)}", cw, ch2, false) { lbl ->

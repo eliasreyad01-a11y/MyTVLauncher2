@@ -45,13 +45,13 @@ object Dialogs {
         val bd = android.graphics.drawable.BitmapDrawable(activity.resources, small).apply {
             isFilterBitmap = true; gravity = android.view.Gravity.FILL
         }
-        android.graphics.drawable.LayerDrawable(arrayOf(bd, android.graphics.drawable.ColorDrawable(Color.parseColor("#8C0E1A1F"))))
+        android.graphics.drawable.LayerDrawable(arrayOf(bd, android.graphics.drawable.ColorDrawable(Color.parseColor("#2E000000"))))
     } catch (e: Throwable) { null }
 
     /** tvOS-style choice page: dimmed centred title, squircle on the left, pill rows on the right, tick on the current value. */
     private fun rowBg(focused: Boolean): android.graphics.drawable.Drawable =
         android.graphics.drawable.GradientDrawable().apply {
-            setColor(Color.parseColor(if (focused) "#F5FFFFFF" else "#38FFFFFF"))
+            setColor(Color.parseColor(if (focused) "#F5FFFFFF" else "#47FFFFFF"))
             cornerRadius = 10f * android.content.res.Resources.getSystem().displayMetrics.density
         }
 
@@ -70,7 +70,7 @@ object Dialogs {
             text = title ?: ""
             textSize = 32f
             gravity = android.view.Gravity.CENTER
-            setTextColor(Color.parseColor("#B3F4F8FF"))
+            setTextColor(Color.parseColor("#E6FFFFFF"))
             setTypeface(typeface, Typeface.BOLD)
         }
         val tile = android.widget.FrameLayout(activity).apply {

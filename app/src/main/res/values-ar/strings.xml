@@ -176,4 +176,5 @@
     <string name="folder_rename">إعادة تسمية المجلد</string>
     <string name="folder_delete">حذف المجلد</string>
     <string name="folder_default">مجلد</string>
+    <string name="qs_on">يعمل</string>
 </resources>

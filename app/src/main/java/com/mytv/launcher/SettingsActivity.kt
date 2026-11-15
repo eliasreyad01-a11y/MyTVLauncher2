@@ -213,7 +213,7 @@ class SettingsActivity : AppCompatActivity() {
         scroll.addView(container)
         titleView = TextView(this).apply {
             textSize = 32f
-            setTextColor(Color.parseColor("#B3F4F8FF"))
+            setTextColor(Color.parseColor("#E6FFFFFF"))
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             gravity = android.view.Gravity.CENTER
         }
@@ -251,7 +251,7 @@ class SettingsActivity : AppCompatActivity() {
                 val small = android.graphics.BitmapFactory.decodeResource(resources, R.drawable.wp_kirkjufell, o)
                 if (small != null) {
                     val bd = android.graphics.drawable.BitmapDrawable(resources, small).apply { isFilterBitmap = true; gravity = android.view.Gravity.FILL }
-                    val shade = android.graphics.drawable.ColorDrawable(Color.parseColor("#7A0E1A1F"))
+                    val shade = android.graphics.drawable.ColorDrawable(Color.parseColor("#2E000000"))
                     background = android.graphics.drawable.LayerDrawable(arrayOf(bd, shade))
                 }
             } catch (_: Throwable) {}
@@ -519,7 +519,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun rowBg(focused: Boolean): android.graphics.drawable.Drawable =
         android.graphics.drawable.GradientDrawable().apply {
-            setColor(Color.parseColor(if (focused) "#F5FFFFFF" else "#38FFFFFF"))
+            setColor(Color.parseColor(if (focused) "#F5FFFFFF" else "#47FFFFFF"))
             cornerRadius = dp(10).toFloat()
         }
 
