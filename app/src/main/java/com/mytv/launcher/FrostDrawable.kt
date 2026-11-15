@@ -51,7 +51,8 @@ class FrostDrawable(private val ctx: Context, private val radiusDp: Float, priva
 
 object Frost {
     private var bmp: Bitmap? = null
-    fun shader(ctx: Context): Shader? = try {
+    fun shader(ctx: Context): Shader? {
+      return try {
         val b = bmp ?: run {
             val o = BitmapFactory.Options().apply { inSampleSize = 16 }
             BitmapFactory.decodeResource(ctx.resources, R.drawable.wp_kirkjufell, o)?.also { bmp = it }
@@ -62,5 +63,6 @@ object Frost {
         m.postScale(sc, sc)
         m.postTranslate((dm.widthPixels - b.width * sc) / 2f, (dm.heightPixels - b.height * sc) / 2f)
         BitmapShader(b, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).also { it.setLocalMatrix(m) }
-    } catch (_: Throwable) { null }
+      } catch (_: Throwable) { null }
+    }
 }
