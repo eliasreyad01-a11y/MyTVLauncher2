@@ -22,13 +22,19 @@ object GlassTheme {
     fun index(ctx: Context): Int = Prefs(ctx).glassTheme.coerceIn(0, all.size - 1)
     fun current(ctx: Context): T = all[index(ctx)]
 
+    /** Mixes ~35% of the theme colour into the glass (keeps the glass's own transparency, darkness and rim). */
+    private fun apply(d: Drawable, tint: Int) {
+        d.setTintMode(android.graphics.PorterDuff.Mode.SRC_ATOP)
+        d.setTintList(android.content.res.ColorStateList.valueOf((0x5A shl 24) or (tint and 0xFFFFFF)))
+    }
+
     /** A private copy of a glass drawable, tinted with the current theme (alpha of every layer is kept). */
     fun drawable(ctx: Context, res: Int): Drawable? =
-        ctx.getDrawable(res)?.mutate()?.also { it.setTint(current(ctx).tint) }
+        ctx.getDrawable(res)?.mutate()?.also { apply(it, current(ctx).tint) }
 
     /** Re-tints a view's existing glass background without touching shape, size or state selectors. */
     fun retint(ctx: Context, v: View?) {
         val bg = v?.background ?: return
-        v.background = bg.mutate().also { it.setTint(current(ctx).tint) }
+        v.background = bg.mutate().also { apply(it, current(ctx).tint) }
     }
 }

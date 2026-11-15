@@ -11,8 +11,8 @@ android {
         applicationId = "com.mytv.glass"
         minSdk = 26
         targetSdk = 34
-        versionCode = 29
-        versionName = "3.1.0"
+        versionCode = 30
+        versionName = "3.2.0"
     }
 
     signingConfigs {

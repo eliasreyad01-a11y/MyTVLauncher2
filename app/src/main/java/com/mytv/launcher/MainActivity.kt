@@ -347,12 +347,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        findViewById<View>(R.id.btnProfile).setOnClickListener { showAccounts(false) }
+        findViewById<View>(R.id.btnWifi).setOnClickListener { startActivitySafe(Intent(Settings.ACTION_WIFI_SETTINGS)) }
         findViewById<View>(R.id.btnHome).setOnClickListener {
             grid.scrollToPosition(0)
             grid.post { updateScrollEffects(); tileOf(0)?.requestFocus() }
         }
-        findViewById<View>(R.id.btnWave).setOnClickListener { startActivitySafe(Intent(Settings.ACTION_SOUND_SETTINGS)) }
         findViewById<View>(R.id.btnBt).setOnClickListener { openBluetooth() }
         btnSettings.setOnClickListener { showQuickSettings() }
 
@@ -393,7 +392,7 @@ class MainActivity : AppCompatActivity() {
         if (i == appliedGlass) return
         appliedGlass = i
         prayerCard.background = GlassTheme.drawable(this, R.drawable.bg_card)
-        for (v in listOf<View?>(findViewById(R.id.btnProfile), btnSettings, findViewById(R.id.btnHome), findViewById(R.id.btnWave), findViewById(R.id.btnBt))) GlassTheme.retint(this, v)
+        for (v in listOf<View?>(findViewById(R.id.btnWifi), btnSettings, findViewById(R.id.btnHome), findViewById(R.id.btnBt))) GlassTheme.retint(this, v)
         grid.invalidateItemDecorations()
         grid.invalidate()
     }
@@ -1170,15 +1169,14 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { popup.dismiss(); action() }
             layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) }
         }
-        val cw = dp(112); val ch = dp(68)
+        val cw = dp(112); val ch = dp(68); val ch2 = (3 * (ch + dp(8))) / 2 - dp(8)
         val left = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            addView(tile(R.drawable.ic_wifi, getString(R.string.qs_network), null, cw, ch, false) { open(Intent(Settings.ACTION_WIFI_SETTINGS)) })
-            addView(tile(R.drawable.ic_moon, getString(R.string.qs_dnd), null, cw, ch, false) {
+            addView(tile(R.drawable.ic_moon, getString(R.string.qs_dnd), null, cw, ch2, false) {
                 open(Intent("android.settings.ZEN_MODE_SETTINGS"))
             })
             addView(tile(R.drawable.ic_timer, getString(R.string.qs_sleep_timer),
-                if (sleepMinutes == 0) getString(R.string.qs_off) else "$sleepMinutes ${getString(R.string.qs_min)}", cw, ch, false) { lbl ->
+                if (sleepMinutes == 0) getString(R.string.qs_off) else "$sleepMinutes ${getString(R.string.qs_min)}", cw, ch2, false) { lbl ->
                 sleepMinutes = when (sleepMinutes) { 0 -> 15; 15 -> 30; 30 -> 60; else -> 0 }
                 handler.removeCallbacks(sleepRunnable)
                 if (sleepMinutes > 0) handler.postDelayed(sleepRunnable, sleepMinutes * 60_000L)
@@ -1212,7 +1210,7 @@ class MainActivity : AppCompatActivity() {
         popup.elevation = dp(12).toFloat()
         popup.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         menuPopup = popup
-        popup.showAsDropDown(btnSettings, 0, dp(8), Gravity.LEFT)
+        popup.showAtLocation(findViewById(android.R.id.content), Gravity.TOP or Gravity.LEFT, dp(60), dp(88))
         left.getChildAt(0)?.requestFocus()
     }
 

@@ -303,50 +303,48 @@ class SettingsActivity : AppCompatActivity() {
         Toast.makeText(this, "Not available on this device", Toast.LENGTH_SHORT).show()
     }
 
-    private fun dateModeLabel() = listOf("Gregorian and Hijri", "Gregorian", "Hijri")[prefs.dateMode.coerceIn(0, 2)]
+    private fun dateModeLabel() = dateModes()[prefs.dateMode.coerceIn(0, 2)]
+    private fun dateModes() = if (prefs.language != "en") listOf("ميلادي وهجري", "ميلادي", "هجري") else listOf("Gregorian and Hijri", "Gregorian", "Hijri")
 
     private fun showDateModeDialog() {
-        Dialogs.showChoice(this, "Date", listOf("Gregorian and Hijri", "Gregorian", "Hijri"), prefs.dateMode) { i ->
+        Dialogs.showChoice(this, tr("Date", "التاريخ"), dateModes(), prefs.dateMode) { i ->
             prefs.dateMode = i
             recreate()
         }
     }
 
     private fun showGlassDialog() {
-        Dialogs.showChoice(this, "Glass Theme", GlassTheme.all.map { it.name }, GlassTheme.index(this)) { i ->
+        Dialogs.showChoice(this, tr("Glass Theme", "الثيم الزجاجي"), GlassTheme.all.map { it.name }, GlassTheme.index(this)) { i ->
             prefs.glassTheme = i
             recreate()
         }
     }
 
+    private val ar get() = prefs.language != "en"
+    private fun tr(en: String, arb: String) = if (ar) arb else en
+
     private fun buildCategories() {
-        titleView.text = "Settings"
-        descView.text = "Apple TV"
-        addRow("Glass Theme", GlassTheme.current(this).name) { showGlassDialog() }
-        addRow("Date", dateModeLabel()) { showDateModeDialog() }
-        addRow("Adhan and Prayer Times", null) { openSection("prayer") }
-        addRow("Wallpaper", null) { openSection("wallpaper") }
-        addRow("Home Screen", null) { openSection("home") }
-        addRow("Launcher", null) { openSection("general") }
-        addRow("General", null) { openSection("a_general") }
-        addRow("Profiles and Accounts", null) { sys(android.provider.Settings.ACTION_SYNC_SETTINGS, android.provider.Settings.ACTION_ADD_ACCOUNT) }
-        addRow("Video and Audio", null) { openSection("a_video") }
-        addRow("Screen Saver", null) { sys(android.provider.Settings.ACTION_DREAM_SETTINGS, android.provider.Settings.ACTION_DISPLAY_SETTINGS) }
-        addRow("Notifications", null) {
-            try { startActivity(Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, packageName)) } catch (_: Exception) { sys(android.provider.Settings.ACTION_SETTINGS) }
-        }
-        addRow("AirPlay and Apple Home", null) { sys(android.provider.Settings.ACTION_CAST_SETTINGS, android.provider.Settings.ACTION_SETTINGS) }
-        addRow("Remotes and Devices", null) { sys(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS) }
-        addRow("Accessibility", null) { sys(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS) }
-        addRow("Apps", null) { sys(android.provider.Settings.ACTION_APPLICATION_SETTINGS, android.provider.Settings.ACTION_MANAGE_ALL_APPLICATIONS_SETTINGS) }
-        addRow("Network", null) { sys(android.provider.Settings.ACTION_WIFI_SETTINGS) }
-        addRow("System", null) { sys(android.provider.Settings.ACTION_SETTINGS) }
-        addRow("Power Off", null, false) {
-            Dialogs.showChoice(this, "Power Off", listOf("Sleep Now", "Cancel")) { i ->
-                if (i == 0) Toast.makeText(this, "Press the power button on your remote", Toast.LENGTH_LONG).show()
-            }
-        }
+        titleView.text = tr("Settings", "الإعدادات")
+        descView.text = ""
+        val d = android.provider.Settings.ACTION_DISPLAY_SETTINGS
+        addRow(tr("Glass Theme", "الثيم الزجاجي"), GlassTheme.current(this).name) { showGlassDialog() }
+        addRow(tr("Date", "التاريخ"), dateModeLabel()) { showDateModeDialog() }
+        addRow(tr("Adhan and Prayer Times", "الأذان والمواقيت")) { openSection("prayer") }
+        addRow(tr("Wallpaper", "الخلفية")) { openSection("wallpaper") }
+        addRow(tr("Home Screen", "الشاشة الرئيسية")) { openSection("home") }
+        addRow(tr("General", "عام")) { openSection("general") }
+        addRow(tr("Video", "الفيديو")) { sys(d) }
+        addRow(tr("Audio", "الصوت")) { sys(android.provider.Settings.ACTION_SOUND_SETTINGS) }
+        addRow(tr("Screen Saver", "شاشة التوقف")) { sys(android.provider.Settings.ACTION_DREAM_SETTINGS, d) }
+        addRow(tr("Accounts", "الحسابات")) { sys(android.provider.Settings.ACTION_SYNC_SETTINGS, android.provider.Settings.ACTION_ADD_ACCOUNT) }
+        addRow(tr("Remotes and Devices", "الريموت والأجهزة")) { sys(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS) }
+        addRow(tr("Accessibility", "سهولة الاستخدام")) { sys(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS) }
+        addRow(tr("Apps", "التطبيقات")) { sys(android.provider.Settings.ACTION_APPLICATION_SETTINGS, android.provider.Settings.ACTION_MANAGE_ALL_APPLICATIONS_SETTINGS) }
+        addRow(tr("Network", "الشبكة")) { sys(android.provider.Settings.ACTION_WIFI_SETTINGS) }
+        addRow(tr("System", "النظام")) { sys(android.provider.Settings.ACTION_SETTINGS) }
     }
+
+    private fun addRow(title: String, onClick: () -> Unit): Row = addRow(title, null, true, onClick)
 
     private fun buildApple(section: String) {
         val d = android.provider.Settings.ACTION_DISPLAY_SETTINGS
