@@ -170,4 +170,10 @@
     <string name="accounts_title">الحسابات المسجّلة</string>
     <string name="accounts_none">ما في حسابات ظاهرة للانشر. أندرويد ممكن يخفي بعض الحسابات عن التطبيقات.</string>
     <string name="accounts_manage">إعدادات الحسابات</string>
+    <string name="folder_add">إضافة إلى مجلد</string>
+    <string name="folder_remove">إزالة من المجلد</string>
+    <string name="folder_new">مجلد جديد</string>
+    <string name="folder_rename">إعادة تسمية المجلد</string>
+    <string name="folder_delete">حذف المجلد</string>
+    <string name="folder_default">مجلد</string>
 </resources>

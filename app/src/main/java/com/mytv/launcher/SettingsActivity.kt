@@ -517,6 +517,12 @@ class SettingsActivity : AppCompatActivity() {
         ).apply { setMargins(dp(14), dp(22), 0, dp(6)) })
     }
 
+    private fun rowBg(focused: Boolean): android.graphics.drawable.Drawable =
+        android.graphics.drawable.GradientDrawable().apply {
+            setColor(Color.parseColor(if (focused) "#F5FFFFFF" else "#38FFFFFF"))
+            cornerRadius = dp(10).toFloat()
+        }
+
     private fun addRow(title: String, subtitle: String?, chevron: Boolean = true, onClick: () -> Unit): Row {
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -524,7 +530,7 @@ class SettingsActivity : AppCompatActivity() {
             isFocusable = true
             isClickable = true
             minimumHeight = dp(56)
-            setBackgroundResource(R.drawable.bg_row)
+            background = rowBg(false)
             setPadding(dp(18), dp(10), dp(14), dp(10))
             setOnClickListener { onClick() }
         }
@@ -553,6 +559,7 @@ class SettingsActivity : AppCompatActivity() {
         box.addView(subView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(10) })
         box.addView(arrow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = dp(10) })
         box.setOnFocusChangeListener { _, f ->
+            box.background = rowBg(f)
             if (f) descView.text = listOfNotNull(title, subtitle).joinToString(" — ")
             box.animate().scaleX(if (f) 1.03f else 1f).scaleY(if (f) 1.03f else 1f).setDuration(140).start()
             titleView.setTextColor(Color.parseColor(if (f) "#10151B" else "#F4F8FF"))

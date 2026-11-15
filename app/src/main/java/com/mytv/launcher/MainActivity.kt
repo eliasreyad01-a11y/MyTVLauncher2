@@ -40,6 +40,7 @@ import java.util.Locale
 
 private const val LIBRARY_PKG = "__library__"
 private const val ADD_PKG = "__add__"
+private const val FOLDER_PREFIX = "__folder:"
 
 class MainActivity : AppCompatActivity() {
 
@@ -72,10 +73,13 @@ class MainActivity : AppCompatActivity() {
             when (it.packageName) {
                 LIBRARY_PKG -> showLibrary()
                 ADD_PKG -> showAddApps()
-                else -> launchApp(it)
+                else -> if (it.packageName.startsWith(FOLDER_PREFIX)) showFolder(folderName(it)) else launchApp(it)
             }
         },
-        onLongClick = { item, a -> if (item.packageName != LIBRARY_PKG && item.packageName != ADD_PKG) showAppMenu(item, a) },
+        onLongClick = { item, a ->
+            if (item.packageName.startsWith(FOLDER_PREFIX)) showFolderMenu(folderName(item))
+            else if (item.packageName != LIBRARY_PKG && item.packageName != ADD_PKG) showAppMenu(item, a)
+        },
         onFocus = { onTileFocus(it) }
     )
 
@@ -859,7 +863,20 @@ class MainActivity : AppCompatActivity() {
         val dockKeys = docked.map { it.packageName }.toSet()
         val cap = prefs.homeRows * span
         val rows: List<AppItem> = if (cap <= 0) emptyList() else {
-            val rest = visibleApps.filter { it.packageName !in dockKeys }
+            val folderMap = prefs.folders
+            val member = HashMap<String, String>()
+            for ((fname, pk) in folderMap) for (x in pk) member[x] = fname
+            val rest = ArrayList<AppItem>()
+            val seen = HashSet<String>()
+            for (a in visibleApps) {
+                if (a.packageName in dockKeys) continue
+                val f = member[a.packageName]
+                if (f == null) rest.add(a)
+                else if (seen.add(f)) {
+                    val apps = (folderMap[f] ?: emptyList()).mapNotNull { pk -> visibleApps.firstOrNull { it.packageName == pk } }
+                    if (apps.isNotEmpty()) rest.add(folderItem(f, apps))
+                }
+            }
             rest.take(cap - 1) + libraryTile()
         }
         if (span != appliedSpan) {
@@ -1083,7 +1100,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAppMenu(
-        item: AppItem, adapter: AppAdapter, inLibrary: Boolean = false, onChanged: () -> Unit = {}
+        item: AppItem, adapter: AppAdapter, inLibrary: Boolean = false, inFolder: String? = null, onChanged: () -> Unit = {}
     ) {
         val isFav = prefs.favorites.contains(item.packageName)
         val entries = ArrayList<Pair<String, () -> Unit>>()
@@ -1103,7 +1120,9 @@ class MainActivity : AppCompatActivity() {
                 onChanged()
             })
         }
-        if (!inLibrary) entries.add(getString(R.string.move_app) to { startMove(item, adapter) })
+        if (inFolder != null) entries.add(getString(R.string.folder_remove) to { removeFromFolder(inFolder, item.packageName); onChanged() })
+        else entries.add(getString(R.string.folder_add) to { pickFolder(item.packageName); onChanged() })
+        if (!inLibrary && inFolder == null) entries.add(getString(R.string.move_app) to { startMove(item, adapter) })
         entries.add(getString(R.string.app_info) to {
             startActivitySafe(
                 Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${item.packageName}"))
@@ -1119,6 +1138,144 @@ class MainActivity : AppCompatActivity() {
         })
         entries.add(getString(R.string.cancel) to {})
         Dialogs.showChoice(this, item.label, entries.map { it.first }) { which -> entries[which].second() }
+    }
+
+    // ---------------------------------------------------------------- folders
+
+    private fun folderName(item: AppItem) = item.packageName.removePrefix(FOLDER_PREFIX).substringBeforeLast('#')
+
+    /** 320x180 frosted plate with up to six mini icons, like tvOS folders. */
+    private fun folderItem(name: String, apps: List<AppItem>): AppItem {
+        val w = 320; val h = 180
+        val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+        val c = android.graphics.Canvas(bmp)
+        val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        p.color = Color.parseColor("#59FFFFFF")
+        c.drawRoundRect(android.graphics.RectF(0f, 0f, w.toFloat(), h.toFloat()), 26f, 26f, p)
+        p.style = android.graphics.Paint.Style.STROKE; p.strokeWidth = 2f; p.color = Color.parseColor("#80FFFFFF")
+        c.drawRoundRect(android.graphics.RectF(1f, 1f, w - 1f, h - 1f), 25f, 25f, p)
+        val s = 70; val gap = 14
+        val x0 = (w - (3 * s + 2 * gap)) / 2; val y0 = (h - (2 * s + gap)) / 2
+        apps.take(6).forEachIndexed { i, a ->
+            val d = a.icon.constantState?.newDrawable()?.mutate() ?: a.icon
+            val x = x0 + (i % 3) * (s + gap); val y = y0 + (i / 3) * (s + gap)
+            d.setBounds(x, y, x + s, y + s)
+            d.draw(c)
+        }
+        return AppItem(FOLDER_PREFIX + name + "#" + apps.map { it.packageName }.hashCode(), name,
+            android.graphics.drawable.BitmapDrawable(resources, bmp), android.graphics.drawable.BitmapDrawable(resources, bmp), Intent())
+    }
+
+    private fun saveFolders(map: LinkedHashMap<String, List<String>>) {
+        map.entries.removeAll { it.value.isEmpty() }
+        prefs.folders = map
+        applyLists()
+    }
+
+    private fun addToFolder(name: String, pkg: String) {
+        val map = prefs.folders
+        for (k in map.keys.toList()) map[k] = map[k]!!.filter { it != pkg }
+        map[name] = (map[name] ?: emptyList()) + pkg
+        if (prefs.favorites.contains(pkg)) prefs.favorites = prefs.favorites.filter { it != pkg }
+        saveFolders(map)
+    }
+
+    private fun removeFromFolder(name: String, pkg: String) {
+        val map = prefs.folders
+        map[name] = (map[name] ?: emptyList()).filter { it != pkg }
+        saveFolders(map)
+    }
+
+    private fun pickFolder(pkg: String) {
+        val names = prefs.folders.keys.toList()
+        val labels = names + getString(R.string.folder_new)
+        Dialogs.showChoice(this, getString(R.string.folder_add), labels) { i ->
+            if (i < names.size) addToFolder(names[i], pkg)
+            else askFolderName(getString(R.string.folder_default) + " " + (names.size + 1)) { n ->
+                val clean = n.trim().ifEmpty { getString(R.string.folder_default) }
+                addToFolder(if (prefs.folders.containsKey(clean)) clean + " 2" else clean, pkg)
+            }
+        }
+    }
+
+    private fun askFolderName(initial: String, onName: (String) -> Unit) {
+        val input = android.widget.EditText(this).apply {
+            setText(initial); setSelectAllOnFocus(true); setSingleLine()
+            setTextColor(Color.WHITE)
+        }
+        AlertDialog.Builder(this, R.style.LauncherDialog)
+            .setTitle(R.string.folder_new)
+            .setView(input)
+            .setPositiveButton(android.R.string.ok) { _, _ -> onName(input.text.toString()) }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showFolderMenu(name: String) {
+        val entries = listOf(
+            getString(R.string.open) to { showFolder(name) },
+            getString(R.string.folder_rename) to {
+                askFolderName(name) { n ->
+                    val clean = n.trim()
+                    val map = prefs.folders
+                    if (clean.isNotEmpty() && clean != name && !map.containsKey(clean)) {
+                        val re = LinkedHashMap<String, List<String>>()
+                        for ((k, v) in map) re[if (k == name) clean else k] = v
+                        saveFolders(re)
+                    }
+                }
+            },
+            getString(R.string.folder_delete) to {
+                val map = prefs.folders; map.remove(name); saveFolders(map)
+            },
+            getString(R.string.cancel) to {}
+        )
+        Dialogs.showChoice(this, name, entries.map { it.first }) { entries[it].second() }
+    }
+
+    /** tvOS-style folder: a frosted rounded panel that zooms open over the dimmed home screen. */
+    private fun showFolder(name: String) {
+        val apps = (prefs.folders[name] ?: return).mapNotNull { pk -> visibleApps.firstOrNull { it.packageName == pk } }
+        if (apps.isEmpty()) return
+        val dialog = Dialogs.track(android.app.Dialog(this, R.style.LauncherPlainDialog))
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(Color.parseColor("#B3262B33")); cornerRadius = dp(36).toFloat()
+                setStroke(dp(1), Color.parseColor("#55FFFFFF"))
+            }
+            setPadding(dp(32), dp(22), dp(32), dp(18))
+        }
+        root.addView(TextView(this).apply {
+            text = name; textSize = 26f; setTextColor(Color.WHITE)
+            setTypeface(typeface, Typeface.BOLD); gravity = Gravity.CENTER
+        })
+        val span = minOf(apps.size, 4).coerceAtLeast(2)
+        val rv = RecyclerView(this).apply {
+            layoutManager = GridLayoutManager(this@MainActivity, span)
+            clipToPadding = false; clipChildren = false
+            setPadding(0, dp(12), 0, dp(8))
+        }
+        val ad = AppAdapter(
+            onClick = { item -> dialog.dismiss(); launchApp(item) },
+            onLongClick = { item, a -> showAppMenu(item, a, inFolder = name) { dialog.dismiss() } }
+        )
+        ad.focusRing = true
+        ad.items.addAll(apps)
+        rv.adapter = ad
+        val dm = resources.displayMetrics
+        root.addView(rv, LinearLayout.LayoutParams((dm.widthPixels * 0.14f * span).toInt().coerceAtLeast(dp(360)), ViewGroup.LayoutParams.WRAP_CONTENT))
+        dialog.setContentView(root)
+        dialog.window?.apply {
+            setBackgroundDrawableResource(android.R.color.transparent)
+            setDimAmount(0.55f)
+            addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        }
+        root.scaleX = 0.8f; root.scaleY = 0.8f; root.alpha = 0f
+        dialog.show()
+        root.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(220).start()
+        rv.post { rv.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() }
     }
 
     private fun toggleFavorite(item: AppItem) {

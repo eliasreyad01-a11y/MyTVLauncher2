@@ -170,4 +170,10 @@
     <string name="accounts_title">Signed-in accounts</string>
     <string name="accounts_none">No accounts are visible to the launcher. Android may hide some accounts from apps.</string>
     <string name="accounts_manage">Account settings</string>
+    <string name="folder_add">Add to folder</string>
+    <string name="folder_remove">Remove from folder</string>
+    <string name="folder_new">New folder</string>
+    <string name="folder_rename">Rename folder</string>
+    <string name="folder_delete">Delete folder</string>
+    <string name="folder_default">Folder</string>
 </resources>

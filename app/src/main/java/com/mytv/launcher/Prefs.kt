@@ -64,6 +64,25 @@ class Prefs(context: Context) {
         get() = readList("app_order")
         set(value) = writeList("app_order", value)
 
+    /** Folders: name -> package names, in order. */
+    var folders: LinkedHashMap<String, List<String>>
+        get() {
+            val out = LinkedHashMap<String, List<String>>()
+            try {
+                val o = org.json.JSONObject(sp.getString("folders", "{}") ?: "{}")
+                for (k in o.keys()) {
+                    val a = o.getJSONArray(k)
+                    out[k] = List(a.length()) { a.getString(it) }
+                }
+            } catch (_: Exception) { }
+            return out
+        }
+        set(value) {
+            val o = org.json.JSONObject()
+            for ((k, v) in value) o.put(k, JSONArray(v))
+            sp.edit().putString("folders", o.toString()).apply()
+        }
+
     var hidden: List<String>
         get() = readList("hidden")
         set(value) = writeList("hidden", value)

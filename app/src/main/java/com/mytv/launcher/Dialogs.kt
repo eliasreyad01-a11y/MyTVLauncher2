@@ -49,6 +49,12 @@ object Dialogs {
     } catch (e: Throwable) { null }
 
     /** tvOS-style choice page: dimmed centred title, squircle on the left, pill rows on the right, tick on the current value. */
+    private fun rowBg(focused: Boolean): android.graphics.drawable.Drawable =
+        android.graphics.drawable.GradientDrawable().apply {
+            setColor(Color.parseColor(if (focused) "#F5FFFFFF" else "#38FFFFFF"))
+            cornerRadius = 10f * android.content.res.Resources.getSystem().displayMetrics.density
+        }
+
     fun showChoice(
         activity: Activity,
         title: String?,
@@ -88,7 +94,7 @@ object Dialogs {
                 isFocusable = true
                 isClickable = true
                 minimumHeight = dp(56)
-                setBackgroundResource(R.drawable.bg_row)
+                background = rowBg(false)
                 setPadding(dp(18), dp(10), dp(18), dp(10))
             }
             val t = TextView(activity).apply {
@@ -107,6 +113,7 @@ object Dialogs {
             row.addView(tick)
             row.setOnClickListener { dialog.dismiss(); onPick(index) }
             row.setOnFocusChangeListener { v, f ->
+                v.background = rowBg(f)
                 v.animate().scaleX(if (f) 1.03f else 1f).scaleY(if (f) 1.03f else 1f).setDuration(140).start()
                 t.setTextColor(Color.parseColor(if (f) "#10151B" else "#F4F8FF"))
                 tick.setTextColor(Color.parseColor(if (f) "#10151B" else "#F4F8FF"))
