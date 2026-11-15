@@ -529,7 +529,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun rowBg(focused: Boolean): android.graphics.drawable.Drawable =
         android.graphics.drawable.GradientDrawable().apply {
-            setColor(Color.parseColor(if (focused) "#F5FFFFFF" else "#47FFFFFF"))
+            setColor(Color.parseColor(if (focused) "#F8FAFF" else "#47F5F9FF"))
             cornerRadius = dp(10).toFloat()
         }
 

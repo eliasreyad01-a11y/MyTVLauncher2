@@ -8,18 +8,26 @@ import android.view.View
 object GlassTheme {
     class T(val name: String, val tint: Int, val frostAlpha: Int)
 
+    /** The Liquid Glass material, exactly as specified. */
+    const val MAIN = 0x38F5F9FF        // rgba(245,249,255,0.22)  main glass background
+    const val SECOND = 0x29E1EBF8      // rgba(225,235,248,0.16)  secondary glass layer
+    const val BORDER = 0xA6FFFFFF.toInt()  // rgba(255,255,255,0.65)  glass border
+    const val HIGHLIGHT = 0xCCFFFFFF.toInt() // rgba(255,255,255,0.80)  inner highlight
+    const val SHADOW = 0x1F415578      // rgba(65,85,120,0.12)    soft shadow
+
     val all = listOf(
-        T("Ice Blue", 0xFFBFE6FF.toInt(), 0x44),
-        T("Glass Purple", 0xFFC9B3FF.toInt(), 0x48),
-        T("Pearl Silver", 0xFFF2F4F8.toInt(), 0x40),
-        T("Mint Green", 0xFFBDF5DC.toInt(), 0x44),
-        T("Rose Pink", 0xFFFFC4D8.toInt(), 0x46),
-        T("Steel Blue", 0xFF8FB0D6.toInt(), 0x50),
-        T("Champagne Gold", 0xFFF3DDA8.toInt(), 0x48),
-        T("Smoke Gray", 0xFF8A8F98.toInt(), 0x5A)
+        T("Crystal White", 0xFFF8FAFF.toInt(), 0x44),
+        T("Pearl Silver", 0xFFE8EDF5.toInt(), 0x44),
+        T("Arctic Ice Blue", 0xFFDCEBFA.toInt(), 0x44),
+        T("Platinum Silver", 0xFFC9D2DF.toInt(), 0x46),
+        T("Soft Sky Blue", 0xFFB9D9F5.toInt(), 0x46),
+        T("Icy Blue", 0xFFA8CFF2.toInt(), 0x46),
+        T("Aurora Lavender", 0xFFDCD9F5.toInt(), 0x44),
+        T("Champagne Silver", 0xFFE8E3DA.toInt(), 0x44)
     )
 
-    fun opacity(ctx: Context): Float = Prefs(ctx).glassOpacity / 100f
+    /** Chosen opacity, nudged by the wallpaper: a darker picture gets slightly lighter glass so it never turns muddy. */
+    fun opacity(ctx: Context): Float = (Prefs(ctx).glassOpacity / 100f * (0.92f + 0.12f * Frost.luminance(ctx))).coerceIn(0.2f, 1f)
     /** Changes whenever theme or transparency changes. */
     fun key(ctx: Context): Int = index(ctx) * 1000 + Prefs(ctx).glassOpacity
 

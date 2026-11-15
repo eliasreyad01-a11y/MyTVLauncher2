@@ -17,6 +17,8 @@ class DockBand(context: Context, private val adapter: AppAdapter) : RecyclerView
     private val rect = android.graphics.RectF()
     private val loc = IntArray(2)
     private var shaderReady = false
+    private var sheen: android.graphics.Paint? = null
+    private var sheenH = -1f
 
     /** Tiny wallpaper copy, scaled up smoothly = frosted glass. One shared shader, positioned in screen coordinates. */
     private fun prepare(context: Context) {
@@ -74,6 +76,12 @@ class DockBand(context: Context, private val adapter: AppAdapter) : RecyclerView
             c.drawRoundRect(rect, radius, radius, paint)
             c.restore()
         }
+        val bh = (bottom - top + 2 * pad).toFloat()
+        if (sheen == null || sheenH != bh) { sheenH = bh; sheen = Frost.sheenPaint(bh) }
+        c.save()
+        c.translate((left - pad).toFloat(), (top - pad).toFloat())
+        c.drawRoundRect(0f, 0f, (right - left + 2 * pad).toFloat(), bh, radius, radius, sheen!!)
+        c.restore()
         drawable.setBounds(left - pad, top - pad, right + pad, bottom + pad)
         drawable.draw(c)
     }

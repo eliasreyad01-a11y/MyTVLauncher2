@@ -14,6 +14,8 @@ class FrostDrawable(private val ctx: Context, private val radiusDp: Float, priva
     private val rect = RectF()
     private val loc = IntArray(2)
     private var themeIdx = -1
+    private var sheen: Paint? = null
+    private var sheenH = -1f
 
     init { paint.isFilterBitmap = true }
 
@@ -42,6 +44,14 @@ class FrostDrawable(private val ctx: Context, private val radiusDp: Float, priva
         rect.offset(loc[0].toFloat(), loc[1].toFloat())
         canvas.drawRoundRect(rect, r, r, paint)
         canvas.restore()
+        if (sheen == null || sheenH != bounds.height().toFloat()) {
+            sheenH = bounds.height().toFloat()
+            sheen = Frost.sheenPaint(sheenH)
+        }
+        canvas.save()
+        canvas.translate(bounds.left.toFloat(), bounds.top.toFloat())
+        canvas.drawRoundRect(0f, 0f, bounds.width().toFloat(), sheenH, r, r, sheen!!)
+        canvas.restore()
     }
 
     override fun setAlpha(alpha: Int) { paint.alpha = alpha }
@@ -52,6 +62,31 @@ class FrostDrawable(private val ctx: Context, private val radiusDp: Float, priva
 
 object Frost {
     private var bmp: Bitmap? = null
+    private var lum = -1f
+
+    /** Average brightness (0..1) of the wallpaper, used to adapt the glass. */
+    fun luminance(ctx: Context): Float {
+        if (lum >= 0f) return lum
+        val b = bmp ?: run { shader(ctx); bmp } ?: return 0.5f
+        var sum = 0.0
+        var n = 0
+        val px = IntArray(b.width)
+        for (y in 0 until b.height step 2) {
+            b.getPixels(px, 0, b.width, 0, y, b.width, 1)
+            for (x in px.indices step 2) {
+                val c = px[x]
+                sum += (0.2126 * Color.red(c) + 0.7152 * Color.green(c) + 0.0722 * Color.blue(c)) / 255.0
+                n++
+            }
+        }
+        lum = if (n == 0) 0.5f else (sum / n).toFloat()
+        return lum
+    }
+
+    /** Soft light reflection across the upper part of a glass surface (the 'lit from above' look). */
+    fun sheenPaint(height: Float): Paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        shader = LinearGradient(0f, 0f, 0f, height * 0.55f, 0x52FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP)
+    }
 
     /** Brighter, slightly more saturated frost: pale clear glass like the iOS / tvOS reference, not a grey plate. */
     fun filter(tint: Int, overlayAlpha: Int): ColorFilter {

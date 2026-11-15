@@ -186,16 +186,16 @@ class MainActivity : AppCompatActivity() {
         Color.colorToHSV(clockTint, hsv)
         val s = (hsv[1] * 0.9f).coerceIn(0.30f, 0.55f)
         val theme = GlassTheme.current(this).tint
-        fun pastel(sat: Float): Int {
-            val w = Color.HSVToColor(floatArrayOf(hsv[0], sat, 0.98f))
-            // half wallpaper colour, half the chosen glass theme
-            return Color.rgb((Color.red(w) + Color.red(theme)) / 2, (Color.green(w) + Color.green(theme)) / 2, (Color.blue(w) + Color.blue(theme)) / 2)
-        }
-        // Mostly see-through: the wallpaper (and the mountain) shows through the digits, only the rim and a soft top sheen stay bright.
+        fun mix(x: Int, y: Int, t: Float) = Color.rgb(
+            (Color.red(x) * (1 - t) + Color.red(y) * t).toInt(),
+            (Color.green(x) * (1 - t) + Color.green(y) * t).toInt(),
+            (Color.blue(x) * (1 - t) + Color.blue(y) * t).toInt()
+        )
+        // Crystal-white top, the theme's glass colour in the middle, a faint wallpaper-tinted sky blue below.
         val op = GlassTheme.opacity(this)
-        val top = ((0xE6 * op).toInt() shl 24) or pastel(s * 0.2f)
-        val mid = ((0xB0 * op).toInt() shl 24) or pastel(s * 0.45f)
-        val bot = ((0x99 * op).toInt() shl 24) or pastel(s * 0.7f)
+        val top = ((0xE6 * op).toInt() shl 24) or (mix(0xF8FAFF, theme, 0.25f) and 0xFFFFFF)
+        val mid = ((0xB0 * op).toInt() shl 24) or (mix(theme, 0xB9D9F5, 0.3f) and 0xFFFFFF)
+        val bot = ((0x99 * op).toInt() shl 24) or (mix(0xB9D9F5, clockTint, 0.25f) and 0xFFFFFF)
         findViewById<GlassClock>(R.id.clock).glass = intArrayOf(top, mid, bot)
     }
 
@@ -1159,9 +1159,9 @@ class MainActivity : AppCompatActivity() {
         val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
         val c = android.graphics.Canvas(bmp)
         val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-        p.color = Color.parseColor("#59FFFFFF")
+        p.color = Color.parseColor("#59F5F9FF")
         c.drawRoundRect(android.graphics.RectF(0f, 0f, w.toFloat(), h.toFloat()), 26f, 26f, p)
-        p.style = android.graphics.Paint.Style.STROKE; p.strokeWidth = 2f; p.color = Color.parseColor("#80FFFFFF")
+        p.style = android.graphics.Paint.Style.STROKE; p.strokeWidth = 2f; p.color = Color.parseColor("#A6FFFFFF")
         c.drawRoundRect(android.graphics.RectF(1f, 1f, w - 1f, h - 1f), 25f, 25f, p)
         val s = 70; val gap = 14
         val x0 = (w - (3 * s + 2 * gap)) / 2; val y0 = (h - (2 * s + gap)) / 2
@@ -1254,8 +1254,8 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             background = android.graphics.drawable.GradientDrawable().apply {
-                setColor(Color.parseColor("#4DFFFFFF")); cornerRadius = dp(34).toFloat()
-                setStroke(dp(1), Color.parseColor("#66FFFFFF"))
+                setColor(Color.parseColor("#59F5F9FF")); cornerRadius = dp(34).toFloat()
+                setStroke(dp(1), Color.parseColor("#A6FFFFFF"))
             }
             setPadding(dp(30), dp(18), dp(30), dp(14))
         }

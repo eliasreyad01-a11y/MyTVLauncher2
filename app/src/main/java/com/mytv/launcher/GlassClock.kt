@@ -59,13 +59,13 @@ class GlassClock @JvmOverloads constructor(
         // Soft dark halo (several thin strokes instead of setShadowLayer, which some TV GPUs draw as a pale box),
         // then a thin dark outline under the bright rim so the digits stay readable on pale sky.
         val d = resources.displayMetrics.density
-        p.color = 0x14102030
+        p.color = 0x14415578
         p.strokeWidth = rim + 12f * d
         super.onDraw(canvas)
-        p.color = 0x1E102030
+        p.color = 0x24415578
         p.strokeWidth = rim + 7f * d
         super.onDraw(canvas)
-        p.color = 0x59102030
+        p.color = 0x59415578
         p.strokeWidth = rim + 2.6f * d
         super.onDraw(canvas)
         p.color = (baseColor and 0xFFFFFF) or (0xFF shl 24)
