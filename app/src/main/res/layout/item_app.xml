@@ -1,17 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="180dp"
+    android:layout_width="176dp"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_app_tile"
-    android:focusable="true"
+        android:focusable="true"
     android:gravity="center_horizontal"
     android:orientation="vertical"
-    android:padding="14dp">
+    android:padding="8dp">
 
     <ImageView
         android:id="@+id/icon"
-        android:layout_width="136dp"
-        android:layout_height="136dp"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
         android:scaleType="fitCenter"
         android:importantForAccessibility="no" />
 
@@ -24,5 +23,6 @@
         android:maxLines="1"
         android:ellipsize="end"
         android:textColor="#FFFFFFFF"
-        android:textSize="18sp" />
+        android:textSize="20sp"
+        android:alpha="0" />
 </LinearLayout>

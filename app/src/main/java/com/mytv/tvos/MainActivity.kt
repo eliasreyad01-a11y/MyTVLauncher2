@@ -7,7 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.view.View
-import android.widget.ImageButton
+import android.view.KeyEvent
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -18,7 +18,6 @@ import java.util.Locale
 class MainActivity : Activity() {
 
     private lateinit var clock: TextView
-    private lateinit var focusName: TextView
     private lateinit var dock: RecyclerView
     private lateinit var controlCenter: View
     private val handler = Handler(Looper.getMainLooper())
@@ -34,24 +33,13 @@ class MainActivity : Activity() {
         setContentView(R.layout.activity_main)
 
         clock = findViewById(R.id.clock)
-        focusName = findViewById(R.id.focusName)
         dock = findViewById(R.id.dock)
         controlCenter = findViewById(R.id.controlCenter)
 
         dock.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         val apps = loadApps()
-        dock.adapter = AppsAdapter(apps, { item -> focusName.text = item.label }, { item -> launch(item.packageName) })
-        if (apps.isNotEmpty()) focusName.text = apps[0].label
+        dock.adapter = AppsAdapter(apps, { }, { item -> launch(item.packageName) })
         dock.post { dock.getChildAt(0)?.requestFocus() }
-
-        findViewById<ImageButton>(R.id.btnControl).setOnClickListener { toggleControlCenter() }
-        findViewById<ImageButton>(R.id.btnProfile).setOnClickListener { openSettings() }
-        findViewById<ImageButton>(R.id.btnHome).setOnClickListener {
-            dock.scrollToPosition(0)
-            dock.post { dock.getChildAt(0)?.requestFocus() }
-        }
-        findViewById<ImageButton>(R.id.btnSound).setOnClickListener { start(Settings.ACTION_SOUND_SETTINGS) }
-        findViewById<ImageButton>(R.id.btnBt).setOnClickListener { start(Settings.ACTION_BLUETOOTH_SETTINGS) }
 
         findViewById<View>(R.id.ccWifi).setOnClickListener { start(Settings.ACTION_WIFI_SETTINGS) }
         findViewById<View>(R.id.ccBt).setOnClickListener { start(Settings.ACTION_BLUETOOTH_SETTINGS) }
@@ -68,6 +56,15 @@ class MainActivity : Activity() {
     override fun onPause() {
         super.onPause()
         handler.removeCallbacks(ticker)
+    }
+
+    /** tvOS opens Control Center with the remote's dedicated button; on Android TV that is the Menu or Settings key. */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_SETTINGS || keyCode == KeyEvent.KEYCODE_BUTTON_Y) {
+            toggleControlCenter()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
     override fun onBackPressed() {

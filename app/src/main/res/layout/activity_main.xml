@@ -29,12 +29,6 @@
         android:paddingTop="32dp"
         android:paddingEnd="48dp">
 
-        <ImageButton android:id="@+id/btnControl" style="@style/TopBtn" android:src="@android:drawable/ic_menu_manage" android:contentDescription="btnControl" />
-        <ImageButton android:id="@+id/btnProfile" style="@style/TopBtn" android:src="@android:drawable/ic_menu_myplaces" android:contentDescription="btnProfile" />
-        <ImageButton android:id="@+id/btnHome" style="@style/TopBtn" android:src="@android:drawable/ic_menu_compass" android:contentDescription="btnHome" />
-        <ImageButton android:id="@+id/btnSound" style="@style/TopBtn" android:src="@android:drawable/ic_lock_silent_mode_off" android:contentDescription="btnSound" />
-        <ImageButton android:id="@+id/btnBt" style="@style/TopBtn" android:src="@android:drawable/ic_menu_upload" android:contentDescription="btnBt" />
-
         <Space
             android:layout_width="0dp"
             android:layout_height="1dp"
@@ -74,15 +68,6 @@
         android:layout_gravity="bottom"
         android:orientation="vertical"
         android:paddingBottom="36dp">
-
-        <TextView
-            android:id="@+id/focusName"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textColor="#FFFFFF"
-            android:textSize="28sp"
-            android:textStyle="bold" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/dock"

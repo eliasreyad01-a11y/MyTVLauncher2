@@ -30,11 +30,13 @@ class AppsAdapter(
         val item = items[position]
         holder.icon.setImageDrawable(item.icon)
         holder.label.text = item.label
+        holder.label.alpha = if (holder.itemView.hasFocus()) 1f else 0f
         holder.itemView.setOnClickListener { onClick(item) }
         holder.itemView.setOnFocusChangeListener { v, focused ->
             val s = if (focused) 1.12f else 1f
             v.animate().scaleX(s).scaleY(s).setDuration(160).start()
-            v.translationZ = if (focused) 12f else 0f
+            holder.label.animate().alpha(if (focused) 1f else 0f).setDuration(160).start()
+            holder.icon.alpha = if (focused) 1f else 0.9f
             if (focused) onFocus(item)
         }
     }
