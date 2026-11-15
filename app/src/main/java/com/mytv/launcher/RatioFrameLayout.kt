@@ -17,7 +17,7 @@ class RatioFrameLayout @JvmOverloads constructor(
         clipToOutline = true
         outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) {
-                outline.setRoundRect(0, 0, view.width, view.height, 20f * resources.displayMetrics.density)
+                outline.setRoundRect(0, 0, view.width, view.height, 24f * resources.displayMetrics.density)
             }
         }
     }

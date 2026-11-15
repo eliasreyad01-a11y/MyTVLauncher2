@@ -26,7 +26,7 @@ class GlassClock @JvmOverloads constructor(
 
     private var shader: Shader? = null
     private var shaderH = 0f
-    private val rim = 2.2f * resources.displayMetrics.density
+    private val rim = 2.6f * resources.displayMetrics.density
 
     override fun onDraw(canvas: Canvas) {
         val p = paint
@@ -37,15 +37,19 @@ class GlassClock @JvmOverloads constructor(
         }
         p.style = Paint.Style.FILL
         p.shader = shader
-        p.setShadowLayer(18f * resources.displayMetrics.density, 0f, 4f * resources.displayMetrics.density, 0x66001828)
+        p.setShadowLayer(24f * resources.displayMetrics.density, 0f, 6f * resources.displayMetrics.density, 0x99001020.toInt())
         super.onDraw(canvas)
         p.clearShadowLayer()
         p.shader = null
         val baseColor = p.color
         p.style = Paint.Style.STROKE
-        p.color = (baseColor and 0xFFFFFF) or (0xF2 shl 24)
-        p.strokeWidth = rim
         p.strokeJoin = Paint.Join.ROUND
+        // thin dark outline under the bright rim so the digits stay readable on pale sky
+        p.color = 0x59102030
+        p.strokeWidth = rim + 2.6f * resources.displayMetrics.density
+        super.onDraw(canvas)
+        p.color = (baseColor and 0xFFFFFF) or (0xFF shl 24)
+        p.strokeWidth = rim
         super.onDraw(canvas)
         p.color = baseColor
         p.style = Paint.Style.FILL

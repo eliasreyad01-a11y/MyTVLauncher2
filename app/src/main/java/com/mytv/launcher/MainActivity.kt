@@ -426,7 +426,7 @@ class MainActivity : AppCompatActivity() {
                     Color.argb(prefs.dim.coerceIn(0, 90) * 255 / 100, 0, 0, 0), android.graphics.PorterDuff.Mode.SRC_ATOP
                 )
             }
-            wallFg.visibility = View.VISIBLE
+            wallFg.visibility = View.GONE
         } else wallFg.visibility = View.GONE
         wallpaper.post { tintClock() }
         val is24 = TimeFmt.is24(this, prefs)
