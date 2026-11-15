@@ -19,6 +19,7 @@ class MainActivity : Activity() {
 
     private lateinit var clock: TextView
     private lateinit var dock: RecyclerView
+    private lateinit var grid: RecyclerView
     private lateinit var controlCenter: View
     private val handler = Handler(Looper.getMainLooper())
     private val ticker = object : Runnable {
@@ -34,11 +35,15 @@ class MainActivity : Activity() {
 
         clock = findViewById(R.id.clock)
         dock = findViewById(R.id.dock)
+        grid = findViewById(R.id.grid)
         controlCenter = findViewById(R.id.controlCenter)
 
         dock.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         val apps = loadApps()
-        dock.adapter = AppsAdapter(apps, { }, { item -> launch(item.packageName) })
+        val dockApps = apps.take(6)
+        dock.adapter = AppsAdapter(dockApps, { }, { item -> launch(item.packageName) })
+        grid.layoutManager = androidx.recyclerview.widget.GridLayoutManager(this, 5)
+        grid.adapter = AppsAdapter(apps.drop(6), { }, { item -> launch(item.packageName) })
         dock.post { dock.getChildAt(0)?.requestFocus() }
 
         findViewById<View>(R.id.ccWifi).setOnClickListener { start(Settings.ACTION_WIFI_SETTINGS) }

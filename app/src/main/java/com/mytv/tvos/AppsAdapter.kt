@@ -22,6 +22,7 @@ class AppsAdapter(
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_app, parent, false)
         val lp = RecyclerView.LayoutParams(view.layoutParams)
         lp.marginEnd = (16 * parent.resources.displayMetrics.density).toInt()
+        lp.bottomMargin = (10 * parent.resources.displayMetrics.density).toInt()
         view.layoutParams = lp
         return VH(view)
     }
@@ -36,7 +37,7 @@ class AppsAdapter(
             val s = if (focused) 1.12f else 1f
             v.animate().scaleX(s).scaleY(s).setDuration(160).start()
             holder.label.animate().alpha(if (focused) 1f else 0f).setDuration(160).start()
-            holder.icon.alpha = if (focused) 1f else 0.9f
+            
             if (focused) onFocus(item)
         }
     }
