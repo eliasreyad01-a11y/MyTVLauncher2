@@ -185,10 +185,16 @@ class MainActivity : AppCompatActivity() {
         val hsv = FloatArray(3)
         Color.colorToHSV(clockTint, hsv)
         val s = (hsv[1] * 0.9f).coerceIn(0.30f, 0.55f)
-        fun pastel(sat: Float) = Color.HSVToColor(floatArrayOf(hsv[0], sat, 0.98f)) and 0xFFFFFF
-        val top = (0xB0 shl 24) or pastel(s * 0.25f)
-        val mid = (0x66 shl 24) or pastel(s * 0.6f)
-        val bot = (0x44 shl 24) or pastel(s * 0.8f)
+        val theme = GlassTheme.current(this).tint
+        fun pastel(sat: Float): Int {
+            val w = Color.HSVToColor(floatArrayOf(hsv[0], sat, 0.98f))
+            // half wallpaper colour, half the chosen glass theme
+            return Color.rgb((Color.red(w) + Color.red(theme)) / 2, (Color.green(w) + Color.green(theme)) / 2, (Color.blue(w) + Color.blue(theme)) / 2)
+        }
+        // Mostly see-through: the wallpaper (and the mountain) shows through the digits, only the rim and a soft top sheen stay bright.
+        val top = (0x8C shl 24) or pastel(s * 0.25f)
+        val mid = (0x38 shl 24) or pastel(s * 0.6f)
+        val bot = (0x2A shl 24) or pastel(s * 0.8f)
         findViewById<GlassClock>(R.id.clock).glass = intArrayOf(top, mid, bot)
     }
 
@@ -397,6 +403,7 @@ class MainActivity : AppCompatActivity() {
         if (i == appliedGlass) return
         appliedGlass = i
         prayerCard.background = GlassTheme.drawable(this, R.drawable.bg_card)
+        applyClockShader()
         for (v in listOf<View?>(findViewById(R.id.btnWifi), btnSettings, findViewById(R.id.btnHome), findViewById(R.id.btnWave), findViewById(R.id.btnBt))) GlassTheme.retint(this, v)
         grid.invalidateItemDecorations()
         grid.invalidate()

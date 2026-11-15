@@ -26,7 +26,7 @@ class GlassClock @JvmOverloads constructor(
 
     private var shader: Shader? = null
     private var shaderH = 0f
-    private val rim = 2.6f * resources.displayMetrics.density
+    private val rim = 2.2f * resources.displayMetrics.density
 
     override fun onDraw(canvas: Canvas) {
         val p = paint
@@ -39,10 +39,13 @@ class GlassClock @JvmOverloads constructor(
         p.shader = shader
         super.onDraw(canvas)
         p.shader = null
+        val baseColor = p.color
         p.style = Paint.Style.STROKE
+        p.color = (baseColor and 0xFFFFFF) or (0xCC shl 24)
         p.strokeWidth = rim
         p.strokeJoin = Paint.Join.ROUND
         super.onDraw(canvas)
+        p.color = baseColor
         p.style = Paint.Style.FILL
     }
 }
