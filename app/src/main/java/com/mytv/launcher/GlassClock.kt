@@ -24,6 +24,20 @@ class GlassClock @JvmOverloads constructor(
             invalidate()
         }
 
+    /** Digits are converted to Latin the moment the text is set, so a minute change never flashes Arabic digits first. */
+    override fun setText(text: CharSequence?, type: BufferType?) {
+        if (text == null) { super.setText(text, type); return }
+        val sb = StringBuilder(text.length)
+        for (ch in text) sb.append(
+            when (ch) {
+                in '\u0660'..'\u0669' -> '0' + (ch - '\u0660')
+                in '\u06F0'..'\u06F9' -> '0' + (ch - '\u06F0')
+                else -> ch
+            }
+        )
+        super.setText(sb, type)
+    }
+
     private var shader: Shader? = null
     private var shaderH = 0f
     private val rim = 2.6f * resources.displayMetrics.density
@@ -37,16 +51,22 @@ class GlassClock @JvmOverloads constructor(
         }
         p.style = Paint.Style.FILL
         p.shader = shader
-        p.setShadowLayer(24f * resources.displayMetrics.density, 0f, 6f * resources.displayMetrics.density, 0x99001020.toInt())
         super.onDraw(canvas)
-        p.clearShadowLayer()
         p.shader = null
         val baseColor = p.color
         p.style = Paint.Style.STROKE
         p.strokeJoin = Paint.Join.ROUND
-        // thin dark outline under the bright rim so the digits stay readable on pale sky
+        // Soft dark halo (several thin strokes instead of setShadowLayer, which some TV GPUs draw as a pale box),
+        // then a thin dark outline under the bright rim so the digits stay readable on pale sky.
+        val d = resources.displayMetrics.density
+        p.color = 0x14102030
+        p.strokeWidth = rim + 12f * d
+        super.onDraw(canvas)
+        p.color = 0x1E102030
+        p.strokeWidth = rim + 7f * d
+        super.onDraw(canvas)
         p.color = 0x59102030
-        p.strokeWidth = rim + 2.6f * resources.displayMetrics.density
+        p.strokeWidth = rim + 2.6f * d
         super.onDraw(canvas)
         p.color = (baseColor and 0xFFFFFF) or (0xFF shl 24)
         p.strokeWidth = rim
