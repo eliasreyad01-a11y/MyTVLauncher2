@@ -41,7 +41,7 @@ class GlassClock @JvmOverloads constructor(
         p.shader = null
         val baseColor = p.color
         p.style = Paint.Style.STROKE
-        p.color = (baseColor and 0xFFFFFF) or (0xCC shl 24)
+        p.color = (baseColor and 0xFFFFFF) or (0xF2 shl 24)
         p.strokeWidth = rim
         p.strokeJoin = Paint.Join.ROUND
         super.onDraw(canvas)

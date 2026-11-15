@@ -22,7 +22,7 @@ class DockBand(context: Context, private val adapter: AppAdapter) : RecyclerView
     private fun prepare(context: Context) {
         shaderReady = true
         try {
-            val o = android.graphics.BitmapFactory.Options().apply { inSampleSize = 32 }
+            val o = android.graphics.BitmapFactory.Options().apply { inSampleSize = 16 }
             val bmp = android.graphics.BitmapFactory.decodeResource(context.resources, R.drawable.wp_kirkjufell, o) ?: return
             val dm = context.resources.displayMetrics
             val sc = maxOf(dm.widthPixels / bmp.width.toFloat(), dm.heightPixels / bmp.height.toFloat())
