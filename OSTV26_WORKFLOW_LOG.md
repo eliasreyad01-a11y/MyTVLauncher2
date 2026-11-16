@@ -69,3 +69,12 @@ Nothing was profiled on a TV: no CPU / RAM / GPU numbers exist.
 `FrostTest`, `FocusRoomTest`, `RemoteControlTest`, `MainScreenTest`, `SettingsScreenTest`, `PrefsPersistenceTest`, `LogicTest`,
 `ScreenshotTest` (renders, no assertions). No compiler warnings in app code.
 
+
+## Follow-up verification (simulation only, Robolectric — NOT a real TV)
+CI "Unit tests (Robolectric)": 58 tests, 0 failures (commit f659b2a). New tests:
+- VerificationTest: control center is a focusable PopupWindow; BACK closes it, activity stays; every control reachable by D-pad.
+- Key pacing: held D-pad accepted at ~50/30/50 moves per 2 s for 50/30/100 Hz remotes; DPAD_CENTER repeats not throttled.
+- System rows: nothing resolvable -> "Not available" toast, nothing started; fallback action used when the first is missing; first action wins when present.
+- Tiles: clipToOutline, 24dp radius, 16:9. Dialogs: FLAG_BLUR_BEHIND, radius 30, dim 0.3.
+- CustomWallpaperTest: orange->teal custom picture reaches the glass (left orange, right teal); resetting wallpaper returns it to the built-in photo; settings backdrop non-null.
+Still needs the real TV: live blur look, rounded-corner rendering, firmware-specific system screens, real remote repeat rate, Back from the popup on real hardware.
