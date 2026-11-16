@@ -86,6 +86,7 @@ object Dialogs {
             orientation = LinearLayout.VERTICAL
             // Side room for the focused row, which grows 3 %: without it the scroll area cuts the row flat at both ends.
             setPadding(dp(14), dp(8), dp(14), dp(40))
+            clipToPadding = false // a ViewGroup clips its children to the padded area by default, which is what cut the row
         }
         labels.forEachIndexed { index, label ->
             val row = LinearLayout(activity).apply {

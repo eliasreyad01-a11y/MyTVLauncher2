@@ -35,6 +35,7 @@ class FocusRoomTest {
         for (row in rows) {
             val list = row.parent as ViewGroup
             val grow = row.width * 0.03f / 2f
+            assertTrue("$what: the list must not clip its children to its padding, or the focused row is cut flat", !list.clipToPadding)
             assertTrue("$what: ${TestUi.title(row)} grows ${grow}px, left room ${list.paddingLeft}px", list.paddingLeft >= grow)
             assertTrue("$what: ${TestUi.title(row)} grows ${grow}px, right room ${list.paddingRight}px", list.paddingRight >= grow)
         }
