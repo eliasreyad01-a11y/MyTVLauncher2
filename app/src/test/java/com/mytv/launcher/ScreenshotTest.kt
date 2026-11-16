@@ -120,7 +120,8 @@ class ScreenshotTest {
     private fun save(name: String, bmp: Bitmap) {
         val f = File("build/screens/$name.jpg")
         f.parentFile!!.mkdirs()
-        f.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 82, it) }
+        val small = Bitmap.createScaledBitmap(bmp, 1280, 720, true)
+        f.outputStream().use { small.compress(Bitmap.CompressFormat.JPEG, 80, it) }
     }
 
     private fun dp(v: Int) = (v * ctx.resources.displayMetrics.density).toInt()

@@ -27,6 +27,6 @@ jobs:
           for f in app/build/screens/*.jpg; do
             [ -f "$f" ] || continue
             echo "SHOT_BEGIN $(basename "$f")"
-            base64 -w0 "$f"; echo
+            base64 -w 200 "$f"
             echo "SHOT_END"
           done
