@@ -70,13 +70,23 @@ class RemoteControlTest {
         TestUi.layoutAt1080p(decor)
     }
 
+    /** Activity.getCurrentFocus() (used by the launcher's own key handling) only reports a view once the window has focus. */
+    private fun windowFocus(c: Any) {
+        try {
+            c.javaClass.getMethod("windowFocusChanged", Boolean::class.javaPrimitiveType).invoke(c, true)
+        } catch (_: Throwable) {
+        }
+    }
+
     private fun fakeApps(n: Int): List<AppItem> = (0 until n).map { i ->
         val d = ColorDrawable(Color.GRAY)
         AppItem("com.fake.app$i", "App %02d".format(i), d, d, Intent())
     }
 
     private fun home(n: Int = 14): MainActivity {
-        val a = Robolectric.buildActivity(MainActivity::class.java).setup().get()
+        val c = Robolectric.buildActivity(MainActivity::class.java).setup()
+        windowFocus(c)
+        val a = c.get()
         val adapter: AppAdapter = field(a, "adapter")
         waitUntil { adapter.itemCount > 0 }
         val apps = fakeApps(n)
