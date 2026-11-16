@@ -60,6 +60,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var focusTitle: TextView
     private lateinit var prayerCard: View
     private lateinit var prayerLine: TextView
+    private lateinit var shelf: View
+    private lateinit var shelfIcon: ImageView
+    private lateinit var shelfName: TextView
     private lateinit var btnSettings: View
     private lateinit var weatherText: TextView
     private var weather: Weather? = null
@@ -142,6 +145,7 @@ class MainActivity : AppCompatActivity() {
                     hero.alpha = a
                     infoBlock.alpha = a
                     clockBox.alpha = a
+                    shelf.alpha = a
                     adhanStop.alpha = a
                     wallFg.alpha = a
                 }
@@ -247,6 +251,9 @@ class MainActivity : AppCompatActivity() {
         focusTitle = findViewById(R.id.focusTitle)
         prayerCard = findViewById(R.id.prayerCard)
         prayerLine = findViewById(R.id.prayerLine)
+        shelf = findViewById(R.id.shelf)
+        shelfIcon = findViewById(R.id.shelfIcon)
+        shelfName = findViewById(R.id.shelfName)
         btnSettings = findViewById(R.id.btnSettings)
         weatherText = findViewById(R.id.weatherText)
         glow = findViewById(R.id.focusGlow)
@@ -339,10 +346,10 @@ class MainActivity : AppCompatActivity() {
         })
         // Rows start just under the cards and title.
         // Everything sits low like on a TV home screen: prayer bar at ~60% of the height, dock right under it.
-        val heroTop = (resources.displayMetrics.heightPixels * 0.60f).toInt()
+        val heroTop = (resources.displayMetrics.heightPixels * 0.70f).toInt()
         hero.setPadding(hero.paddingLeft, heroTop, hero.paddingRight, hero.paddingBottom)
         // The rows start under the bar from the very first layout, so nothing shifts or scrolls when the bar appears.
-        grid.setPadding(grid.paddingLeft, heroTop + dp(62) + dp(2) + dp(8), grid.paddingRight, (resources.displayMetrics.heightPixels * 0.22f).toInt())
+        grid.setPadding(grid.paddingLeft, heroTop + dp(10), grid.paddingRight, (resources.displayMetrics.heightPixels * 0.22f).toInt())
         focusTitle.visibility = View.GONE
         (adhanStop.layoutParams as FrameLayout.LayoutParams).topMargin = heroTop - dp(70)
         // The padding only grows: when the prayer card or the Adhan button appears the rows move down once,
@@ -801,6 +808,11 @@ class MainActivity : AppCompatActivity() {
         lastFocused = item
         lastFocusedDock = adapter.isDock(item.packageName)
         if (focusTitle.text != item.label) focusTitle.text = item.label
+        if (shelfName.text != item.label) {
+            shelfName.text = item.label
+            shelfIcon.setImageDrawable(item.icon)
+        }
+        shelf.visibility = if (lastFocusedDock) View.VISIBLE else View.INVISIBLE
     }
 
     private fun applyLookOptions() {
@@ -1411,6 +1423,13 @@ class MainActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             background = GlassTheme.drawable(this@MainActivity, R.drawable.bg_ctl_panel)
             setPadding(dp(8), dp(8), dp(8), dp(8))
+            val pl = prayerLine.text?.toString().orEmpty()
+            if (prefs.showPrayerCard && pl.isNotEmpty()) {
+                addView(TextView(this@MainActivity).apply {
+                    text = pl; textSize = 14f; setTextColor(tint); alpha = 0.9f
+                    setPadding(dp(12), dp(6), dp(12), dp(8))
+                })
+            }
             addView(cols); addView(rounds)
         }
         panel.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
@@ -1717,7 +1736,7 @@ class MainActivity : AppCompatActivity() {
             prayerCard.visibility = View.GONE
             return
         }
-        prayerCard.visibility = View.VISIBLE
+        prayerCard.visibility = View.GONE // tvOS home has no info card: the prayer line lives in Control Center
         val next = nextPrayer?.name
         for ((name, chip) in chips) {
             chip.text = latin("${prayerLabel(name)}\n${TimeFmt.display(today.times[name], TimeFmt.is24(this, prefs))}")

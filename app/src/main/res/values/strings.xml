@@ -10,7 +10,7 @@
     <string name="greeting_evening">Good evening</string>
 
     <string name="menu_hidden_apps">Hidden apps</string>
-    <string name="card_prayer">Prayer times card</string>
+    <string name="card_prayer">Prayer times in Control Center</string>
 
     <string name="open">Open app</string>
     <string name="add_fav">Add to dock</string>

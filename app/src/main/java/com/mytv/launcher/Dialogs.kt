@@ -44,7 +44,7 @@ object Dialogs {
         val bd = android.graphics.drawable.BitmapDrawable(activity.resources, small).apply {
             isFilterBitmap = true; gravity = android.view.Gravity.FILL
         }
-        android.graphics.drawable.LayerDrawable(arrayOf(bd, android.graphics.drawable.ColorDrawable(Color.parseColor("#2E000000"))))
+        android.graphics.drawable.LayerDrawable(arrayOf(bd, android.graphics.drawable.ColorDrawable(Color.parseColor("#8A06100A"))))
     } catch (e: Throwable) { null }
 
     /** tvOS-style choice page: dimmed centred title, squircle on the left, pill rows on the right, tick on the current value. */
