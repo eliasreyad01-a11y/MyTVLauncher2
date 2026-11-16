@@ -177,7 +177,6 @@ class ScreenshotTest {
     @Test
     fun folderScreens() {
         val a = openHome()
-        val adapter: AppAdapter = field(a, "adapter")
         for (p in listOf("com.fake.Plex", "com.fake.Kodi", "com.fake.Music", "com.fake.LiveTV", "com.fake.Photos")) {
             call(a, "addToFolder", "Entertainment", p)
         }

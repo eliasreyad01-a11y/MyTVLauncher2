@@ -84,7 +84,8 @@ object Dialogs {
         }
         val list = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(8), dp(8), dp(40))
+            // Side room for the focused row, which grows 3 %: without it the scroll area cuts the row flat at both ends.
+            setPadding(dp(14), dp(8), dp(14), dp(40))
         }
         labels.forEachIndexed { index, label ->
             val row = LinearLayout(activity).apply {

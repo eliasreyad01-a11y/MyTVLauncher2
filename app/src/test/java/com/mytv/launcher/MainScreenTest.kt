@@ -44,6 +44,7 @@ class MainScreenTest {
                 }
                 nonLocalizedLabel = "App %02d".format(i)
             }
+            @Suppress("DEPRECATION")
             spm.addResolveInfoForIntent(query, ri)
             spm.addActivityIfNotPresent(ComponentName(pkg, "$pkg.Main"))
         }

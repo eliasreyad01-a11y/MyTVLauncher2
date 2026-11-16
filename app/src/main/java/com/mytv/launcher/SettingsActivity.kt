@@ -208,7 +208,8 @@ class SettingsActivity : AppCompatActivity() {
         }
         container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(8), dp(8), dp(40))
+            // Side room for the focused row, which grows 3 %: without it the scroll area cuts the row flat at both ends.
+            setPadding(dp(14), dp(8), dp(14), dp(40))
         }
         scroll.addView(container)
         titleView = TextView(this).apply {
