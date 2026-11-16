@@ -153,9 +153,9 @@ class VerificationTest {
         val at30 = hold(30, 2000)
         val at100 = hold(100, 2000)
         // Moves are at most one per 40 ms: a 50 Hz remote gets 25 a second, a 30 Hz remote 15, never more than 25.
-        assertEquals("50 Hz over 2 s", 50, at50, 2.0)
-        assertEquals("30 Hz over 2 s", 30, at30, 2.0)
-        assertEquals("100 Hz over 2 s", 50, at100, 2.0)
+        assertEquals("50 Hz over 2 s", 50.0, at50.toDouble(), 2.0)
+        assertEquals("30 Hz over 2 s", 30.0, at30.toDouble(), 2.0)
+        assertEquals("100 Hz over 2 s", 50.0, at100.toDouble(), 2.0)
 
         setField(a, "lastRepeatMove", 0L)
         val down = 2_000_000L
@@ -202,10 +202,7 @@ class VerificationTest {
             assertNull("row $title started something that cannot exist", shadowOf(a).nextStartedActivity)
         }
 
-        // 2. Only the LAST action of each chain exists: the row must fall back to it.
-        for ((title, actions) in systemRows) {
-            shadowOf(ctx.packageManager).clearResolveInfosForIntent(Intent(actions.first()))
-        }
+        // 2. Only the LAST action of each chain exists (the first ones were never registered): the row must fall back to it.
         for ((title, actions) in systemRows) {
             resolvable(actions.last())
             val a = settingsMain()
