@@ -197,10 +197,11 @@ class ScreenshotTest {
     @Test
     fun focusedRowProbe() {
         val a = Robolectric.buildActivity(SettingsActivity::class.java, Intent(ctx, SettingsActivity::class.java)).setup().get()
+        TestUi.leaveTouchMode(a.window.decorView)
         val row = TestUi.rowsIn(a.window.decorView)[1]
-        row.requestFocus()
+        val focused = row.requestFocus()
         TestUi.idle()
-        val sb = StringBuilder()
+        val sb = StringBuilder("focus granted=$focused touchMode=${a.window.decorView.isInTouchMode} hasFocus=${row.hasFocus()}\n")
         fun probe(tag: String) {
             val bmp = render(a.window.decorView)
             val l = absLeft(row); val t = absTop(row); val cy = t + row.height / 2
@@ -229,7 +230,8 @@ class ScreenshotTest {
             if (s != null) intent.putExtra("section", s)
             val a = Robolectric.buildActivity(SettingsActivity::class.java, intent).setup().get()
             // Focus the second row so the focused style shows.
-            TestUi.rowsIn(a.window.decorView).getOrNull(1)?.let { it.requestFocus(); it.onFocusChangeListener?.onFocusChange(it, true) }
+            TestUi.leaveTouchMode(a.window.decorView)
+            TestUi.rowsIn(a.window.decorView).getOrNull(1)?.requestFocus()
             TestUi.idle()
             save("1${i}_settings_${s ?: "main"}", render(a.window.decorView))
         }

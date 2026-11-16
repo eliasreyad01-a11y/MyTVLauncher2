@@ -53,4 +53,26 @@ object TestUi {
         row(latestDialogRoot(), label).performClick()
         idle()
     }
+
+    /** A TV remote works outside touch mode; Robolectric starts inside it, where only touch-focusable views can focus. */
+    fun leaveTouchMode(decor: View) {
+        try {
+            val vri = View::class.java.getMethod("getViewRootImpl").invoke(decor) ?: return
+            for (name in listOf("ensureTouchModeLocally", "ensureTouchMode")) {
+                try {
+                    val m = vri.javaClass.getDeclaredMethod(name, Boolean::class.javaPrimitiveType)
+                    m.isAccessible = true
+                    m.invoke(vri, false)
+                    return
+                } catch (_: NoSuchMethodException) {
+                }
+            }
+        } catch (_: Throwable) {
+        }
+    }
+
+    fun layoutAt1080p(v: View) {
+        v.measure(View.MeasureSpec.makeMeasureSpec(1920, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY))
+        v.layout(0, 0, 1920, 1080)
+    }
 }

@@ -63,33 +63,11 @@ class RemoteControlTest {
         return cond()
     }
 
-    /** A TV remote works outside touch mode; Robolectric starts inside it, where only touch-focusable views can focus. */
-    private fun leaveTouchMode(decor: View) {
-        try {
-            val vri = View::class.java.getMethod("getViewRootImpl").invoke(decor) ?: return
-            for (name in listOf("ensureTouchModeLocally", "ensureTouchMode")) {
-                try {
-                    val m = vri.javaClass.getDeclaredMethod(name, Boolean::class.javaPrimitiveType)
-                    m.isAccessible = true
-                    m.invoke(vri, false)
-                    return
-                } catch (_: NoSuchMethodException) {
-                }
-            }
-        } catch (_: Throwable) {
-        }
-    }
-
-    private fun layoutAt1080p(v: View) {
-        v.measure(View.MeasureSpec.makeMeasureSpec(1920, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY))
-        v.layout(0, 0, 1920, 1080)
-    }
-
     private fun prepare(decor: View) {
-        leaveTouchMode(decor)
-        layoutAt1080p(decor)
+        TestUi.leaveTouchMode(decor)
+        TestUi.layoutAt1080p(decor)
         TestUi.idle()
-        layoutAt1080p(decor)
+        TestUi.layoutAt1080p(decor)
     }
 
     private fun fakeApps(n: Int): List<AppItem> = (0 until n).map { i ->
@@ -224,11 +202,16 @@ class RemoteControlTest {
         val a = home()
         val adapter: AppAdapter = field(a, "adapter")
         val last = adapter.dockCount - 1
-        tile(a, last)!!.requestFocus()
-        key(a, KeyEvent.KEYCODE_DPAD_RIGHT)
-        assertEquals("RIGHT at the end of the dock wraps to its start", 0, posOf(a, a.currentFocus))
-        key(a, KeyEvent.KEYCODE_DPAD_LEFT)
-        assertEquals("LEFT at the start of the dock wraps to its end", last, posOf(a, a.currentFocus))
+        val lastTile = tile(a, last)!!
+        assertTrue("last dock tile takes focus", lastTile.requestFocus())
+        fun focusInfo(): String { val f = a.currentFocus; return "${f?.javaClass?.simpleName}#${f?.id} pos=${posOf(a, f)}" }
+        assertEquals("before: " + focusInfo(), last, posOf(a, a.currentFocus))
+        val consumed = a.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT))
+        assertTrue("RIGHT at the end of the dock is handled (wraps); focus now " + focusInfo(), consumed)
+        assertEquals("RIGHT at the end of the dock wraps to its start; focus now " + focusInfo(), 0, posOf(a, a.currentFocus))
+        val consumedLeft = a.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT))
+        assertTrue("LEFT at the start of the dock is handled (wraps); focus now " + focusInfo(), consumedLeft)
+        assertEquals("LEFT at the start of the dock wraps to its end; focus now " + focusInfo(), last, posOf(a, a.currentFocus))
     }
 
     // ------------------------------------------------------------------ home: OK / Back / move mode / screensaver
