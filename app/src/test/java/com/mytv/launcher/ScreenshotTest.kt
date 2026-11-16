@@ -10,6 +10,7 @@ import android.graphics.Paint
 import android.graphics.Shader
 import android.graphics.drawable.BitmapDrawable
 import android.view.View
+import android.view.ViewGroup
 import android.widget.PopupWindow
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.core.app.ApplicationProvider
@@ -187,6 +188,37 @@ class ScreenshotTest {
         TestUi.idle()
         overlay(base, ShadowDialog.getLatestDialog().window!!.decorView, null, null, true)
         save("07_folder_open", base)
+    }
+
+    /** Looks at how a focused settings row is really painted (numbers, not guesses); written to build/screens/debug.txt. */
+    @Test
+    fun focusedRowProbe() {
+        val a = Robolectric.buildActivity(SettingsActivity::class.java, Intent(ctx, SettingsActivity::class.java)).setup().get()
+        val row = TestUi.rowsIn(a.window.decorView)[1]
+        row.requestFocus()
+        TestUi.idle()
+        fun absLeft(v: View): Int { var x = 0; var c: View? = v; while (c != null) { x += c.left; c = c.parent as? View }; return x }
+        fun absTop(v: View): Int { var y = 0; var c: View? = v; while (c != null) { y += c.top; c = c.parent as? View }; return y }
+        val sb = StringBuilder()
+        fun probe(tag: String) {
+            val bmp = render(a.window.decorView)
+            val l = absLeft(row); val t = absTop(row); val cy = t + row.height / 2
+            val p1 = row.parent as ViewGroup
+            sb.append("$tag scaleX=${row.scaleX} left=$l top=$t w=${row.width} h=${row.height} parentPadL=${p1.paddingLeft} parentLeft=${absLeft(p1)} clipChildren=${p1.clipChildren} anim=${row.animation}\n")
+            sb.append("  hline@cy:")
+            for (dx in -24..24 step 6) sb.append(" ${l + dx}=${Integer.toHexString(bmp.getPixel(l + dx, cy))}")
+            sb.append("\n  corner:")
+            for (d in intArrayOf(1, 4, 8, 14)) sb.append(" (${l + d},${t + 1})=${Integer.toHexString(bmp.getPixel(l + d, t + 1))}")
+            sb.append("\n")
+        }
+        probe("A-after-focus")
+        row.animate().cancel(); row.scaleX = 1.03f; row.scaleY = 1.03f
+        probe("B-forced-1.03")
+        row.scaleX = 1f; row.scaleY = 1f
+        probe("C-forced-1.0")
+        val f = File("build/screens/debug.txt")
+        f.parentFile!!.mkdirs()
+        f.writeText(sb.toString())
     }
 
     @Test

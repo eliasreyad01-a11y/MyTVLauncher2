@@ -24,6 +24,7 @@ jobs:
       - name: Print screenshots (base64, because artifacts cannot be downloaded from the sandbox)
         if: always()
         run: |
+          echo "=== DEBUG_BEGIN"; cat app/build/screens/debug.txt 2>/dev/null || true; echo "=== DEBUG_END"
           for f in app/build/screens/*.jpg; do
             [ -f "$f" ] || continue
             echo "SHOT_BEGIN $(basename "$f")"
