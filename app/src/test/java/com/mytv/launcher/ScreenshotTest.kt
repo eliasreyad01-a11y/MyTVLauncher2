@@ -190,6 +190,9 @@ class ScreenshotTest {
         save("07_folder_open", base)
     }
 
+    private fun absLeft(v: View): Int = generateSequence(v) { it.parent as? View }.sumOf { it.left }
+    private fun absTop(v: View): Int = generateSequence(v) { it.parent as? View }.sumOf { it.top }
+
     /** Looks at how a focused settings row is really painted (numbers, not guesses); written to build/screens/debug.txt. */
     @Test
     fun focusedRowProbe() {
@@ -197,8 +200,6 @@ class ScreenshotTest {
         val row = TestUi.rowsIn(a.window.decorView)[1]
         row.requestFocus()
         TestUi.idle()
-        fun absLeft(v: View): Int { var x = 0; var c: View? = v; while (c != null) { x += c.left; c = c.parent as? View }; return x }
-        fun absTop(v: View): Int { var y = 0; var c: View? = v; while (c != null) { y += c.top; c = c.parent as? View }; return y }
         val sb = StringBuilder()
         fun probe(tag: String) {
             val bmp = render(a.window.decorView)
