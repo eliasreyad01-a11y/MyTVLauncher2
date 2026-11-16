@@ -71,7 +71,8 @@ class AppAdapter(
         }
         holder.tile.setOnFocusChangeListener { v, hasFocus ->
             val sc = if (hasFocus && animate) FOCUS_SCALE else 1f
-            v.animate().scaleX(sc).scaleY(sc).translationZ(if (hasFocus) 12f else 0f).setDuration(150).start()
+            v.animate().scaleX(sc).scaleY(sc).translationZ(if (hasFocus) 24f else 0f).setDuration(220)
+                .setInterpolator(android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f)).start()
             val it2 = holder.item
             if (hasFocus && it2 != null) onFocus?.invoke(it2)
         }
@@ -114,7 +115,7 @@ class AppAdapter(
 
     companion object {
         /** Tiles keep their size on focus (like Secreto): only the glass highlight marks the focus, so nothing re-scales while the page moves. */
-        const val FOCUS_SCALE = 1.08f
+        const val FOCUS_SCALE = 1.10f
 
         /** Invisible filler tiles that complete the dock row so grid apps never slip into it. */
         const val PAD_PREFIX = "__pad"

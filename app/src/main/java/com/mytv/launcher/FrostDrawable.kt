@@ -127,7 +127,7 @@ object Frost {
 
     /** Soft light reflection across the upper part of a glass surface (the 'lit from above' look). */
     fun sheenPaint(height: Float): Paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        shader = LinearGradient(0f, 0f, 0f, height * 0.55f, 0x52FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP)
+        shader = LinearGradient(0f, 0f, 0f, height * 0.6f, 0x78FFFFFF, 0x00FFFFFF, Shader.TileMode.CLAMP)
     }
 
     /** Brighter, slightly more saturated frost: pale clear glass like the iOS / tvOS reference, not a grey plate. */

@@ -691,8 +691,8 @@ class MainActivity : AppCompatActivity() {
         val cx = tileLoc[0] - rootLoc[0] + tile.width * tile.scaleX / 2f
         val cy = tileLoc[1] - rootLoc[1] + tile.height * tile.scaleY / 2f
         val target = if (prefs.animations) AppAdapter.FOCUS_SCALE else 1f
-        val w = tile.width * target + dp(8)
-        val h = tile.height * target + dp(8)
+        val w = tile.width * target
+        val h = tile.height * target
         val lp = glow.layoutParams
         if (lp.width != w.toInt() || lp.height != h.toInt()) {
             lp.width = w.toInt()
@@ -785,15 +785,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Eases the outer glow ring toward the focused app's colour (white for unknown). */
-    private fun tintGlow(tile: View) {
-        val item = tile.getTag(R.id.tile) as? AppItem
-        val rgb = if (item != null && prefs.animations) ambientOf(item) else 0xFFFFFF
-        val target = 0x70000000 or rgb
-        if (glowTint == target) return
-        glowTint = target
-        val ring = (glow.background as? android.graphics.drawable.LayerDrawable)?.getDrawable(0) as? android.graphics.drawable.GradientDrawable
-        ring?.setStroke(dp(8), glowTint)
-    }
+    /** The old coloured ring is gone (tvOS focus is lift + sheen); kept so the call site stays simple. */
+    private fun tintGlow(tile: View) {}
 
     private companion object {
         const val GLOW_W = 26f // critically damped offset decay: no overshoot, ~150 ms

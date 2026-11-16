@@ -517,7 +517,8 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun rowBg(focused: Boolean): android.graphics.drawable.Drawable =
         android.graphics.drawable.GradientDrawable().apply {
-            setColor(Color.parseColor(if (focused) "#F8FAFF" else "#38F5F9FF"))
+            if (focused) setColor(Color.parseColor("#F8FAFF"))
+            else { orientation = android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM; colors = intArrayOf(Color.parseColor("#52F5F9FF"), Color.parseColor("#2CF5F9FF")); setStroke(dp(1), Color.parseColor("#26FFFFFF")) }
             cornerRadius = dp(14).toFloat()
         }
 
