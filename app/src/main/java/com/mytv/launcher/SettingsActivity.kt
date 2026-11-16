@@ -214,17 +214,17 @@ class SettingsActivity : AppCompatActivity() {
         }
         scroll.addView(container)
         titleView = TextView(this).apply {
-            textSize = 32f
-            setTextColor(Color.parseColor("#E6FFFFFF"))
+            textSize = 30f
+            setTextColor(Color.parseColor("#80FFFFFF"))
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             gravity = android.view.Gravity.CENTER
         }
         val tile = android.widget.FrameLayout(this).apply {
-            setBackgroundResource(R.drawable.bg_settings_tile)
+            setBackgroundResource(R.drawable.bg_tile_flat)
             addView(android.widget.ImageView(this@SettingsActivity).apply {
                 setImageResource(R.drawable.ic_tune)
                 imageTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#66FFFFFF"))
-            }, android.widget.FrameLayout.LayoutParams(dp(120), dp(120), android.view.Gravity.CENTER))
+            }, android.widget.FrameLayout.LayoutParams(dp(150), dp(150), android.view.Gravity.CENTER))
         }
         descView = TextView(this).apply {
             textSize = 15f
@@ -235,21 +235,26 @@ class SettingsActivity : AppCompatActivity() {
         val left = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = android.view.Gravity.CENTER
-            addView(tile, LinearLayout.LayoutParams(dp(230), dp(230)))
+            addView(tile, LinearLayout.LayoutParams(dp(300), dp(300)))
             addView(descView, LinearLayout.LayoutParams(dp(300), ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(18) })
+        }
+        // tvOS layout: the title sits centred above the list, the squircle stays on the left.
+        val right = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(titleView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(14) })
+            addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         }
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             addView(left, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
-            addView(scroll, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1.25f))
+            addView(right, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1.25f))
         }
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutDirection = View.LAYOUT_DIRECTION_LTR
             setBackgroundResource(R.drawable.bg_settings)
-            setPadding(dp(64), dp(28), dp(64), 0)
+            setPadding(dp(64), dp(36), dp(64), 0)
             Dialogs.backdrop(this@SettingsActivity)?.let { background = it }
-            addView(titleView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(18) })
             addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         }
         setContentView(root)
@@ -344,6 +349,7 @@ class SettingsActivity : AppCompatActivity() {
         titleView.text = tr("Settings", "الإعدادات")
         descView.text = ""
         val d = android.provider.Settings.ACTION_DISPLAY_SETTINGS
+        addLabel(tr("Launcher", "اللانشر"))
         addRow(tr("Glass Theme", "الثيم الزجاجي"), GlassTheme.current(this).name) { showGlassDialog() }
         addRow(tr("Glass Transparency", "شفافية الزجاج"), "${prefs.glassOpacity}%") { showOpacityDialog() }
         addRow(tr("Date", "التاريخ"), dateModeLabel()) { showDateModeDialog() }
@@ -351,6 +357,7 @@ class SettingsActivity : AppCompatActivity() {
         addRow(tr("Wallpaper", "الخلفية")) { openSection("wallpaper") }
         addRow(tr("Home Screen", "الشاشة الرئيسية")) { openSection("home") }
         addRow(tr("General", "عام")) { openSection("general") }
+        addLabel(tr("Device", "الجهاز"))
         addRow(tr("Video", "الفيديو")) { sys(d) }
         addRow(tr("Audio", "الصوت")) { sys(android.provider.Settings.ACTION_SOUND_SETTINGS) }
         addRow(tr("Screen Saver", "شاشة التوقف")) { sys(android.provider.Settings.ACTION_DREAM_SETTINGS, d) }
@@ -510,8 +517,8 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun rowBg(focused: Boolean): android.graphics.drawable.Drawable =
         android.graphics.drawable.GradientDrawable().apply {
-            setColor(Color.parseColor(if (focused) "#F8FAFF" else "#47F5F9FF"))
-            cornerRadius = dp(10).toFloat()
+            setColor(Color.parseColor(if (focused) "#F8FAFF" else "#38F5F9FF"))
+            cornerRadius = dp(14).toFloat()
         }
 
     private fun addRow(title: String, subtitle: String?, chevron: Boolean = true, onClick: () -> Unit): Row {
@@ -520,14 +527,14 @@ class SettingsActivity : AppCompatActivity() {
             gravity = android.view.Gravity.CENTER_VERTICAL
             isFocusable = true
             isClickable = true
-            minimumHeight = dp(56)
+            minimumHeight = dp(48)
             background = rowBg(false)
-            setPadding(dp(18), dp(10), dp(14), dp(10))
+            setPadding(dp(18), dp(8), dp(14), dp(8))
             setOnClickListener { onClick() }
         }
         val titleView = TextView(this).apply {
             text = title
-            textSize = 19f
+            textSize = 18f
             textAlignment = View.TEXT_ALIGNMENT_VIEW_START
             setTextColor(Color.parseColor("#F4F8FF"))
         }

@@ -50,8 +50,8 @@ object Dialogs {
     /** tvOS-style choice page: dimmed centred title, squircle on the left, pill rows on the right, tick on the current value. */
     private fun rowBg(focused: Boolean): android.graphics.drawable.Drawable =
         android.graphics.drawable.GradientDrawable().apply {
-            setColor(Color.parseColor(if (focused) "#F8FAFF" else "#47F5F9FF"))
-            cornerRadius = 10f * android.content.res.Resources.getSystem().displayMetrics.density
+            setColor(Color.parseColor(if (focused) "#F8FAFF" else "#38F5F9FF"))
+            cornerRadius = 14f * android.content.res.Resources.getSystem().displayMetrics.density
         }
 
     fun showChoice(
@@ -73,7 +73,7 @@ object Dialogs {
             setTypeface(typeface, Typeface.BOLD)
         }
         val tile = android.widget.FrameLayout(activity).apply {
-            setBackgroundResource(R.drawable.bg_settings_tile)
+            setBackgroundResource(R.drawable.bg_tile_flat)
             addView(android.widget.ImageView(activity).apply {
                 setImageResource(R.drawable.ic_tune)
                 imageTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#66FFFFFF"))

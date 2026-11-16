@@ -206,11 +206,25 @@
             <LinearLayout
                 android:id="@+id/infoBlock"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="40dp"
                 android:layout_gravity="top|end"
+                android:background="@drawable/bg_capsule"
                 android:gravity="center_vertical"
                 android:layoutDirection="rtl"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp">
+
+                <TextView
+                    android:id="@+id/headerTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="0dp"
+                    android:shadowColor="#66000000"
+                    android:shadowRadius="8"
+                    android:textColor="@color/text_primary"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/greeting"
@@ -318,18 +332,6 @@
                         style="@style/MiniIcon"
                         android:src="@drawable/ic_bluetooth" />
                 </LinearLayout>
-
-                <TextView
-                    android:id="@+id/headerTime"
-                    android:visibility="gone"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:shadowColor="#66000000"
-                    android:shadowRadius="8"
-                    android:textColor="@color/text_primary"
-                    android:textSize="17sp"
-                    android:textStyle="bold" />
             </LinearLayout>
         </FrameLayout>
     </FrameLayout>
