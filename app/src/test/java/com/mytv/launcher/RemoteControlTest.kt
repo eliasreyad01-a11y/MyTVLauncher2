@@ -217,7 +217,9 @@ class RemoteControlTest {
         fun focusInfo(): String { val f = a.currentFocus; return "${f?.javaClass?.simpleName}#${f?.id} pos=${posOf(a, f)}" }
         val diag = "tile focused=${lastTile.isFocused} hasFocus=${lastTile.hasFocus()} attached=${lastTile.isAttachedToWindow} " +
             "rootIsDecor=${lastTile.rootView === a.window.decorView} rootFocus=${lastTile.rootView.findFocus()?.javaClass?.simpleName} " +
-            "touch=${lastTile.isInTouchMode} windowFocus=${a.window.decorView.hasWindowFocus()}"
+            "touch=${lastTile.isInTouchMode} windowFocus=${a.window.decorView.hasWindowFocus()} " +
+            "windowCurrentFocus=${a.window.currentFocus?.javaClass?.simpleName} decorFind=${a.window.decorView.findFocus()?.javaClass?.simpleName} " +
+            "activityClass=${a.javaClass.simpleName} sameWindow=${lastTile.context.let { (it as? android.content.ContextWrapper)?.baseContext != null }}"
         assertEquals("before: " + focusInfo() + " | " + diag, last, posOf(a, a.currentFocus))
         val consumed = a.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT))
         assertTrue("RIGHT at the end of the dock is handled (wraps); focus now " + focusInfo(), consumed)

@@ -133,7 +133,6 @@ class MainActivity : AppCompatActivity() {
         if (only != null) shift(only) else for (i in 0 until grid.childCount) shift(grid.getChildAt(i))
     }
 
-    private var wallFgKey = 0
     private fun updateScrollEffects() {
                 val off = grid.computeVerticalScrollOffset()
                 val open = listOffset().toFloat()
@@ -413,18 +412,8 @@ class MainActivity : AppCompatActivity() {
         applyDateMode()
         wallpaper.apply(prefs)
         wallpaper.onResume()
-        val fgRes = wallpaper.foregroundRes(prefs)
-        if (fgRes != 0) {
-            val fgKey = fgRes * 1000 + prefs.dim.coerceIn(0, 90)
-            if (fgKey != wallFgKey) {
-                wallFgKey = fgKey
-                wallFg.setImageResource(fgRes)
-                wallFg.colorFilter = android.graphics.PorterDuffColorFilter(
-                    Color.argb(prefs.dim.coerceIn(0, 90) * 255 / 100, 0, 0, 0), android.graphics.PorterDuff.Mode.SRC_ATOP
-                )
-            }
-            wallFg.visibility = View.GONE
-        } else wallFg.visibility = View.GONE
+        // The mountain cut-out layer (wallFg) is always kept hidden, so its picture is no longer decoded on every start.
+        wallFg.visibility = View.GONE
         wallpaper.post { tintClock() }
         val is24 = TimeFmt.is24(this, prefs)
         val clock = findViewById<TextClock>(R.id.clock)
@@ -1255,6 +1244,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** tvOS-style folder: blurred home behind, a frosted rounded panel that grows out of the folder tile. */
+    private fun crossWindowBlur(): Boolean = try {
+        android.os.Build.VERSION.SDK_INT >= 31 && windowManager.isCrossWindowBlurEnabled
+    } catch (_: Throwable) { false }
+
     private fun showFolder(name: String) {
         val apps = (prefs.folders[name] ?: return).mapNotNull { pk -> visibleApps.firstOrNull { it.packageName == pk } }
         if (apps.isEmpty()) return
@@ -1304,7 +1297,9 @@ class MainActivity : AppCompatActivity() {
             addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         }
         // Blur the home screen behind the folder (Android 12+); the effect is removed again when the folder closes.
-        if (android.os.Build.VERSION.SDK_INT >= 31) {
+        // Where the system already blurs behind the window (FLAG_BLUR_BEHIND, set by Dialogs.track) a second full-screen
+        // blur would only cost GPU time, so this one is the fallback for TVs without cross-window blur.
+        if (android.os.Build.VERSION.SDK_INT >= 31 && !crossWindowBlur()) {
             try {
                 window.decorView.setRenderEffect(android.graphics.RenderEffect.createBlurEffect(28f, 28f, android.graphics.Shader.TileMode.CLAMP))
                 dialog.setOnDismissListener { window.decorView.setRenderEffect(null) }
