@@ -214,19 +214,19 @@ class RemoteControlTest {
         val last = adapter.dockCount - 1
         val lastTile = tile(a, last)!!
         assertTrue("last dock tile takes focus", lastTile.requestFocus())
-        fun focusInfo(): String { val f = a.currentFocus; return "${f?.javaClass?.simpleName}#${f?.id} pos=${posOf(a, f)}" }
+        fun focusInfo(): String { val f = a.window.currentFocus; return "${f?.javaClass?.simpleName}#${f?.id} pos=${posOf(a, f)}" }
         val diag = "tile focused=${lastTile.isFocused} hasFocus=${lastTile.hasFocus()} attached=${lastTile.isAttachedToWindow} " +
             "rootIsDecor=${lastTile.rootView === a.window.decorView} rootFocus=${lastTile.rootView.findFocus()?.javaClass?.simpleName} " +
             "touch=${lastTile.isInTouchMode} windowFocus=${a.window.decorView.hasWindowFocus()} " +
             "windowCurrentFocus=${a.window.currentFocus?.javaClass?.simpleName} decorFind=${a.window.decorView.findFocus()?.javaClass?.simpleName} " +
             "activityClass=${a.javaClass.simpleName} sameWindow=${lastTile.context.let { (it as? android.content.ContextWrapper)?.baseContext != null }}"
-        assertEquals("before: " + focusInfo() + " | " + diag, last, posOf(a, a.currentFocus))
+        assertEquals("before: " + focusInfo() + " | " + diag, last, posOf(a, a.window.currentFocus))
         val consumed = a.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT))
         assertTrue("RIGHT at the end of the dock is handled (wraps); focus now " + focusInfo(), consumed)
-        assertEquals("RIGHT at the end of the dock wraps to its start; focus now " + focusInfo(), 0, posOf(a, a.currentFocus))
+        assertEquals("RIGHT at the end of the dock wraps to its start; focus now " + focusInfo(), 0, posOf(a, a.window.currentFocus))
         val consumedLeft = a.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT))
         assertTrue("LEFT at the start of the dock is handled (wraps); focus now " + focusInfo(), consumedLeft)
-        assertEquals("LEFT at the start of the dock wraps to its end; focus now " + focusInfo(), last, posOf(a, a.currentFocus))
+        assertEquals("LEFT at the start of the dock wraps to its end; focus now " + focusInfo(), last, posOf(a, a.window.currentFocus))
     }
 
     // ------------------------------------------------------------------ home: OK / Back / move mode / screensaver

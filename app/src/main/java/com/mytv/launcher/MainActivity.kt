@@ -1603,7 +1603,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Left/right at the end of a row wraps to the other end instead of escaping to the header buttons. */
     private fun wrapSideways(right: Boolean): Boolean {
-        val f = currentFocus ?: return false
+        val f = window.currentFocus ?: return false // same view Activity.getCurrentFocus() returns
         if (f.id != R.id.tile) return false
         val pos = positionOf(f)
         if (pos < 0) return false

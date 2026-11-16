@@ -19,6 +19,7 @@ class VolumePill(context: Context) : View(context) {
     private val icon = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF3AA0FF.toInt() }
     private val rect = RectF()
     private val clip = Path()
+    private val speaker = Path()
 
     init {
         isFocusable = true
@@ -52,8 +53,10 @@ class VolumePill(context: Context) : View(context) {
         // speaker glyph
         val s = w * 0.16f; val cx = w / 2f; val cy = h - w * 0.45f
         c.drawRect(cx - s * 1.2f, cy - s * 0.6f, cx - s * 0.2f, cy + s * 0.6f, icon)
-        val p = Path().apply { moveTo(cx - s * 0.2f, cy - s * 0.6f); lineTo(cx + s * 0.8f, cy - s * 1.4f); lineTo(cx + s * 0.8f, cy + s * 1.4f); lineTo(cx - s * 0.2f, cy + s * 0.6f); close() }
-        c.drawPath(p, icon)
+        speaker.reset()
+        speaker.moveTo(cx - s * 0.2f, cy - s * 0.6f); speaker.lineTo(cx + s * 0.8f, cy - s * 1.4f)
+        speaker.lineTo(cx + s * 0.8f, cy + s * 1.4f); speaker.lineTo(cx - s * 0.2f, cy + s * 0.6f); speaker.close()
+        c.drawPath(speaker, icon)
         rim.color = if (isFocused) 0xFFFFFFFF.toInt() else 0x80FFFFFF.toInt()
         rim.strokeWidth = resources.displayMetrics.density * (if (isFocused) 3f else 1.5f)
         rect.inset(rim.strokeWidth / 2, rim.strokeWidth / 2)
