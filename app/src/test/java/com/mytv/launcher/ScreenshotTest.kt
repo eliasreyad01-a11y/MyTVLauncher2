@@ -197,7 +197,7 @@ class ScreenshotTest {
             if (s != null) intent.putExtra("section", s)
             val a = Robolectric.buildActivity(SettingsActivity::class.java, intent).setup().get()
             // Focus the second row so the focused style shows.
-            TestUi.rowsIn(a.window.decorView).getOrNull(1)?.requestFocus()
+            TestUi.rowsIn(a.window.decorView).getOrNull(1)?.let { it.requestFocus(); it.onFocusChangeListener?.onFocusChange(it, true) }
             TestUi.idle()
             save("1${i}_settings_${s ?: "main"}", render(a.window.decorView))
         }

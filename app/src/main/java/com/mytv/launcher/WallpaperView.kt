@@ -59,6 +59,18 @@ class WallpaperView @JvmOverloads constructor(
     /** Called whenever a new picture is on screen, so the clock can pick up its colours. */
     var onImage: (() -> Unit)? = null
 
+    /**
+     * A new picture is on screen: the frosted glass takes its colours from the same picture (user photos only; the built-in
+     * photo is what the glass uses by default), then the clock re-tints.
+     */
+    private fun pictureShown() {
+        val type = key?.substringBefore('|')
+        val bmp = (image.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+        Frost.setSource(if ((type == "image" || type == "slideshow") && image.visibility == VISIBLE) bmp else null)
+        rootView.invalidate()
+        onImage?.invoke()
+    }
+
     /** Cut-out of the mountain, drawn above the clock so the clock sits behind it (built-in photo only). */
     fun foregroundRes(prefs: Prefs): Int =
         if (prefs.wallpaperType == "none" && photoRes(prefs.wallpaperPreset) == R.drawable.wp_kirkjufell)
@@ -117,6 +129,7 @@ class WallpaperView @JvmOverloads constructor(
 
         stopSlideshow()
         slideRes = null
+        Frost.setSource(null) // glass goes back to the built-in photo until the new picture is on screen
         image.visibility = GONE
         image.alpha = 1f
         image.setImageDrawable(null)
@@ -140,7 +153,7 @@ class WallpaperView @JvmOverloads constructor(
                         if (key == newKey && bmp != null) {
                             image.setImageBitmap(bmp)
                             image.visibility = VISIBLE
-                            onImage?.invoke()
+                            pictureShown()
                         }
                     }
                 }.start()
@@ -155,7 +168,7 @@ class WallpaperView @JvmOverloads constructor(
                 if (res != 0) {
                     image.setImageResource(res)
                     image.visibility = VISIBLE
-                    post { onImage?.invoke() }
+                    post { pictureShown() }
                 }
             }
         }
@@ -216,12 +229,12 @@ class WallpaperView @JvmOverloads constructor(
                 if (image.drawable == null) {
                     image.setImageBitmap(bmp)
                     image.visibility = VISIBLE
-                    onImage?.invoke()
+                    pictureShown()
                 } else {
                     image.animate().alpha(0f).setDuration(400).withEndAction {
                         image.setImageBitmap(bmp)
                         image.animate().alpha(1f).setDuration(600).start()
-                        onImage?.invoke()
+                        pictureShown()
                     }.start()
                 }
             }

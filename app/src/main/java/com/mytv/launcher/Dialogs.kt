@@ -38,10 +38,9 @@ object Dialogs {
         open.clear()
     }
 
-    /** Blurred, darkened mountain backdrop shared by the Apple-style full pages. */
+    /** Blurred, darkened backdrop of the current wallpaper, shared by the Apple-style full pages. */
     fun backdrop(activity: Activity): android.graphics.drawable.Drawable? = try {
-        val o = android.graphics.BitmapFactory.Options().apply { inSampleSize = 24 }
-        val small = android.graphics.BitmapFactory.decodeResource(activity.resources, R.drawable.wp_kirkjufell, o)
+        val small = Frost.bitmap(activity) ?: throw IllegalStateException("no wallpaper")
         val bd = android.graphics.drawable.BitmapDrawable(activity.resources, small).apply {
             isFilterBitmap = true; gravity = android.view.Gravity.FILL
         }

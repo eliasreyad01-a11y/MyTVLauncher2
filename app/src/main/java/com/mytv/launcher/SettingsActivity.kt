@@ -246,15 +246,7 @@ class SettingsActivity : AppCompatActivity() {
             layoutDirection = View.LAYOUT_DIRECTION_LTR
             setBackgroundResource(R.drawable.bg_settings)
             setPadding(dp(64), dp(28), dp(64), 0)
-            try {
-                val o = android.graphics.BitmapFactory.Options().apply { inSampleSize = 24 }
-                val small = android.graphics.BitmapFactory.decodeResource(resources, R.drawable.wp_kirkjufell, o)
-                if (small != null) {
-                    val bd = android.graphics.drawable.BitmapDrawable(resources, small).apply { isFilterBitmap = true; gravity = android.view.Gravity.FILL }
-                    val shade = android.graphics.drawable.ColorDrawable(Color.parseColor("#2E000000"))
-                    background = android.graphics.drawable.LayerDrawable(arrayOf(bd, shade))
-                }
-            } catch (_: Throwable) {}
+            Dialogs.backdrop(this@SettingsActivity)?.let { background = it }
             addView(titleView, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(18) })
             addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         }

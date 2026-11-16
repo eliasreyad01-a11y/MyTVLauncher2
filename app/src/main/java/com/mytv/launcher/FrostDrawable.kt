@@ -19,9 +19,16 @@ class FrostDrawable(private val ctx: Context, private val radiusDp: Float, priva
 
     init { paint.isFilterBitmap = true }
 
+    private var sourceVersion = -1
+
     private fun ensure() {
+        // The picture behind the glass changed (custom wallpaper loaded / reset): rebuild the shader and the tint.
+        if (paint.shader == null || sourceVersion != Frost.version) {
+            sourceVersion = Frost.version
+            paint.shader = Frost.shader(ctx)
+            themeIdx = -1
+        }
         val idx = GlassTheme.key(ctx)
-        if (paint.shader == null) paint.shader = Frost.shader(ctx)
         if (idx != themeIdx) {
             themeIdx = idx
             paint.alpha = (255 * GlassTheme.opacity(ctx)).toInt()
@@ -63,11 +70,46 @@ class FrostDrawable(private val ctx: Context, private val radiusDp: Float, priva
 object Frost {
     private var bmp: Bitmap? = null
     private var lum = -1f
+    private var custom = false
+
+    /** Bumped whenever the picture behind the glass changes, so glass surfaces know to rebuild their shader. */
+    @Volatile var version = 0
+        private set
+
+    /**
+     * The glass shows the picture that is really on the home screen. A user photo (or slideshow frame) is passed in here;
+     * null returns to the built-in photo. Main thread only. Does nothing while the built-in photo is already in use.
+     */
+    fun setSource(src: Bitmap?) {
+        val small = if (src == null) null else shrink(src)
+        if (small == null && !custom) return
+        bmp = small
+        custom = small != null
+        lum = -1f
+        version++
+    }
+
+    /** Smooth ~1/16 scale copy (repeated halving, so no aliasing); null if the bitmap can't be read. */
+    private fun shrink(src: Bitmap): Bitmap? = try {
+        var cur = src
+        while (cur.width / 2 >= 120 && cur.height / 2 >= 68) {
+            val next = Bitmap.createScaledBitmap(cur, cur.width / 2, cur.height / 2, true)
+            if (cur !== src) cur.recycle()
+            cur = next
+        }
+        if (cur === src) src.copy(Bitmap.Config.ARGB_8888, false) else cur
+    } catch (_: Throwable) { null }
+
+    /** The small picture the glass is made from (custom wallpaper, or the built-in photo). */
+    fun bitmap(ctx: Context): Bitmap? = bmp ?: try {
+        val o = BitmapFactory.Options().apply { inSampleSize = 16 }
+        BitmapFactory.decodeResource(ctx.resources, R.drawable.wp_kirkjufell, o)?.also { bmp = it }
+    } catch (_: Throwable) { null }
 
     /** Average brightness (0..1) of the wallpaper, used to adapt the glass. */
     fun luminance(ctx: Context): Float {
         if (lum >= 0f) return lum
-        val b = bmp ?: run { shader(ctx); bmp } ?: return 0.5f
+        val b = bitmap(ctx) ?: return 0.5f
         var sum = 0.0
         var n = 0
         val px = IntArray(b.width)
@@ -103,10 +145,7 @@ object Frost {
     }
     fun shader(ctx: Context): Shader? {
       return try {
-        val b = bmp ?: run {
-            val o = BitmapFactory.Options().apply { inSampleSize = 16 }
-            BitmapFactory.decodeResource(ctx.resources, R.drawable.wp_kirkjufell, o)?.also { bmp = it }
-        } ?: return null
+        val b = bitmap(ctx) ?: return null
         val dm = ctx.resources.displayMetrics
         val sc = maxOf(dm.widthPixels / b.width.toFloat(), dm.heightPixels / b.height.toFloat())
         val m = Matrix()

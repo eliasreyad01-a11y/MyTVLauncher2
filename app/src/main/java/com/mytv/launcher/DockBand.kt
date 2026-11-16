@@ -21,22 +21,15 @@ class DockBand(context: Context, private val adapter: AppAdapter) : RecyclerView
     private var sheenH = -1f
 
     /** Tiny wallpaper copy, scaled up smoothly = frosted glass. One shared shader, positioned in screen coordinates. */
+    private var sourceVersion = -1
+
     private fun prepare(context: Context) {
         shaderReady = true
-        try {
-            val o = android.graphics.BitmapFactory.Options().apply { inSampleSize = 16 }
-            val bmp = android.graphics.BitmapFactory.decodeResource(context.resources, R.drawable.wp_kirkjufell, o) ?: return
-            val dm = context.resources.displayMetrics
-            val sc = maxOf(dm.widthPixels / bmp.width.toFloat(), dm.heightPixels / bmp.height.toFloat())
-            val m = android.graphics.Matrix()
-            m.postScale(sc, sc)
-            m.postTranslate((dm.widthPixels - bmp.width * sc) / 2f, (dm.heightPixels - bmp.height * sc) / 2f)
-            val sh = android.graphics.BitmapShader(bmp, android.graphics.Shader.TileMode.CLAMP, android.graphics.Shader.TileMode.CLAMP)
-            sh.setLocalMatrix(m)
-            paint.shader = sh
-            paint.isFilterBitmap = true
-            applyTheme(context)
-        } catch (_: Throwable) { paint.shader = null }
+        sourceVersion = Frost.version
+        // Same picture as every other glass surface (shared with Frost, so the wallpaper is decoded once).
+        paint.shader = Frost.shader(context)
+        paint.isFilterBitmap = true
+        if (paint.shader != null) applyTheme(context)
     }
 
     private fun applyTheme(context: Context) {
@@ -64,7 +57,7 @@ class DockBand(context: Context, private val adapter: AppAdapter) : RecyclerView
         }
         if (left == Int.MAX_VALUE) return
         val drawable = band ?: return
-        if (!shaderReady) prepare(parent.context)
+        if (!shaderReady || sourceVersion != Frost.version) prepare(parent.context)
         val ti = GlassTheme.key(parent.context)
         if (ti != themeIdx) { themeIdx = ti; band = GlassTheme.drawable(parent.context, R.drawable.bg_dock); applyTheme(parent.context) }
         if (paint.shader != null) {
