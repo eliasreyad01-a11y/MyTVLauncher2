@@ -21,3 +21,12 @@ jobs:
         with:
           name: test-reports
           path: app/build/test-results/testDebugUnitTest/*.xml
+      - name: Print screenshots (base64, because artifacts cannot be downloaded from the sandbox)
+        if: always()
+        run: |
+          for f in app/build/screens/*.jpg; do
+            [ -f "$f" ] || continue
+            echo "SHOT_BEGIN $(basename "$f")"
+            base64 -w0 "$f"; echo
+            echo "SHOT_END"
+          done
