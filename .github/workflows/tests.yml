@@ -1,0 +1,33 @@
+name: Unit tests (Robolectric)
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: Run unit tests
+        run: gradle testDebugUnitTest --stacktrace
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports
+          path: app/build/test-results/testDebugUnitTest/*.xml
+      - name: Print screenshots (base64, because artifacts cannot be downloaded from the sandbox)
+        if: always()
+        run: |
+          echo "=== DEBUG_BEGIN"; cat app/build/screens/debug.txt app/build/screens/debug2.txt 2>/dev/null || true; echo "=== DEBUG_END"
+          for f in app/build/screens/*.jpg; do
+            [ -f "$f" ] || continue
+            echo "SHOT_BEGIN $(basename "$f")"
+            base64 -w 200 "$f"
+            echo "SHOT_END"
+          done
