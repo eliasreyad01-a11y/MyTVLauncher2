@@ -60,14 +60,19 @@ class ShelfTest {
         assertEquals("no big clock on home", View.GONE, clockBox.visibility)
         assertEquals("no prayer card on home", View.GONE, prayerCard.visibility)
 
-        for (pos in 0..1) {
-            val tile = grid.findViewHolderForAdapterPosition(pos)!!.itemView.findViewById<View>(R.id.tile)
-            tile.requestFocus()
-            TestUi.idle()
+        fun checkShelf(pos: Int) {
             assertEquals("shelf name for dock app $pos", adapter.items[pos].label, shelfName.text.toString())
             assertEquals("shelf visible", View.VISIBLE, shelf.visibility)
             assertTrue("shelf opaque on the home page (alpha=${shelf.alpha})", shelf.alpha > 0.99f)
             assertTrue("shelf has the app's icon", shelfIcon.drawable === adapter.items[pos].icon)
         }
+        grid.findViewHolderForAdapterPosition(0)!!.itemView.findViewById<View>(R.id.tile).requestFocus()
+        TestUi.idle()
+        checkShelf(0)
+        // Move with the real remote key: the shelf must follow.
+        a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_RIGHT))
+        a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_DPAD_RIGHT))
+        TestUi.idle()
+        checkShelf(1)
     }
 }
