@@ -48,6 +48,15 @@ class MainActivity : Activity() {
     private lateinit var grid: RecyclerView
     private lateinit var capsule: LinearLayout
     private lateinit var clock: TextClock
+    private lateinit var infoBlock: LinearLayout
+    private lateinit var bigClock: TextClock
+    private lateinit var dateText: TextView
+    private lateinit var wxText: TextView
+    private lateinit var prText: TextView
+    private lateinit var wxPill: View
+    private lateinit var prPill: View
+    private var nextPrayer: NextPrayer? = null
+    private var weather: Weather? = null
     private lateinit var adapter: HomeAdapter
 
     private var apps: List<AppItem> = emptyList()
@@ -100,11 +109,105 @@ class MainActivity : Activity() {
         }
         content.addView(wallpaper, FrameLayout.LayoutParams(-1, -1))
         content.addView(bgGray, FrameLayout.LayoutParams(-1, -1))
+        buildInfo()
         content.addView(grid, FrameLayout.LayoutParams(-1, -1))
         root.addView(content, FrameLayout.LayoutParams(-1, -1))
         buildCapsule()
         setContentView(root)
         loadAppsAsync()
+    }
+
+    // ------------------------------------------------------------------ home info: clock, date, weather, next prayer
+
+    private fun pill(icon: Int, tv: TextView): View = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(u.i(20f), 0, u.i(26f), 0)
+        background = Glass.solid(0x2EFFFFFF, u.px(26f))
+        addView(ImageView(this@MainActivity).apply { setImageResource(icon); imageTintList = android.content.res.ColorStateList.valueOf(0xCCFFFFFF.toInt()) }, LinearLayout.LayoutParams(u.i(28f), u.i(28f)).apply { marginEnd = u.i(12f) })
+        addView(tv)
+    }
+
+    private fun smallText(sizePx: Float, color: Int) = TextView(this).apply {
+        setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(sizePx))
+        setTextColor(color)
+        maxLines = 1
+    }
+
+    private fun buildInfo() {
+        bigClock = TextClock(this).apply {
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(96f))
+            setTextColor(0xF2FFFFFF.toInt())
+            typeface = android.graphics.Typeface.create("sans-serif-light", android.graphics.Typeface.NORMAL)
+            includeFontPadding = false
+        }
+        dateText = smallText(28f, 0xB3FFFFFF.toInt())
+        wxText = smallText(26f, 0xE6FFFFFF.toInt())
+        prText = smallText(26f, 0xE6FFFFFF.toInt())
+        wxPill = pill(R.drawable.ic_sun, wxText)
+        prPill = pill(R.drawable.ic_prayer, prText)
+        wxPill.visibility = View.GONE
+        prPill.visibility = View.GONE
+        val pills = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(wxPill, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, u.i(52f)).apply { marginEnd = u.i(14f) })
+            addView(prPill, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, u.i(52f)))
+        }
+        infoBlock = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(bigClock)
+            addView(dateText, LinearLayout.LayoutParams(-2, -2).apply { topMargin = u.i(6f); bottomMargin = u.i(16f) })
+            addView(pills)
+        }
+        content.addView(infoBlock, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START).apply { leftMargin = u.i(80f); topMargin = u.i(56f) })
+    }
+
+    private fun dateString(): String {
+        val p = Prefs(this)
+        val today = PrayerRepository.cityToday(this)
+        val g = java.text.SimpleDateFormat("EEEE, d MMMM", java.util.Locale.ENGLISH).apply { timeZone = CityClock.timeZone(this@MainActivity) }.format(java.util.Date())
+        val h = HijriDate.format(this, today, java.util.Locale.ENGLISH)
+        return when (p.dateMode) { 1 -> g; 2 -> h; else -> if (h.isEmpty()) g else "$g  ·  $h" }
+    }
+
+    /** Refreshes the text of the clock block; cheap, called every minute and after the data arrives. */
+    private fun updateInfo() {
+        dateText.text = dateString()
+        val p = Prefs(this)
+        val w = weather
+        if (w == null) wxPill.visibility = View.GONE else {
+            wxPill.visibility = View.VISIBLE
+            wxText.text = "${w.tempC}°  ${getString(Weather.labelRes(w.code))}  ·  ${w.today.maxC}°/${w.today.minC}°  ·  Tomorrow ${w.tomorrow.maxC}°/${w.tomorrow.minC}°"
+        }
+        val n = nextPrayer
+        if (n == null) prPill.visibility = View.GONE else {
+            val mins = java.time.Duration.between(java.time.Instant.now(), n.time.toInstant()).toMinutes()
+            if (mins < 0) { prPill.visibility = View.GONE; return }
+            prPill.visibility = View.VISIBLE
+            val hhmm = n.time.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+            prText.text = n.name + "  " + TimeFmt.display(hhmm, TimeFmt.is24(this, p)) + "  ·  in " + (if (mins >= 60) "${mins / 60}h " else "") + "${mins % 60}m"
+        }
+    }
+
+    private val infoTick = object : Runnable {
+        override fun run() { updateInfo(); handler.postDelayed(this, 30_000) }
+    }
+
+    private fun refreshInfoData() {
+        val app = applicationContext
+        Thread {
+            val p = Prefs(app)
+            CityClock.ensure(app)
+            val n = try { PrayerRepository.nextPrayer(app, false) } catch (_: Exception) { null }
+            val w = WeatherRepository.fetch(p.latitude, p.longitude)
+            runOnUiThread {
+                if (isDestroyed) return@runOnUiThread
+                if (n != null) nextPrayer = n
+                if (w != null) weather = w
+                bigClock.timeZone = CityClock.gmtId(this); clock.timeZone = CityClock.gmtId(this)
+                updateInfo()
+            }
+        }.start()
     }
 
     // ------------------------------------------------------------------ capsule
@@ -152,11 +255,11 @@ class MainActivity : Activity() {
             .filter { it.activityInfo.packageName != packageName }
             .map { ri ->
                 val banner = try { ri.activityInfo.loadBanner(pm) ?: ri.activityInfo.applicationInfo.loadBanner(pm) } catch (_: Exception) { null }
-                AppItem(ri.activityInfo.packageName, ri.loadLabel(pm).toString(), ri.loadIcon(pm), banner, null)
+                AppItem(ri.activityInfo.packageName, ri.loadLabel(pm).toString(), ri.loadIcon(pm), banner, null).also { it.prepare() }
             }
     }
 
-    private fun settingsItem() = AppItem(Store.SETTINGS_PKG, "Settings", GearDrawable(), null, Intent(this, SettingsActivity::class.java))
+    private fun settingsItem() = AppItem(Store.SETTINGS_PKG, "Settings", GearDrawable(), null, Intent(this, SettingsActivity::class.java)).also { it.prepare() }
 
     /** Also the entry point for tests, which supply their own apps. */
     fun setApps(list: List<AppItem>) {
@@ -175,6 +278,7 @@ class MainActivity : Activity() {
         clock.format12Hour = if (f24) "HH:mm" else "h:mm"
         clock.format24Hour = "HH:mm"
         clock.timeZone = CityClock.gmtId(this)
+        bigClock.format12Hour = clock.format12Hour; bigClock.format24Hour = "HH:mm"; bigClock.timeZone = clock.timeZone
         return changed
     }
 
@@ -209,6 +313,7 @@ class MainActivity : Activity() {
         val v = grid.findViewHolderForAdapterPosition(0)?.itemView
         val off = if (v == null) 100000f else u.px(HomeLayoutManager.REST_TOP) - v.top
         bgGray.alpha = (off / u.px(650f)).coerceIn(0f, 1f) * 0.94f
+        infoBlock.alpha = (1f - off / u.px(220f)).coerceIn(0f, 1f)
     }
 
     private fun open(e: Entry) {
@@ -219,6 +324,7 @@ class MainActivity : Activity() {
     private fun launch(a: AppItem) {
         val i = a.intent ?: packageManager.getLeanbackLaunchIntentForPackage(a.pkg) ?: packageManager.getLaunchIntentForPackage(a.pkg)
         if (i == null) { toast("Not available"); return }
+        closeCC()
         try {
             startActivity(i)
             overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
@@ -302,7 +408,7 @@ class MainActivity : Activity() {
         if (folderView != null) return
         folderKey = e.key
         val fRoot = FrameLayout(this)
-        fRoot.addView(Blur.view(this, Blur.fromView(content), 0x59000000), FrameLayout.LayoutParams(-1, -1))
+        fRoot.addView(Blur.view(this, Blur.fromView(content, 32, 2), 0x59000000), FrameLayout.LayoutParams(-1, -1))
         val title = TextView(this).apply {
             text = e.title
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(40f))
@@ -444,8 +550,6 @@ class MainActivity : Activity() {
     } catch (_: Exception) { false }
 
     private fun openCC() {
-        val frame = FrameLayout(this)
-        frame.addView(Blur.view(this, Blur.fromView(content), 0x73000000).apply { setOnClickListener { closeCC() } }, FrameLayout.LayoutParams(-1, -1))
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = Glass.solid(0xD91C1C1E.toInt(), u.px(70f))
@@ -481,63 +585,14 @@ class MainActivity : Activity() {
             addView(round(R.drawable.ic_access, "Accessibility") { startSafe(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) })
             addView(round(R.drawable.ic_gear, "Settings") { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) })
         }
-        val pr = glassTile(440f, 150f, R.drawable.ic_prayer, "Next Prayer", "Loading…", false) { closeCC(); startActivity(Intent(this, SettingsActivity::class.java).putExtra("page", "prayer")) }
-        val wx = glassTile(440f, 150f, R.drawable.ic_sun, "Weather", "Loading…", false) { closeCC(); startActivity(Intent(this, SettingsActivity::class.java).putExtra("page", "prayer")) }
-        val rowP = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; addView(pr); addView(wx) }
-        fillInfo(pr, wx)
-        val dateLine = TextView(this).apply {
-            text = dateText()
-            setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(30f))
-            setTextColor(0xB3FFFFFF.toInt())
-            gravity = Gravity.CENTER
-            setPadding(0, u.i(4f), 0, u.i(10f))
-        }
-        panel.addView(dateLine); panel.addView(rowA); panel.addView(rowB); panel.addView(rowP); panel.addView(rowC)
-        frame.addView(panel, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END).apply {
+        panel.addView(rowA); panel.addView(rowB); panel.addView(rowC)
+        ccView = panel
+        root.addView(panel, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END).apply {
             topMargin = u.i(140f); marginEnd = u.i(45f)
         })
-        ccView = frame
-        root.addView(frame, FrameLayout.LayoutParams(-1, -1))
-        frame.alpha = 0f
-        frame.animate().alpha(1f).setDuration(200).start()
+        panel.alpha = 0f
+        panel.animate().alpha(1f).setDuration(120).start()
         power.requestFocus()
-    }
-
-    private fun dateText(): String {
-        val p = Prefs(this)
-        val today = PrayerRepository.cityToday(this)
-        val g = java.text.SimpleDateFormat("EEE, d MMM yyyy", java.util.Locale.ENGLISH).apply { timeZone = CityClock.timeZone(this@MainActivity) }.format(java.util.Date())
-        val h = HijriDate.format(this, today, java.util.Locale.ENGLISH)
-        return when (p.dateMode) { 1 -> g; 2 -> h; else -> if (h.isEmpty()) g else "$g  ·  $h" }
-    }
-
-    private fun subOf(tile: LinearLayout): TextView = (tile.getChildAt(1) as LinearLayout).getChildAt(1) as TextView
-    private fun titleOf(tile: LinearLayout): TextView = (tile.getChildAt(1) as LinearLayout).getChildAt(0) as TextView
-
-    /** Fetches the next prayer and the weather off the main thread and writes them into the two Control Center tiles. */
-    private fun fillInfo(prayerTile: LinearLayout, weatherTile: LinearLayout) {
-        val app = applicationContext
-        Thread {
-            val p = Prefs(app)
-            CityClock.ensure(app)
-            val next = try { PrayerRepository.nextPrayer(app, false) } catch (_: Exception) { null }
-            val wx = WeatherRepository.fetch(p.latitude, p.longitude)
-            runOnUiThread {
-                if (isDestroyed || ccView == null) return@runOnUiThread
-                if (next == null) { titleOf(prayerTile).text = "Prayer Times"; subOf(prayerTile).text = "Not available (no internet)" }
-                else {
-                    val hhmm = next.time.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
-                    val mins = java.time.Duration.between(java.time.Instant.now(), next.time.toInstant()).toMinutes().coerceAtLeast(0)
-                    titleOf(prayerTile).text = next.name
-                    subOf(prayerTile).text = TimeFmt.display(hhmm, TimeFmt.is24(app, p)) + "  ·  in " + (if (mins >= 60) "${mins / 60}h " else "") + "${mins % 60}m"
-                }
-                if (wx == null) { titleOf(weatherTile).text = "Weather"; subOf(weatherTile).text = "Not available (no internet)" }
-                else {
-                    titleOf(weatherTile).text = "${wx.tempC}°  " + getString(Weather.labelRes(wx.code))
-                    subOf(weatherTile).text = "Today ${wx.today.maxC}°/${wx.today.minC}°\nTomorrow ${wx.tomorrow.maxC}°/${wx.tomorrow.minC}°"
-                }
-            }
-        }.start()
     }
 
     private fun closeCC() {
@@ -641,6 +696,7 @@ class MainActivity : Activity() {
         if (apps.isNotEmpty()) { lay = store.layout(apps); if (lay.cells().map { it.key } != adapter.cells.map { it.key }) relayout(lastFocusKey) }
         resetIdle()
         clock.timeZone = CityClock.gmtId(this)
+        handler.removeCallbacks(infoTick); handler.post(infoTick); refreshInfoData()
         val app = applicationContext
         Thread {
             val changed = CityClock.ensure(app)
@@ -649,7 +705,7 @@ class MainActivity : Activity() {
         }.start()
     }
 
-    override fun onPause() { super.onPause(); handler.removeCallbacks(idleRun) }
+    override fun onPause() { super.onPause(); handler.removeCallbacks(idleRun); handler.removeCallbacks(infoTick) }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)

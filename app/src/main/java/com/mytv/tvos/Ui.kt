@@ -237,13 +237,26 @@ class TileView(context: Context, private val u: U) : View(context) {
         c.restore()
     }
 
+    private val src = android.graphics.Rect()
+    private val dst = RectF()
+    private val bp = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+
+    private fun letter(c: Canvas, a: AppItem, cx: Float, cy: Float, size: Float) {
+        paint.color = 0xE6FFFFFF.toInt()
+        paint.textSize = size
+        paint.textAlign = Paint.Align.CENTER
+        paint.typeface = android.graphics.Typeface.DEFAULT_BOLD
+        c.drawText(a.label.trim().take(1).uppercase(), cx, cy + size * 0.35f, paint)
+    }
+
     private fun drawApp(c: Canvas, a: AppItem, w: Float, h: Float) {
-        val banner = a.banner
-        if (banner != null && banner.intrinsicWidth > 0) {
-            val sc = max(w / banner.intrinsicWidth, h / banner.intrinsicHeight)
-            val bw = banner.intrinsicWidth * sc
-            val bh = banner.intrinsicHeight * sc
-            drawIn(c, banner, ((w - bw) / 2).toInt(), ((h - bh) / 2).toInt(), ((w + bw) / 2).toInt(), ((h + bh) / 2).toInt())
+        val banner = a.bannerBmp
+        if (banner != null) {
+            val sc = max(w / banner.width, h / banner.height)
+            val bw = banner.width * sc
+            val bh = banner.height * sc
+            dst.set((w - bw) / 2, (h - bh) / 2, (w + bw) / 2, (h + bh) / 2)
+            c.drawBitmap(banner, null, dst, bp)
             return
         }
         paint.color = a.tileColor
@@ -253,8 +266,10 @@ class TileView(context: Context, private val u: U) : View(context) {
             c.drawRect(0f, 0f, w, h, paint)
             paint.shader = null
         }
+        if (a.blank) { letter(c, a, w / 2, h / 2, h * 0.5f); return }
         val s = h * if (a.pkg == Store.SETTINGS_PKG) 0.8f else 0.72f
-        drawIn(c, a.icon, ((w - s) / 2).toInt(), ((h - s) / 2).toInt(), ((w + s) / 2).toInt(), ((h + s) / 2).toInt())
+        dst.set((w - s) / 2, (h - s) / 2, (w + s) / 2, (h + s) / 2)
+        c.drawBitmap(a.iconBmp, null, dst, bp)
     }
 
     private fun drawFolder(c: Canvas, e: Entry, w: Float, h: Float) {
@@ -274,7 +289,8 @@ class TileView(context: Context, private val u: U) : View(context) {
             val s = icon * 0.78f
             val ix = x + (icon - s) / 2
             val iy = y + (icon - s) / 2
-            drawIn(c, a.icon, ix.toInt(), iy.toInt(), (ix + s).toInt(), (iy + s).toInt())
+            if (a.blank) letter(c, a, x + icon / 2, y + icon / 2, icon * 0.5f)
+            else { dst.set(ix, iy, ix + s, iy + s); c.drawBitmap(a.iconBmp, null, dst, bp) }
         }
     }
 

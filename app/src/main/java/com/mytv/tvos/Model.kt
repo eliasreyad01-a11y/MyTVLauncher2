@@ -18,7 +18,17 @@ class AppItem(
     val intent: Intent?
 ) {
     /** Colour of the icon's own background (edge pixels), used to paint the tile behind a square icon. */
-    val tileColor: Int by lazy { Art.edgeColor(icon) }
+    /** The icon rendered once into a bitmap: drawing the live Drawable on every frame is slow and some icons then come out empty. */
+    val iconBmp: Bitmap by lazy { Art.render(icon, 192, 192) }
+    val bannerBmp: Bitmap? by lazy {
+        val b = banner ?: return@lazy null
+        if (b.intrinsicWidth <= 0 || b.intrinsicHeight <= 0) null
+        else Art.render(b, 498, (498f * b.intrinsicHeight / b.intrinsicWidth).toInt().coerceIn(150, 900))
+    }
+    val tileColor: Int by lazy { Art.edgeColor(iconBmp) }
+    /** True when the icon has nothing visible on it; the tile then shows the first letter of the name instead of an empty square. */
+    val blank: Boolean by lazy { Art.isBlank(iconBmp, tileColor) }
+    fun prepare() { bannerBmp; tileColor; blank }
 }
 
 /** A cell of the home grid: an app, a folder, or an empty slot that keeps the dock row six wide. */
@@ -224,29 +234,43 @@ class Store(ctx: Context) {
 }
 
 object Art {
-    /** Average colour of the icon's outer ring of pixels: that is the colour its own background has. */
-    fun edgeColor(d: Drawable): Int {
-        val n = 24
-        val bmp = Bitmap.createBitmap(n, n, Bitmap.Config.ARGB_8888)
-        val c = Canvas(bmp)
+    fun render(d: Drawable, w: Int, h: Int): Bitmap {
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         try {
-            d.setBounds(0, 0, n, n)
-            d.draw(c)
-        } catch (_: Exception) {
-            return 0xFF2C2C2E.toInt()
-        }
+            val old = d.copyBounds()
+            d.setBounds(0, 0, w, h)
+            d.draw(Canvas(bmp))
+            d.bounds = old
+        } catch (_: Exception) {}
+        return bmp
+    }
+
+    /** Average colour of the icon's outer ring of pixels: that is the colour its own background has. */
+    fun edgeColor(src: Bitmap): Int {
+        val n = 24
+        val bmp = Bitmap.createScaledBitmap(src, n, n, true)
         var r = 0L; var g = 0L; var b = 0L; var cnt = 0L
         for (i in 0 until n) for (j in 0 until n) {
             if (i > 1 && j > 1 && i < n - 2 && j < n - 2) continue
             val p = bmp.getPixel(i, j)
-            val a = Color.alpha(p)
-            if (a < 200) continue
+            if (Color.alpha(p) < 200) continue
             r += Color.red(p); g += Color.green(p); b += Color.blue(p); cnt++
         }
-        bmp.recycle()
         if (cnt == 0L) return 0xFF2C2C2E.toInt()
         val avg = Color.rgb((r / cnt).toInt(), (g / cnt).toInt(), (b / cnt).toInt())
         val lum = (0.299 * Color.red(avg) + 0.587 * Color.green(avg) + 0.114 * Color.blue(avg)) / 255.0
         return if (lum > 0.82) 0xFFF4F4F6.toInt() else avg
+    }
+
+    fun isBlank(src: Bitmap, bg: Int): Boolean {
+        val n = 24
+        val bmp = Bitmap.createScaledBitmap(src, n, n, true)
+        for (i in 6 until n - 6) for (j in 6 until n - 6) {
+            val p = bmp.getPixel(i, j)
+            if (Color.alpha(p) < 40) continue
+            val d = Math.abs(Color.red(p) - Color.red(bg)) + Math.abs(Color.green(p) - Color.green(bg)) + Math.abs(Color.blue(p) - Color.blue(bg))
+            if (d > 45) return false
+        }
+        return true
     }
 }
