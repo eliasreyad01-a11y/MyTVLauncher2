@@ -202,6 +202,7 @@ class TileView(context: Context, private val u: U) : View(context) {
     private var sheenShader: Shader? = null
     private var sheenW = 0f
     private var sheenH = 0f
+    private val clipP = Path()
     private val mask = RectF()
     private val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN) }
     private val tmp = android.graphics.Rect()
@@ -226,7 +227,9 @@ class TileView(context: Context, private val u: U) : View(context) {
         val w = width.toFloat(); val h = height.toFloat()
         val rad = u.px(RADIUS)
         // Content is drawn into a layer and cut with an anti-aliased rounded mask: clipPath leaves stair-stepped corners on many TVs.
-        val layer = c.saveLayer(0f, 0f, w, h, null)
+        val smooth = TileView.smooth
+        val layer = if (smooth) c.saveLayer(0f, 0f, w, h, null) else c.save()
+        if (!smooth) { clipP.reset(); clipP.addRoundRect(RectF(0f, 0f, w, h), rad, rad, Path.Direction.CW); c.clipPath(clipP) }
         val e = entry
         if (e != null) {
             if (e.isFolder) drawFolder(c, e, w, h) else e.app?.let { drawApp(c, it, w, h) }
@@ -241,8 +244,7 @@ class TileView(context: Context, private val u: U) : View(context) {
         c.drawRect(0f, 0f, w, h, paint)
         paint.shader = null
         paint.alpha = 255
-        mask.set(0f, 0f, w, h)
-        c.drawRoundRect(mask, rad, rad, maskPaint)
+        if (smooth) { mask.set(0f, 0f, w, h); c.drawRoundRect(mask, rad, rad, maskPaint) }
         c.restoreToCount(layer)
     }
 
@@ -304,6 +306,8 @@ class TileView(context: Context, private val u: U) : View(context) {
     }
 
     companion object {
+        /** Anti-aliased rounded corners through a mask layer; the plain clip is kept as a switch in Settings in case a TV renders the mask badly. */
+        @Volatile var smooth = true
         const val RADIUS = 27f
         const val W = 249f
         const val H = 150f

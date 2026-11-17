@@ -39,7 +39,7 @@ object L {
         "None" to "بدون", "Default" to "الافتراضية", "Choose from TV storage" to "اختيار من ذاكرة التلفزيون", "Clock Style" to "شكل الساعة", "Clock Size" to "حجم الساعة",
         "Light" to "رفيع", "Regular" to "عادي", "Bold" to "عريض", "Medium" to "متوسط", "Large" to "كبير", "Extra Large" to "كبير جداً",
         "Up" to "للأعلى", "Choose a location" to "اختر المكان", "Cannot read this folder" to "ما بقدر أقرأ هالمجلد", "Internal storage" to "الذاكرة الداخلية",
-        "App folder" to "مجلد التطبيق", "Choose a picture" to "اختر صورة", "Wallpaper set" to "تم تعيين الخلفية", "Loading…" to "جاري التحميل…", "Prayer Times" to "مواقيت الصلاة", "Weather" to "الطقس"
+        "App folder" to "مجلد التطبيق", "Choose a picture" to "اختر صورة", "Wallpaper set" to "تم تعيين الخلفية", "Smooth Icon Edges" to "حواف أيقونات ناعمة", "Anti-aliased rounded corners on the icons. Turn this off if your TV draws the icons wrongly." to "حواف مدوّرة ناعمة للأيقونات. أوقفها إذا التلفزيون رسم الأيقونات غلط.", "Loading…" to "جاري التحميل…", "Prayer Times" to "مواقيت الصلاة", "Weather" to "الطقس"
     )
 
     fun t(s: String): String {

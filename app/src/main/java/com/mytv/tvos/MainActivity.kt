@@ -347,9 +347,10 @@ class MainActivity : Activity() {
     private fun applyOptions(): Boolean {
         val labels = sp.getBoolean("labels", false)
         val calm = sp.getBoolean("calm", false)
-        val changed = labels != adapter.alwaysLabels || calm != adapter.reduceMotion
+        val changed = labels != adapter.alwaysLabels || calm != adapter.reduceMotion || TileView.smooth != sp.getBoolean("smooth_edges", true)
         adapter.alwaysLabels = labels
         adapter.reduceMotion = calm
+        TileView.smooth = sp.getBoolean("smooth_edges", true)
         loadWallpaper()
         val f24 = TimeFmt.is24(this, Prefs(this))
         clock.format12Hour = if (f24) "HH:mm" else "h:mm"

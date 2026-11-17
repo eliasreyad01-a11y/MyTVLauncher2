@@ -113,6 +113,7 @@ class SettingsActivity : Activity() {
             Row.Nav("Clock Size", { when (prefs.getString("clock_size", "l")) { "m" -> "Medium"; "xl" -> "Extra Large"; else -> "Large" } }) {
                 choose("Clock Size", listOf("Medium" to { prefs.edit().putString("clock_size", "m").apply(); refresh() }, "Large" to { prefs.edit().putString("clock_size", "l").apply(); refresh() }, "Extra Large" to { prefs.edit().putString("clock_size", "xl").apply(); refresh() }))
             },
+            Row.Switch("Smooth Icon Edges", { prefs.getBoolean("smooth_edges", true) }, { on -> prefs.edit().putBoolean("smooth_edges", on).apply() }, "Anti-aliased rounded corners on the icons. Turn this off if your TV draws the icons wrongly."),
             Row.Label("LAYOUT"),
             Row.Nav("Reset Home Screen Layout") {
                 Store(this).reset()
