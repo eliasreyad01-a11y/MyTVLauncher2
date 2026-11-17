@@ -70,6 +70,12 @@ class ScreenshotTest {
     private fun home(): MainActivity {
         val a = Robolectric.buildActivity(MainActivity::class.java).setup().get()
         a.setApps(fake()); idle()
+        try {
+            val vri = View::class.java.getMethod("getViewRootImpl").invoke(a.window.decorView)
+            for (n in listOf("ensureTouchModeLocally", "ensureTouchMode")) try {
+                val m = vri.javaClass.getDeclaredMethod(n, Boolean::class.javaPrimitiveType); m.isAccessible = true; m.invoke(vri, false); break
+            } catch (_: NoSuchMethodException) {}
+        } catch (_: Throwable) {}
         return a
     }
 

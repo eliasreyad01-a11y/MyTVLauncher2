@@ -21,7 +21,7 @@ import android.widget.Toast
 class SettingsActivity : Activity() {
 
     private sealed class Row {
-        class Nav(val title: String, val value: () -> String? = { null }, val go: () -> Unit) : Row()
+        class Nav(val title: String, val value: () -> String? = { null }, val chevron: Boolean = true, val go: () -> Unit) : Row()
         class Toggle(val title: String, val key: String, val desc: String) : Row()
         class Label(val text: String) : Row()
     }
@@ -85,7 +85,7 @@ class SettingsActivity : Activity() {
 
     private fun screensaver() = Page("Screen Saver") {
         listOf(0, 2, 5, 10, 15, 30).map { m ->
-            Row.Nav(if (m == 0) "Never" else "After $m minutes", { if (prefs.getInt("ss_min", 10) == m) "✓" else null }) {
+            Row.Nav(if (m == 0) "Never" else "After $m minutes", { if (prefs.getInt("ss_min", 10) == m) "✓" else null }, false) {
                 prefs.edit().putInt("ss_min", m).apply(); pop()
             }
         }
@@ -93,10 +93,10 @@ class SettingsActivity : Activity() {
 
     private fun about() = Page("About") {
         listOf(
-            Row.Nav("Name", { "TV" }) {},
-            Row.Nav("Version", { try { packageManager.getPackageInfo(packageName, 0).versionName } catch (_: Exception) { "" } }) {},
-            Row.Nav("Model", { android.os.Build.MODEL }) {},
-            Row.Nav("Android", { android.os.Build.VERSION.RELEASE }) {}
+            Row.Nav("Name", { "TV" }, false) {},
+            Row.Nav("Version", { try { packageManager.getPackageInfo(packageName, 0).versionName } catch (_: Exception) { "" } }, false) {},
+            Row.Nav("Model", { android.os.Build.MODEL }, false) {},
+            Row.Nav("Android", { android.os.Build.VERSION.RELEASE }, false) {}
         )
     }
 
@@ -105,15 +105,20 @@ class SettingsActivity : Activity() {
         u = U(this)
         prefs = getSharedPreferences("tvos_settings", Context.MODE_PRIVATE)
         val frame = FrameLayout(this).apply { setBackgroundColor(0xFF1B1B1D.toInt()) }
-        val squircle = FrameLayout(this).apply { background = Glass.solid(0x24FFFFFF, u.px(120f)) }
-        squircle.addView(ImageView(this).apply { setImageDrawable(GearDrawable()) }, FrameLayout.LayoutParams(u.i(300f), u.i(300f), Gravity.CENTER))
+        val wall = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageResource(R.drawable.wp_kirkjufell) }
+        if (android.os.Build.VERSION.SDK_INT >= 31) wall.setRenderEffect(android.graphics.RenderEffect.createBlurEffect(60f, 60f, android.graphics.Shader.TileMode.CLAMP))
+        frame.addView(wall, FrameLayout.LayoutParams(-1, -1))
+        frame.addView(View(this).apply { setBackgroundColor(0xB31B1B1D.toInt()) }, FrameLayout.LayoutParams(-1, -1))
+        val squircle = FrameLayout(this).apply { background = Glass.solid(0x33FFFFFF, u.px(120f)) }
+        squircle.addView(TvGlyph(this), FrameLayout.LayoutParams(u.i(300f), u.i(300f), Gravity.CENTER))
         frame.addView(squircle, FrameLayout.LayoutParams(u.i(540f), u.i(540f)).apply { leftMargin = u.i(255f); topMargin = u.i(240f) })
         titleView = TextView(this).apply {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, u.px(58f))
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(0x80FFFFFF.toInt())
         }
-        frame.addView(titleView, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { leftMargin = u.i(1056f); topMargin = u.i(90f) })
+        titleView.gravity = Gravity.CENTER_HORIZONTAL
+        frame.addView(titleView, FrameLayout.LayoutParams(u.i(789f), ViewGroup.LayoutParams.WRAP_CONTENT).apply { leftMargin = u.i(1056f); topMargin = u.i(70f) })
         descView = TextView(this).apply {
             setTextSize(TypedValue.COMPLEX_UNIT_PX, u.px(28f))
             setTextColor(0x80FFFFFF.toInt())
@@ -179,6 +184,11 @@ class SettingsActivity : Activity() {
         }
         row.addView(title, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         row.addView(value)
+        if (r is Row.Nav && r.chevron) row.addView(ImageView(this).apply {
+            setImageResource(R.drawable.ic_chevron)
+            imageTintList = Glass.dim()
+            isDuplicateParentStateEnabled = true
+        }, LinearLayout.LayoutParams(u.i(30f), u.i(30f)).apply { marginStart = u.i(14f) })
         when (r) {
             is Row.Nav -> {
                 title.text = r.title
