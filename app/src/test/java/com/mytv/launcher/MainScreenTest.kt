@@ -172,7 +172,8 @@ class MainScreenTest {
         val sub = a.findViewById<TextView>(R.id.ssSub)
         val prefs = Prefs(ctx)
 
-        call(a, "stopScreensaver") // the idle timer may already have started it on a slow runner
+        Dialogs.dismissAll() // dialogs left over from other tests (static, weakly held) would make startScreensaver bail out
+        call(a, "stopScreensaver")
         prefs.dateMode = 1
         call(a, "startScreensaver")
         assertEquals(View.GONE, sub.visibility)

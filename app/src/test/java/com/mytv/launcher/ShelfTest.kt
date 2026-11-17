@@ -37,6 +37,7 @@ class ShelfTest {
     @Test
     fun shelfFollowsTheFocusedDockApp() {
         val c = Robolectric.buildActivity(MainActivity::class.java).setup()
+        try { c.javaClass.getMethod("windowFocusChanged", Boolean::class.javaPrimitiveType).invoke(c, true) } catch (_: Throwable) {}
         val a = c.get()
         val adapter: AppAdapter = field(a, "adapter")
         waitUntil { adapter.itemCount > 0 }
@@ -49,6 +50,8 @@ class ShelfTest {
         val m = a.javaClass.declaredMethods.first { it.name == "applyLists" && it.parameterCount == 0 }; m.isAccessible = true; m.invoke(a)
         TestUi.idle()
         TestUi.leaveTouchMode(a.window.decorView)
+        TestUi.layoutAt1080p(a.window.decorView)
+        TestUi.idle()
         TestUi.layoutAt1080p(a.window.decorView)
 
         val grid: RecyclerView = field(a, "grid")
