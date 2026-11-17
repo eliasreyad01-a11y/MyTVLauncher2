@@ -140,8 +140,10 @@ class HomeLayoutManager(ctx: Context, span: Int, private val u: U) : GridLayoutM
 /** The rounded translucent plate behind the dock row. It scrolls away with the dock. */
 class PlateDecoration(private val u: U) : RecyclerView.ItemDecoration() {
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x1AFFFFFF }
-    private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = 0x26FFFFFF; strokeWidth = u.px(2f) }
+    private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = 0x40FFFFFF; strokeWidth = u.px(2f) }
     private val rect = RectF()
+    private val hi = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val clip = android.graphics.Path()
 
     override fun onDraw(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
         var top = Int.MIN_VALUE
@@ -153,6 +155,8 @@ class PlateDecoration(private val u: U) : RecyclerView.ItemDecoration() {
         rect.set(u.px(51f), top - u.px(39f), parent.width - u.px(51f), top + u.px(TileView.H + 39f))
         val r = u.px(58f)
         c.drawRoundRect(rect, r, r, fill)
+        hi.shader = android.graphics.LinearGradient(0f, rect.top, 0f, rect.top + rect.height() * 0.6f, 0x2EFFFFFF, 0x00FFFFFF, android.graphics.Shader.TileMode.CLAMP)
+        c.save(); clip.reset(); clip.addRoundRect(rect, r, r, android.graphics.Path.Direction.CW); c.clipPath(clip); c.drawRect(rect, hi); c.restore()
         c.drawRoundRect(rect, r, r, stroke)
     }
 }

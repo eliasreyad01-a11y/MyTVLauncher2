@@ -39,7 +39,7 @@ class SettingsActivity : Activity() {
     private var selectedIndex = ArrayList<Int>()
 
     private val p by lazy { Prefs(this) }
-    private fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_SHORT).show()
+    private fun toast(s: String) = Toast.makeText(this, L.t(s), Toast.LENGTH_SHORT).show()
     private fun choose(title: String, items: List<Pair<String, () -> Unit>>) { Menus.show(this, title, items) }
     private fun reschedule() = AdhanScheduler.reschedule(this)
 
@@ -73,6 +73,9 @@ class SettingsActivity : Activity() {
             Row.Nav("Appearance", go = sys(Settings.ACTION_DISPLAY_SETTINGS)),
             Row.Nav("Language and Region", go = sys(Settings.ACTION_LOCALE_SETTINGS)),
             Row.Nav("Date and Time", go = sys(Settings.ACTION_DATE_SETTINGS)),
+            Row.Nav("Language", { if (p.language == "ar") "العربية" else "English" }) {
+                choose("Language", listOf("English" to { setLang("en") }, "العربية" to { setLang("ar") }))
+            },
             Row.Nav("Time Format", { when (p.timeFormat) { "12" -> "12-Hour"; "system" -> "System"; else -> "24-Hour" } }) {
                 choose("Time Format", listOf("24-Hour" to { p.timeFormat = "24"; refresh() }, "12-Hour" to { p.timeFormat = "12"; refresh() }, "System" to { p.timeFormat = "system"; refresh() }))
             },
@@ -131,11 +134,11 @@ class SettingsActivity : Activity() {
     }
 
     private fun searchCity() {
-        val input = android.widget.EditText(this).apply { setSingleLine(); hint = "City name" }
+        val input = android.widget.EditText(this).apply { setSingleLine(); hint = L.t("City name") }
         android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog)
-            .setTitle("Search City")
+            .setTitle(L.t("Search City"))
             .setView(input)
-            .setPositiveButton("Search") { _, _ ->
+            .setPositiveButton(L.t("Search")) { _, _ ->
                 val q = input.text.toString().trim()
                 if (q.isNotEmpty()) Thread {
                     val res = PrayerRepository.searchCities(q, "en")
@@ -146,7 +149,7 @@ class SettingsActivity : Activity() {
                     }
                 }.start()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(L.t("Cancel"), null)
             .show()
     }
 
@@ -178,13 +181,14 @@ class SettingsActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         u = U(this)
+        L.ar = Prefs(this).language == "ar"
         prefs = getSharedPreferences("tvos_settings", Context.MODE_PRIVATE)
         val frame = FrameLayout(this).apply { setBackgroundColor(0xFF1B1B1D.toInt()) }
         val small = android.graphics.BitmapFactory.decodeResource(resources, R.drawable.wp_kirkjufell, android.graphics.BitmapFactory.Options().apply { inSampleSize = 16 })
         val wall = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageBitmap(Blur.blur(small, 4)) }
         frame.addView(wall, FrameLayout.LayoutParams(-1, -1))
         frame.addView(View(this).apply { setBackgroundColor(0xB31B1B1D.toInt()) }, FrameLayout.LayoutParams(-1, -1))
-        val squircle = FrameLayout(this).apply { background = Glass.solid(0x33FFFFFF, u.px(120f)) }
+        val squircle = FrameLayout(this).apply { background = Glass.glass(0x33FFFFFF, u.px(120f), 0.9f) }
         squircle.addView(TvGlyph(this), FrameLayout.LayoutParams(u.i(300f), u.i(300f), Gravity.CENTER))
         frame.addView(squircle, FrameLayout.LayoutParams(u.i(540f), u.i(540f)).apply { leftMargin = u.i(255f); topMargin = u.i(240f) })
         titleView = TextView(this).apply {
@@ -217,6 +221,12 @@ class SettingsActivity : Activity() {
     private var lastIdx = 0
     private fun refresh() { render(lastIdx) }
 
+    private fun setLang(code: String) {
+        p.language = code
+        L.ar = code == "ar"
+        recreate()
+    }
+
     private fun pop() {
         stack.removeAt(stack.size - 1); selectedIndex.removeAt(selectedIndex.size - 1)
         render(selectedIndex.last().coerceAtLeast(0))
@@ -224,7 +234,7 @@ class SettingsActivity : Activity() {
 
     private fun render(focusIndex: Int) {
         val p = stack.last()
-        titleView.text = p.title
+        titleView.text = L.t(p.title)
         descView.text = ""
         list.removeAllViews()
         for (r in p.rows()) list.addView(rowView(r), LinearLayout.LayoutParams(-1, u.i(66f)).apply { bottomMargin = u.i(14f) })
@@ -236,7 +246,7 @@ class SettingsActivity : Activity() {
 
     private fun rowView(r: Row): View {
         if (r is Row.Label) return TextView(this).apply {
-            text = r.text
+            text = L.t(r.text)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, u.px(26f))
             setTextColor(0x80FFFFFF.toInt())
             gravity = Gravity.BOTTOM
@@ -270,23 +280,23 @@ class SettingsActivity : Activity() {
         }, LinearLayout.LayoutParams(u.i(30f), u.i(30f)).apply { marginStart = u.i(14f) })
         when (r) {
             is Row.Nav -> {
-                title.text = r.title
-                value.text = r.value() ?: ""
-                row.setOnClickListener { lastIdx = list.indexOfChild(row); r.go(); if (stack.isNotEmpty()) value.text = r.value() ?: "" }
+                title.text = L.t(r.title)
+                value.text = L.t(r.value() ?: "")
+                row.setOnClickListener { lastIdx = list.indexOfChild(row); r.go(); if (stack.isNotEmpty()) value.text = L.t(r.value() ?: "") }
             }
             is Row.Toggle -> {
-                title.text = r.title
-                fun sync() { value.text = if (prefs.getBoolean(r.key, false)) "On" else "Off" }
+                title.text = L.t(r.title)
+                fun sync() { value.text = L.t(if (prefs.getBoolean(r.key, false)) "On" else "Off") }
                 sync()
                 row.setOnClickListener { prefs.edit().putBoolean(r.key, !prefs.getBoolean(r.key, false)).apply(); sync() }
-                row.setOnFocusChangeListener { _, f -> if (f) descView.text = r.desc }
+                row.setOnFocusChangeListener { _, f -> if (f) descView.text = L.t(r.desc) }
             }
             is Row.Switch -> {
-                title.text = r.title
-                fun sync() { value.text = if (r.get()) "On" else "Off" }
+                title.text = L.t(r.title)
+                fun sync() { value.text = L.t(if (r.get()) "On" else "Off") }
                 sync()
                 row.setOnClickListener { r.set(!r.get()); sync() }
-                row.setOnFocusChangeListener { _, f -> if (f) descView.text = r.desc }
+                row.setOnFocusChangeListener { _, f -> if (f) descView.text = L.t(r.desc) }
             }
             else -> {}
         }

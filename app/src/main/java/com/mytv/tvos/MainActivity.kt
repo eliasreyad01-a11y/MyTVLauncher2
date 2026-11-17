@@ -55,6 +55,9 @@ class MainActivity : Activity() {
     private lateinit var prText: TextView
     private lateinit var wxPill: View
     private lateinit var prPill: View
+    private var builtAr = false
+    private var folderRv: RecyclerView? = null
+    private var folderAd: HomeAdapter? = null
     private var nextPrayer: NextPrayer? = null
     private var weather: Weather? = null
     private lateinit var adapter: HomeAdapter
@@ -79,6 +82,8 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        L.ar = Prefs(this).language == "ar"
+        builtAr = L.ar
         u = U(this)
         store = Store(this)
         sp = getSharedPreferences("tvos_settings", Context.MODE_PRIVATE)
@@ -165,8 +170,8 @@ class MainActivity : Activity() {
     private fun dateString(): String {
         val p = Prefs(this)
         val today = PrayerRepository.cityToday(this)
-        val g = java.text.SimpleDateFormat("EEEE, d MMMM", java.util.Locale.ENGLISH).apply { timeZone = CityClock.timeZone(this@MainActivity) }.format(java.util.Date())
-        val h = HijriDate.format(this, today, java.util.Locale.ENGLISH)
+        val g = java.text.SimpleDateFormat("EEEE, d MMMM", L.locale()).apply { timeZone = CityClock.timeZone(this@MainActivity) }.format(java.util.Date())
+        val h = HijriDate.format(this, today, L.locale())
         return when (p.dateMode) { 1 -> g; 2 -> h; else -> if (h.isEmpty()) g else "$g  ·  $h" }
     }
 
@@ -177,7 +182,7 @@ class MainActivity : Activity() {
         val w = weather
         if (w == null) wxPill.visibility = View.GONE else {
             wxPill.visibility = View.VISIBLE
-            wxText.text = "${w.tempC}°  ${getString(Weather.labelRes(w.code))}  ·  ${w.today.maxC}°/${w.today.minC}°  ·  Tomorrow ${w.tomorrow.maxC}°/${w.tomorrow.minC}°"
+            wxText.text = "${w.tempC}°  ${L.t(getString(Weather.labelRes(w.code)))}  ·  ${w.today.maxC}°/${w.today.minC}°  ·  ${L.t("Tomorrow")} ${w.tomorrow.maxC}°/${w.tomorrow.minC}°"
         }
         val n = nextPrayer
         if (n == null) prPill.visibility = View.GONE else {
@@ -185,7 +190,7 @@ class MainActivity : Activity() {
             if (mins < 0) { prPill.visibility = View.GONE; return }
             prPill.visibility = View.VISIBLE
             val hhmm = n.time.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
-            prText.text = n.name + "  " + TimeFmt.display(hhmm, TimeFmt.is24(this, p)) + "  ·  in " + (if (mins >= 60) "${mins / 60}h " else "") + "${mins % 60}m"
+            prText.text = L.t(n.name) + "  " + TimeFmt.display(hhmm, TimeFmt.is24(this, p), L.locale()) + "  ·  " + L.t("in") + " " + (if (mins >= 60) "${mins / 60}${L.t("h")} " else "") + "${mins % 60}${L.t("m")}"
         }
     }
 
@@ -331,7 +336,7 @@ class MainActivity : Activity() {
         } catch (_: Exception) { toast("Not available") }
     }
 
-    private fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_SHORT).show()
+    private fun toast(s: String) = Toast.makeText(this, L.t(s), Toast.LENGTH_SHORT).show()
 
     // ------------------------------------------------------------------ menu / move
 
@@ -365,10 +370,10 @@ class MainActivity : Activity() {
     private fun rename(e: Entry) {
         val input = android.widget.EditText(this).apply { setText(e.title); setSelectAllOnFocus(true); setSingleLine() }
         android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog)
-            .setTitle("Rename Folder")
+            .setTitle(L.t("Rename Folder"))
             .setView(input)
-            .setPositiveButton("OK") { _, _ -> store.renameFolder(e.key, input.text.toString()); relayout(e.key) }
-            .setNegativeButton("Cancel", null)
+            .setPositiveButton(L.t("OK")) { _, _ -> store.renameFolder(e.key, input.text.toString()); relayout(e.key) }
+            .setNegativeButton(L.t("Cancel"), null)
             .show()
     }
 
@@ -420,9 +425,7 @@ class MainActivity : Activity() {
         }
         fRoot.addView(title, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, u.i(94f), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = u.i(33f) })
         val panel = FrameLayout(this).apply {
-            background = android.graphics.drawable.GradientDrawable().apply {
-                setColor(0x47FFFFFF); cornerRadius = u.px(58f); setStroke(u.i(2f), 0x40FFFFFF)
-            }
+            background = Glass.glass(0x4DFFFFFF, u.px(58f), 0.8f)
         }
         val cellsF = e.folderApps.map { Entry(it.pkg, it) }
         val dots = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
@@ -440,6 +443,7 @@ class MainActivity : Activity() {
             clipToPadding = false
             setPadding(0, u.i(30f), 0, u.i(40f))
         }
+        folderRv = rv; folderAd = ad
         panel.addView(rv, FrameLayout.LayoutParams(-1, -1))
         fRoot.addView(panel, FrameLayout.LayoutParams(u.i(1197f), u.i(771f), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = u.i(150f) })
         fRoot.addView(dots, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, u.i(30f), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = u.i(940f) })
@@ -461,6 +465,7 @@ class MainActivity : Activity() {
         val v = folderView ?: return
         root.removeView(v)
         folderView = null
+        folderRv = null; folderAd = null
         val k = folderKey
         folderKey = null
         if (k != null) focusKey(k)
@@ -478,7 +483,7 @@ class MainActivity : Activity() {
 
     private fun glassTile(w: Float, h: Float, icon: Int, title: String, sub: String?, vertical: Boolean, action: (TextView?) -> Unit): LinearLayout {
         val subView = TextView(this).apply {
-            text = sub ?: ""
+            text = L.t(sub ?: "")
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(26f))
             setTextColor(Glass.dim())
             isDuplicateParentStateEnabled = true
@@ -504,7 +509,7 @@ class MainActivity : Activity() {
         })
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; isDuplicateParentStateEnabled = true }
         col.addView(TextView(this).apply {
-            text = title
+            text = L.t(title)
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(32f))
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             setTextColor(Glass.text())
@@ -552,7 +557,7 @@ class MainActivity : Activity() {
     private fun openCC() {
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = Glass.solid(0xD91C1C1E.toInt(), u.px(70f))
+            background = Glass.glass(0xA82A2A2E.toInt(), u.px(70f), 0.8f)
             setPadding(u.i(24f), u.i(24f), u.i(24f), u.i(24f))
         }
         val power = glassTile(230f, 316f, R.drawable.ic_power, "Sleep", null, true) { closeCC(); startScreensaver() }
@@ -563,7 +568,7 @@ class MainActivity : Activity() {
                 val nm = getSystemService(NotificationManager::class.java)
                 if (nm.isNotificationPolicyAccessGranted) {
                     nm.setInterruptionFilter(if (dndOn()) NotificationManager.INTERRUPTION_FILTER_ALL else NotificationManager.INTERRUPTION_FILTER_NONE)
-                    sub?.text = if (dndOn()) "On" else "Off"
+                    sub?.text = L.t(if (dndOn()) "On" else "Off")
                 } else { closeCC(); startSafe(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }
             } catch (_: Exception) { toast("Not available") }
         }
@@ -574,14 +579,14 @@ class MainActivity : Activity() {
             sleepMin = when (sleepMin) { 0 -> 15; 15 -> 30; 30 -> 60; else -> 0 }
             handler.removeCallbacks(sleepRun)
             if (sleepMin > 0) handler.postDelayed(sleepRun, sleepMin * 60_000L)
-            sub?.text = timerSub()
+            sub?.text = L.t(timerSub())
         }
         val audio = glassTile(440f, 150f, R.drawable.ic_audio, "Audio", "Output", false) { closeCC(); startSafe(Intent(Settings.ACTION_SOUND_SETTINGS)) }
         val rowB = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; addView(timer); addView(audio) }
         val rowC = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_HORIZONTAL
-            addView(round(R.drawable.ic_search, "Search") { startSafe(Intent(Intent.ACTION_ASSIST)) })
+            addView(round(R.drawable.ic_search, "Search") { showSearch() })
             addView(round(R.drawable.ic_access, "Accessibility") { startSafe(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) })
             addView(round(R.drawable.ic_gear, "Settings") { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) })
         }
@@ -593,6 +598,63 @@ class MainActivity : Activity() {
         panel.alpha = 0f
         panel.animate().alpha(1f).setDuration(120).start()
         power.requestFocus()
+    }
+
+    private fun showSearch() {
+        val d = android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar)
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = Glass.glass(0xE62A2A2C.toInt(), u.px(48f), 0.7f)
+            setPadding(u.i(36f), u.i(32f), u.i(36f), u.i(32f))
+        }
+        val input = android.widget.EditText(this).apply {
+            hint = L.t("Type an app name")
+            setSingleLine()
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(36f))
+            setTextColor(Color.WHITE)
+            setHintTextColor(0x80FFFFFF.toInt())
+            background = Glass.glass(0x2EFFFFFF, u.px(33f), 0.5f)
+            setPadding(u.i(30f), 0, u.i(30f), 0)
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+        }
+        panel.addView(input, LinearLayout.LayoutParams(-1, u.i(78f)))
+        val results = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        panel.addView(results, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = u.i(12f) })
+        fun refresh(q: String) {
+            results.removeAllViews()
+            if (q.isBlank()) return
+            val list = apps.filter { it.label.contains(q.trim(), true) }.sortedBy { !it.label.startsWith(q.trim(), true) }.take(7)
+            if (list.isEmpty()) results.addView(TextView(this).apply {
+                text = L.t("No apps found"); setTextColor(0x99FFFFFF.toInt()); setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(30f)); setPadding(u.i(30f), u.i(20f), 0, u.i(10f))
+            })
+            for (a in list) results.addView(TextView(this).apply {
+                text = a.label
+                setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(34f))
+                setTextColor(Glass.text())
+                gravity = Gravity.CENTER_VERTICAL
+                isFocusable = true; isClickable = true; maxLines = 1
+                setPadding(u.i(24f), 0, u.i(30f), 0)
+                compoundDrawablePadding = u.i(20f)
+                setCompoundDrawables(android.graphics.drawable.BitmapDrawable(resources, a.iconBmp).apply { setBounds(0, 0, u.i(52f), u.i(52f)) }, null, null, null)
+                background = Glass.rowBg(u, 33f, 0x14FFFFFF)
+                setOnClickListener { d.dismiss(); launch(a) }
+            }, LinearLayout.LayoutParams(-1, u.i(72f)).apply { topMargin = u.i(6f); bottomMargin = u.i(6f) })
+        }
+        input.addTextChangedListener(object : android.text.TextWatcher {
+            override fun afterTextChanged(s: android.text.Editable?) { refresh(s?.toString().orEmpty()) }
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+        })
+        d.setContentView(panel, ViewGroup.LayoutParams(u.i(900f), ViewGroup.LayoutParams.WRAP_CONTENT))
+        d.window?.apply {
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+            setGravity(Gravity.TOP or Gravity.CENTER_HORIZONTAL)
+            attributes = attributes.apply { y = u.i(150f); dimAmount = 0.55f }
+            addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
+        }
+        d.show()
+        input.requestFocus()
     }
 
     private fun closeCC() {
@@ -609,25 +671,30 @@ class MainActivity : Activity() {
         closeCC(); closeFolder()
         val f = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         val c = TextClock(this).apply {
-            setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(240f))
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(260f))
             setTextColor(0xE6FFFFFF.toInt())
+            typeface = android.graphics.Typeface.create("sans-serif-thin", android.graphics.Typeface.NORMAL)
+            includeFontPadding = false
             format12Hour = if (TimeFmt.is24(this@MainActivity, Prefs(this@MainActivity))) "HH:mm" else "h:mm"
             timeZone = CityClock.gmtId(this@MainActivity)
             format24Hour = "HH:mm"
         }
-        f.addView(c, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        val date = TextView(this).apply {
+            text = dateString()
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(44f))
+            setTextColor(0x99FFFFFF.toInt())
+            gravity = Gravity.CENTER
+        }
+        val col = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            addView(c); addView(date, LinearLayout.LayoutParams(-2, -2).apply { topMargin = u.i(12f) })
+        }
+        f.addView(col, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         f.alpha = 0f
         screensaver = f
         root.addView(f, FrameLayout.LayoutParams(-1, -1))
         f.animate().alpha(1f).setDuration(600).start()
-        drift(c)
-    }
-
-    private fun drift(c: View) {
-        if (screensaver == null) return
-        val dx = (Math.random() * 2 - 1).toFloat() * u.px(300f)
-        val dy = (Math.random() * 2 - 1).toFloat() * u.px(200f)
-        c.animate().translationX(dx).translationY(dy).setDuration(20000).withEndAction { drift(c) }.start()
     }
 
     private fun stopScreensaver() {
@@ -656,6 +723,7 @@ class MainActivity : Activity() {
                 }
                 return true
             }
+            if ((event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT || event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) && wrapRow(event.keyCode)) return true
             when (event.keyCode) {
                 KeyEvent.KEYCODE_MENU -> {
                     val f = currentFocus
@@ -666,6 +734,27 @@ class MainActivity : Activity() {
             }
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    /** Last app of a row + Right goes to the first app of the row, and the other way round. */
+    private fun wrapRow(code: Int): Boolean {
+        val f = currentFocus ?: return false
+        val rv = if (folderView != null) folderRv else grid
+        val ad = if (folderView != null) folderAd else adapter
+        val span = if (folderView != null) 3 else Store.COLUMNS
+        if (rv == null || ad == null) return false
+        val pos = rv.findContainingViewHolder(f)?.bindingAdapterPosition ?: return false
+        if (pos < 0) return false
+        val start = (pos / span) * span
+        val ids = (start until minOf(start + span, ad.cells.size)).filter { !ad.cells[it].isSpacer }
+        if (ids.size < 2) return false
+        val target = when {
+            code == KeyEvent.KEYCODE_DPAD_RIGHT && pos == ids.last() -> ids.first()
+            code == KeyEvent.KEYCODE_DPAD_LEFT && pos == ids.first() -> ids.last()
+            else -> return false
+        }
+        rv.findViewHolderForAdapterPosition(target)?.itemView?.requestFocus()
+        return true
     }
 
     @Deprecated("Deprecated in Java")
@@ -692,6 +781,8 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        val wantAr = Prefs(this).language == "ar"
+        if (wantAr != builtAr) { L.ar = wantAr; recreate(); return }
         if (apps.isNotEmpty() && applyOptions()) { adapter.notifyDataSetChanged() }
         if (apps.isNotEmpty()) { lay = store.layout(apps); if (lay.cells().map { it.key } != adapter.cells.map { it.key }) relayout(lastFocusKey) }
         resetIdle()

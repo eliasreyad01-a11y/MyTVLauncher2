@@ -54,11 +54,12 @@ object Glass {
 
     /** Flat translucent pill that turns solid white when focused (settings rows, menu rows, control center tiles). */
     fun rowBg(u: U, radius: Float = 33f, normal: Int = 0x1FFFFFFF): StateListDrawable = StateListDrawable().apply {
-        addState(FOCUSED, shape(WHITE, u.px(radius)))
-        addState(intArrayOf(), shape(normal, u.px(radius)))
+        addState(FOCUSED, GlossDrawable(u.px(radius), WHITE, 0.55f))
+        addState(intArrayOf(), GlossDrawable(u.px(radius), normal, 1f))
     }
 
     fun solid(color: Int, r: Float) = shape(color, r)
+    fun glass(color: Int, r: Float, strength: Float = 1f): Drawable = GlossDrawable(r, color, strength)
 }
 
 /** Two-tone silver gear, drawn in code so it scales cleanly (the Settings icon). */
@@ -147,13 +148,13 @@ object Menus {
         d.requestWindowFeature(Window.FEATURE_NO_TITLE)
         val panel = LinearLayout(a).apply {
             orientation = LinearLayout.VERTICAL
-            background = Glass.solid(0xF22A2A2C.toInt(), u.px(48f))
+            background = Glass.glass(0xE62A2A2C.toInt(), u.px(48f), 0.7f)
             setPadding(u.i(36f), u.i(32f), u.i(36f), u.i(32f))
             clipChildren = false
             clipToPadding = false
         }
         if (title != null) panel.addView(TextView(a).apply {
-            text = title
+            text = L.t(title)
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(34f))
             setTextColor(0x99FFFFFF.toInt())
             gravity = Gravity.CENTER
@@ -162,7 +163,7 @@ object Menus {
         val rows = ArrayList<View>()
         for ((label, action) in items) {
             val row = TextView(a).apply {
-                text = label
+                text = L.t(label)
                 setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(34f))
                 setTextColor(Glass.text())
                 gravity = Gravity.CENTER_VERTICAL
@@ -227,9 +228,10 @@ class TileView(context: Context, private val u: U) : View(context) {
         if (e != null) {
             if (e.isFolder) drawFolder(c, e, w, h) else e.app?.let { drawApp(c, it, w, h) }
         }
-        if (sheen > 0f) {
+        val sh = max(sheen, 0.3f)
+        if (sh > 0f) {
             paint.shader = LinearGradient(0f, 0f, w * 0.7f, h, intArrayOf(
-                Color.argb((90 * sheen).toInt(), 255, 255, 255), Color.argb((22 * sheen).toInt(), 255, 255, 255), Color.argb(0, 255, 255, 255)
+                Color.argb((90 * sh).toInt(), 255, 255, 255), Color.argb((22 * sh).toInt(), 255, 255, 255), Color.argb(0, 255, 255, 255)
             ), floatArrayOf(0f, 0.45f, 1f), Shader.TileMode.CLAMP)
             c.drawRect(0f, 0f, w, h, paint)
             paint.shader = null
@@ -364,4 +366,34 @@ class ShelfView(context: Context) : android.widget.ImageView(context) {
         path.addRoundRect(r, rad, rad, android.graphics.Path.Direction.CW)
         c.save(); c.clipPath(path); super.onDraw(c); c.restore()
     }
+}
+
+/** Frosted glass: a translucent body, a soft highlight over the upper half and a thin bright edge, like the glass in the reference videos. */
+class GlossDrawable(private val radius: Float, private val base: Int, private val strength: Float = 1f) : Drawable() {
+    private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val hi = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val edge = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val r = RectF()
+    private val clip = Path()
+
+    override fun onBoundsChange(b: android.graphics.Rect) {
+        r.set(b)
+        fill.color = base
+        val a = (255 * 0.30f * strength).toInt()
+        hi.shader = LinearGradient(0f, b.top.toFloat(), 0f, b.top + b.height() * 0.62f, Color.argb(a, 255, 255, 255), Color.argb(0, 255, 255, 255), Shader.TileMode.CLAMP)
+        edge.strokeWidth = max(1.5f, radius * 0.03f)
+        edge.shader = LinearGradient(0f, b.top.toFloat(), 0f, b.bottom.toFloat(), Color.argb((255 * 0.55f * strength).toInt(), 255, 255, 255), Color.argb((255 * 0.10f * strength).toInt(), 255, 255, 255), Shader.TileMode.CLAMP)
+        clip.reset(); clip.addRoundRect(r, radius, radius, Path.Direction.CW)
+    }
+
+    override fun draw(c: Canvas) {
+        c.drawRoundRect(r, radius, radius, fill)
+        c.save(); c.clipPath(clip); c.drawRect(r, hi); c.restore()
+        val h = edge.strokeWidth / 2
+        c.drawRoundRect(RectF(r.left + h, r.top + h, r.right - h, r.bottom - h), radius, radius, edge)
+    }
+
+    override fun setAlpha(alpha: Int) { fill.alpha = alpha }
+    override fun setColorFilter(cf: ColorFilter?) {}
+    @Deprecated("Deprecated in Java") override fun getOpacity() = PixelFormat.TRANSLUCENT
 }
