@@ -23,6 +23,7 @@ class SettingsActivity : Activity() {
     private sealed class Row {
         class Nav(val title: String, val value: () -> String? = { null }, val chevron: Boolean = true, val go: () -> Unit) : Row()
         class Toggle(val title: String, val key: String, val desc: String) : Row()
+        class Switch(val title: String, val get: () -> Boolean, val set: (Boolean) -> Unit, val desc: String = "") : Row()
         class Label(val text: String) : Row()
     }
 
@@ -37,6 +38,17 @@ class SettingsActivity : Activity() {
     private val stack = ArrayList<Page>()
     private var selectedIndex = ArrayList<Int>()
 
+    private val p by lazy { Prefs(this) }
+    private fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_SHORT).show()
+    private fun choose(title: String, items: List<Pair<String, () -> Unit>>) { Menus.show(this, title, items) }
+    private fun reschedule() = AdhanScheduler.reschedule(this)
+
+    private val methods = listOf(
+        23 to "Jordan (Ministry of Awqaf)", 3 to "Muslim World League", 4 to "Umm al-Qura, Makkah",
+        5 to "Egyptian General Authority", 1 to "Karachi", 2 to "ISNA (North America)", 13 to "Diyanet, Turkey"
+    )
+    private val zones = listOf("auto" to "Automatic (by city)", "7200" to "UTC+2", "10800" to "UTC+3 (Amman, summer time)", "14400" to "UTC+4", "3600" to "UTC+1")
+
     private fun sys(action: String) = { try { startActivity(Intent(action)) } catch (_: Exception) { Toast.makeText(this, "Not available on this device", Toast.LENGTH_SHORT).show() } }
 
     private fun ssText(): String { val m = prefs.getInt("ss_min", 10); return if (m == 0) "Never" else "$m min" }
@@ -45,6 +57,7 @@ class SettingsActivity : Activity() {
         listOf(
             Row.Nav("General") { push(general()) },
             Row.Nav("Home Screen") { push(home()) },
+            Row.Nav("Prayer and Adhan", { p.cityName }) { push(prayer()) },
             Row.Nav("Screen Saver", { ssText() }) { push(screensaver()) },
             Row.Nav("Video and Audio", go = sys(Settings.ACTION_SOUND_SETTINGS)),
             Row.Nav("Remotes and Devices", go = sys(Settings.ACTION_BLUETOOTH_SETTINGS)),
@@ -60,7 +73,18 @@ class SettingsActivity : Activity() {
             Row.Nav("Appearance", go = sys(Settings.ACTION_DISPLAY_SETTINGS)),
             Row.Nav("Language and Region", go = sys(Settings.ACTION_LOCALE_SETTINGS)),
             Row.Nav("Date and Time", go = sys(Settings.ACTION_DATE_SETTINGS)),
-            Row.Toggle("24-Hour Time", "h24", "Show the clock in 24-hour format."),
+            Row.Nav("Time Format", { when (p.timeFormat) { "12" -> "12-Hour"; "system" -> "System"; else -> "24-Hour" } }) {
+                choose("Time Format", listOf("24-Hour" to { p.timeFormat = "24"; refresh() }, "12-Hour" to { p.timeFormat = "12"; refresh() }, "System" to { p.timeFormat = "system"; refresh() }))
+            },
+            Row.Nav("Time Zone", { zones.firstOrNull { it.first == p.tzMode }?.second?.substringBefore(" (") ?: "Automatic" }) {
+                choose("Time Zone", zones.map { z -> z.second to { p.tzMode = z.first; Thread { CityClock.ensure(applicationContext); AdhanScheduler.rescheduleBlocking(applicationContext) }.start(); refresh() } })
+            },
+            Row.Nav("Date Display", { when (p.dateMode) { 1 -> "Gregorian"; 2 -> "Hijri"; else -> "Gregorian and Hijri" } }) {
+                choose("Date Display", listOf("Gregorian and Hijri" to { p.dateMode = 0; refresh() }, "Gregorian" to { p.dateMode = 1; refresh() }, "Hijri" to { p.dateMode = 2; refresh() }))
+            },
+            Row.Nav("Hijri Date Adjustment", { (if (p.hijriAdjust > 0) "+" else "") + p.hijriAdjust + " day" }) {
+                p.hijriAdjust = if (p.hijriAdjust >= 2) -2 else p.hijriAdjust + 1
+            },
             Row.Nav("Storage", go = sys(Settings.ACTION_INTERNAL_STORAGE_SETTINGS)),
             Row.Nav("About", go = { push(about()) })
         )
@@ -81,6 +105,57 @@ class SettingsActivity : Activity() {
                 Toast.makeText(this, "All apps are visible again", Toast.LENGTH_SHORT).show()
             }
         )
+    }
+
+    private fun prayer() = Page("Prayer and Adhan") {
+        val names = listOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")
+        listOf<Row>(
+            Row.Switch("Play Adhan Automatically", { p.adhanEnabled }, { on ->
+                p.adhanEnabled = on
+                if (on && android.os.Build.VERSION.SDK_INT >= 33) requestPermissions(arrayOf("android.permission.POST_NOTIFICATIONS"), 1)
+                reschedule()
+            }, "Play the Adhan at each prayer time that is switched on below."),
+            Row.Nav("City", { p.cityName }) { searchCity() },
+            Row.Nav("Calculation Method", { methods.firstOrNull { it.first == p.method }?.second ?: "Method ${p.method}" }) {
+                choose("Calculation Method", methods.map { m -> m.second to { p.method = m.first; p.timingsCache = null; reschedule(); refresh() } })
+            },
+            Row.Nav("Adhan Volume", { "${p.adhanVolume}%" }) { p.adhanVolume = if (p.adhanVolume >= 100) 25 else p.adhanVolume + 25 },
+            Row.Nav("Test Adhan") { try { androidx.core.content.ContextCompat.startForegroundService(this, Intent(this, AdhanService::class.java).setAction(AdhanService.ACTION_TEST)) } catch (_: Exception) { toast("Could not start the Adhan") } },
+            Row.Nav("Stop Adhan") { AdhanService.stopNow() },
+            Row.Label("PRAYERS TO ANNOUNCE")
+        ) + names.map { n -> Row.Switch(n, { p.isPrayerEnabled(n) }, { on -> p.setPrayerEnabled(n, on); reschedule() }) } +
+            listOf(Row.Label("MANUAL CORRECTION (MINUTES)")) +
+            names.map { n -> Row.Nav("$n correction", { (if (p.prayerOffset(n) > 0) "+" else "") + p.prayerOffset(n) }) {
+                p.setPrayerOffset(n, if (p.prayerOffset(n) >= 15) -15 else p.prayerOffset(n) + 5); reschedule()
+            } }
+    }
+
+    private fun searchCity() {
+        val input = android.widget.EditText(this).apply { setSingleLine(); hint = "City name" }
+        android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog)
+            .setTitle("Search City")
+            .setView(input)
+            .setPositiveButton("Search") { _, _ ->
+                val q = input.text.toString().trim()
+                if (q.isNotEmpty()) Thread {
+                    val res = PrayerRepository.searchCities(q, "en")
+                    runOnUiThread {
+                        if (isDestroyed) return@runOnUiThread
+                        if (res.isEmpty()) toast("No city found (check internet)")
+                        else choose("Choose City", res.map { c -> c.display to { pickCity(c) } })
+                    }
+                }.start()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun pickCity(c: City) {
+        p.cityName = c.display; p.latitude = c.lat; p.longitude = c.lon
+        p.cityOffsetKey = null; p.timingsCache = null
+        val app = applicationContext
+        Thread { CityClock.ensure(app); AdhanScheduler.rescheduleBlocking(app) }.start()
+        refresh()
     }
 
     private fun screensaver() = Page("Screen Saver") {
@@ -130,6 +205,7 @@ class SettingsActivity : Activity() {
         frame.addView(scroll, FrameLayout.LayoutParams(u.i(789f), u.i(900f)).apply { leftMargin = u.i(1056f); topMargin = u.i(180f) })
         setContentView(frame)
         push(root())
+        if (intent?.getStringExtra("page") == "prayer") push(prayer())
     }
 
     private fun push(p: Page) {
@@ -137,6 +213,9 @@ class SettingsActivity : Activity() {
         stack.add(p); selectedIndex.add(0)
         render(0)
     }
+
+    private var lastIdx = 0
+    private fun refresh() { render(lastIdx) }
 
     private fun pop() {
         stack.removeAt(stack.size - 1); selectedIndex.removeAt(selectedIndex.size - 1)
@@ -193,13 +272,20 @@ class SettingsActivity : Activity() {
             is Row.Nav -> {
                 title.text = r.title
                 value.text = r.value() ?: ""
-                row.setOnClickListener { r.go(); if (stack.isNotEmpty()) value.text = r.value() ?: "" }
+                row.setOnClickListener { lastIdx = list.indexOfChild(row); r.go(); if (stack.isNotEmpty()) value.text = r.value() ?: "" }
             }
             is Row.Toggle -> {
                 title.text = r.title
                 fun sync() { value.text = if (prefs.getBoolean(r.key, false)) "On" else "Off" }
                 sync()
                 row.setOnClickListener { prefs.edit().putBoolean(r.key, !prefs.getBoolean(r.key, false)).apply(); sync() }
+                row.setOnFocusChangeListener { _, f -> if (f) descView.text = r.desc }
+            }
+            is Row.Switch -> {
+                title.text = r.title
+                fun sync() { value.text = if (r.get()) "On" else "Off" }
+                sync()
+                row.setOnClickListener { r.set(!r.get()); sync() }
                 row.setOnFocusChangeListener { _, f -> if (f) descView.text = r.desc }
             }
             else -> {}
