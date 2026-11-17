@@ -5,6 +5,7 @@ import android.app.Dialog
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
+import android.graphics.BitmapShader
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ColorFilter
@@ -194,7 +195,7 @@ object Menus {
 /** Tile art: the app's banner, or its icon on its own background colour; or a folder of mini icons. */
 class TileView(context: Context, private val u: U) : View(context) {
     var entry: Entry? = null
-        set(v) { field = v; invalidate() }
+        set(v) { field = v; cache = null; invalidate() }
     var sheen = 0f
         set(v) { field = v; invalidate() }
 
@@ -204,8 +205,7 @@ class TileView(context: Context, private val u: U) : View(context) {
     private var sheenH = 0f
     private val clipP = Path()
     private val mask = RectF()
-    private val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN) }
-    private val tmp = android.graphics.Rect()
+        private val tmp = android.graphics.Rect()
 
     init {
         outlineProvider = object : ViewOutlineProvider() {
@@ -223,17 +223,41 @@ class TileView(context: Context, private val u: U) : View(context) {
         d.bounds = tmp
     }
 
+    private var cache: Bitmap? = null
+    private var cacheShader: Shader? = null
+    private val shaderM = android.graphics.Matrix()
+
     override fun onDraw(c: Canvas) {
         val w = width.toFloat(); val h = height.toFloat()
+        if (w <= 0f || h <= 0f) return
         val rad = u.px(RADIUS)
-        // Content is drawn into a layer and cut with an anti-aliased rounded mask: clipPath leaves stair-stepped corners on many TVs.
-        val smooth = TileView.smooth
-        val layer = if (smooth) c.saveLayer(0f, 0f, w, h, null) else c.save()
-        if (!smooth) { clipP.reset(); clipP.addRoundRect(RectF(0f, 0f, w, h), rad, rad, Path.Direction.CW); c.clipPath(clipP) }
-        val e = entry
-        if (e != null) {
-            if (e.isFolder) drawFolder(c, e, w, h) else e.app?.let { drawApp(c, it, w, h) }
+        mask.set(0f, 0f, w, h)
+        if (!TileView.smooth) {
+            // Plain clip (switch in Settings): reliable everywhere, corners may look stepped on some TVs.
+            val s = c.save()
+            clipP.reset(); clipP.addRoundRect(mask, rad, rad, Path.Direction.CW); c.clipPath(clipP)
+            entry?.let { e -> if (e.isFolder) drawFolder(c, e, w, h) else e.app?.let { drawApp(c, it, w, h) } }
+            drawSheen(c, w, h)
+            c.restoreToCount(s)
+            return
         }
+        // The tile content is painted once into a bitmap and drawn with drawRoundRect through a BitmapShader:
+        // the shape stays a rounded rectangle and its edge is anti-aliased, without layers or clip paths.
+        var bmp = cache
+        if (bmp == null || bmp.width != w.toInt() || bmp.height != h.toInt()) {
+            bmp = Bitmap.createBitmap(w.toInt().coerceAtLeast(1), h.toInt().coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+            val bc = Canvas(bmp)
+            entry?.let { e -> if (e.isFolder) drawFolder(bc, e, w, h) else e.app?.let { drawApp(bc, it, w, h) } }
+            cache = bmp
+            cacheShader = BitmapShader(bmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+        }
+        paint.shader = cacheShader
+        c.drawRoundRect(mask, rad, rad, paint)
+        paint.shader = null
+        drawSheen(c, w, h, rad)
+    }
+
+    private fun drawSheen(c: Canvas, w: Float, h: Float, rad: Float = 0f) {
         val sh = max(sheen, 0.3f)
         if (sheenShader == null || sheenW != w || sheenH != h) {
             sheenShader = LinearGradient(0f, 0f, w * 0.7f, h, intArrayOf(0x5AFFFFFF, 0x16FFFFFF, 0x00FFFFFF), floatArrayOf(0f, 0.45f, 1f), Shader.TileMode.CLAMP)
@@ -241,11 +265,9 @@ class TileView(context: Context, private val u: U) : View(context) {
         }
         paint.shader = sheenShader
         paint.alpha = (255 * sh).toInt().coerceIn(0, 255)
-        c.drawRect(0f, 0f, w, h, paint)
+        if (rad > 0f) c.drawRoundRect(mask, rad, rad, paint) else c.drawRect(0f, 0f, w, h, paint)
         paint.shader = null
         paint.alpha = 255
-        if (smooth) { mask.set(0f, 0f, w, h); c.drawRoundRect(mask, rad, rad, maskPaint) }
-        c.restoreToCount(layer)
     }
 
     private val src = android.graphics.Rect()
