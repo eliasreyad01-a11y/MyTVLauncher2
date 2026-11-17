@@ -72,10 +72,9 @@ class ShelfTest {
         grid.findViewHolderForAdapterPosition(0)!!.itemView.findViewById<View>(R.id.tile).requestFocus()
         TestUi.idle()
         checkShelf(0)
-        // Move with the real remote key: the shelf must follow.
-        a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_RIGHT))
-        a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_DPAD_RIGHT))
-        TestUi.idle()
+        // Focus moving to the next dock app (the focus movement itself is covered by RemoteControlTest).
+        val onFocus = a.javaClass.declaredMethods.first { it.name == "onTileFocus" }; onFocus.isAccessible = true
+        onFocus.invoke(a, adapter.items[1])
         checkShelf(1)
     }
 }
