@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Dialog
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ColorFilter
@@ -281,5 +282,70 @@ class TileView(context: Context, private val u: U) : View(context) {
         const val RADIUS = 27f
         const val W = 249f
         const val H = 150f
+    }
+}
+
+/** Software blur that works on every Android version (the TV may be older than API 31, where RenderEffect does not exist). */
+object Blur {
+    /** [src] drawn small and blurred; show it stretched over the screen (bilinear scaling smooths it further). */
+    fun fromView(v: View, divisor: Int = 12, passes: Int = 3): Bitmap {
+        val w = (v.width / divisor).coerceAtLeast(8)
+        val h = (v.height / divisor).coerceAtLeast(8)
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        c.scale(w.toFloat() / v.width, h.toFloat() / v.height)
+        v.draw(c)
+        return blur(bmp, passes)
+    }
+
+    fun blur(src: Bitmap, passes: Int = 3): Bitmap {
+        val w = src.width; val h = src.height
+        var a = IntArray(w * h).also { src.getPixels(it, 0, w, 0, 0, w, h) }
+        var b = IntArray(w * h)
+        repeat(passes) {
+            box(a, b, w, h, true); box(b, a, w, h, false)
+        }
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        out.setPixels(a, 0, w, 0, 0, w, h)
+        return out
+    }
+
+    private fun box(s: IntArray, d: IntArray, w: Int, h: Int, horiz: Boolean) {
+        val r = 2
+        val n = if (horiz) h else w
+        val len = if (horiz) w else h
+        for (line in 0 until n) {
+            for (i in 0 until len) {
+                var ra = 0; var rr = 0; var rg = 0; var rb = 0; var cnt = 0
+                for (k in -r..r) {
+                    val j = (i + k).coerceIn(0, len - 1)
+                    val p = if (horiz) s[line * w + j] else s[j * w + line]
+                    ra += p ushr 24; rr += (p shr 16) and 255; rg += (p shr 8) and 255; rb += p and 255; cnt++
+                }
+                val o = ((ra / cnt) shl 24) or ((rr / cnt) shl 16) or ((rg / cnt) shl 8) or (rb / cnt)
+                if (horiz) d[line * w + i] = o else d[i * w + line] = o
+            }
+        }
+    }
+
+    fun view(ctx: Context, bmp: Bitmap, dim: Int): android.widget.ImageView = android.widget.ImageView(ctx).apply {
+        setImageBitmap(bmp)
+        scaleType = android.widget.ImageView.ScaleType.FIT_XY
+        colorFilter = android.graphics.PorterDuffColorFilter(dim, android.graphics.PorterDuff.Mode.SRC_OVER)
+    }
+}
+
+/** The big icon above the dock: drawn with rounded corners like the app icons on tvOS. */
+class ShelfView(context: Context) : android.widget.ImageView(context) {
+    private val path = android.graphics.Path()
+    override fun onDraw(c: Canvas) {
+        val d = drawable
+        if (d == null) { super.onDraw(c); return }
+        val r = RectF(0f, 0f, d.intrinsicWidth.toFloat(), d.intrinsicHeight.toFloat())
+        imageMatrix.mapRect(r)
+        path.reset()
+        val rad = minOf(r.width(), r.height()) * 0.22f
+        path.addRoundRect(r, rad, rad, android.graphics.Path.Direction.CW)
+        c.save(); c.clipPath(path); super.onDraw(c); c.restore()
     }
 }

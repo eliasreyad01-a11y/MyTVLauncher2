@@ -105,8 +105,8 @@ class SettingsActivity : Activity() {
         u = U(this)
         prefs = getSharedPreferences("tvos_settings", Context.MODE_PRIVATE)
         val frame = FrameLayout(this).apply { setBackgroundColor(0xFF1B1B1D.toInt()) }
-        val wall = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageResource(R.drawable.wp_kirkjufell) }
-        if (android.os.Build.VERSION.SDK_INT >= 31) wall.setRenderEffect(android.graphics.RenderEffect.createBlurEffect(60f, 60f, android.graphics.Shader.TileMode.CLAMP))
+        val small = android.graphics.BitmapFactory.decodeResource(resources, R.drawable.wp_kirkjufell, android.graphics.BitmapFactory.Options().apply { inSampleSize = 16 })
+        val wall = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageBitmap(Blur.blur(small, 4)) }
         frame.addView(wall, FrameLayout.LayoutParams(-1, -1))
         frame.addView(View(this).apply { setBackgroundColor(0xB31B1B1D.toInt()) }, FrameLayout.LayoutParams(-1, -1))
         val squircle = FrameLayout(this).apply { background = Glass.solid(0x33FFFFFF, u.px(120f)) }

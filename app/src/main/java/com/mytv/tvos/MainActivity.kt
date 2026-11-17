@@ -84,7 +84,7 @@ class MainActivity : Activity() {
             visibility = View.GONE
         }
         bgGray = View(this).apply { setBackgroundColor(0xFF707072.toInt()); alpha = 0f }
-        shelf = ImageView(this).apply {
+        shelf = ShelfView(this).apply {
             scaleType = ImageView.ScaleType.FIT_CENTER
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
@@ -310,7 +310,7 @@ class MainActivity : Activity() {
         if (folderView != null) return
         folderKey = e.key
         val fRoot = FrameLayout(this)
-        fRoot.addView(View(this).apply { setBackgroundColor(0x59000000) }, FrameLayout.LayoutParams(-1, -1))
+        fRoot.addView(Blur.view(this, Blur.fromView(content), 0x59000000), FrameLayout.LayoutParams(-1, -1))
         val title = TextView(this).apply {
             text = e.title
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(40f))
@@ -348,7 +348,6 @@ class MainActivity : Activity() {
         updateDots(dots, 0, (cellsF.size + 8) / 9)
         folderView = fRoot
         root.addView(fRoot, FrameLayout.LayoutParams(-1, -1))
-        blurContent(true, 60f)
         rv.post { rv.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() }
     }
 
@@ -364,7 +363,6 @@ class MainActivity : Activity() {
         val v = folderView ?: return
         root.removeView(v)
         folderView = null
-        blurContent(false, 0f)
         val k = folderKey
         folderKey = null
         if (k != null) focusKey(k)
@@ -454,7 +452,7 @@ class MainActivity : Activity() {
 
     private fun openCC() {
         val frame = FrameLayout(this)
-        frame.addView(View(this).apply { setBackgroundColor(0x80000000.toInt()); setOnClickListener { closeCC() } }, FrameLayout.LayoutParams(-1, -1))
+        frame.addView(Blur.view(this, Blur.fromView(content), 0x73000000).apply { setOnClickListener { closeCC() } }, FrameLayout.LayoutParams(-1, -1))
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = Glass.solid(0xD91C1C1E.toInt(), u.px(70f))
@@ -498,7 +496,6 @@ class MainActivity : Activity() {
         root.addView(frame, FrameLayout.LayoutParams(-1, -1))
         frame.alpha = 0f
         frame.animate().alpha(1f).setDuration(200).start()
-        blurContent(true, 30f)
         power.requestFocus()
     }
 
@@ -506,7 +503,6 @@ class MainActivity : Activity() {
         val v = ccView ?: return
         root.removeView(v)
         ccView = null
-        blurContent(false, 0f)
         lastFocusKey?.let { focusKey(it) }
     }
 
