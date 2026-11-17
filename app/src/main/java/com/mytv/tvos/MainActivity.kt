@@ -56,6 +56,7 @@ class MainActivity : Activity() {
     private lateinit var wxPill: View
     private lateinit var prPill: View
     private var builtAr = false
+    private var leftForApp = false
     private var folderRv: RecyclerView? = null
     private var folderAd: HomeAdapter? = null
     private var nextPrayer: NextPrayer? = null
@@ -331,6 +332,7 @@ class MainActivity : Activity() {
         if (i == null) { toast("Not available"); return }
         closeCC()
         try {
+            leftForApp = true
             startActivity(i)
             overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         } catch (_: Exception) { toast("Not available") }
@@ -787,7 +789,15 @@ class MainActivity : Activity() {
         if (apps.isNotEmpty()) { lay = store.layout(apps); if (lay.cells().map { it.key } != adapter.cells.map { it.key }) relayout(lastFocusKey) }
         resetIdle()
         clock.timeZone = CityClock.gmtId(this)
-        handler.removeCallbacks(infoTick); handler.post(infoTick); refreshInfoData()
+        if (leftForApp) {
+            // Coming back from an app: the same soft fade as going into one (a tiny settle from 1.03 to 1), no sliding.
+            leftForApp = false
+            content.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            content.alpha = 0f; content.scaleX = 1.03f; content.scaleY = 1.03f
+            content.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(300).setInterpolator(android.view.animation.DecelerateInterpolator(1.6f))
+                .withEndAction { content.setLayerType(View.LAYER_TYPE_NONE, null) }.start()
+        }
+        handler.removeCallbacks(infoTick); handler.postDelayed(infoTick, 400); handler.postDelayed({ if (!isDestroyed) refreshInfoData() }, 900)
         val app = applicationContext
         Thread {
             val changed = CityClock.ensure(app)
