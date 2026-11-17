@@ -64,7 +64,7 @@ class ShelfTest {
         assertEquals("no prayer card on home", View.GONE, prayerCard.visibility)
 
         fun checkShelf(pos: Int) {
-            assertEquals("shelf name for dock app $pos", adapter.items[pos].label, shelfName.text.toString())
+            assertEquals("shelf name for dock app $pos (window focus=${a.window.currentFocus?.javaClass?.simpleName} pos=${a.window.currentFocus?.let { grid.findContainingItemView(it)?.let { v -> grid.getChildAdapterPosition(v) } }})", adapter.items[pos].label, shelfName.text.toString())
             assertEquals("shelf visible", View.VISIBLE, shelf.visibility)
             assertTrue("shelf opaque on the home page (alpha=${shelf.alpha})", shelf.alpha > 0.99f)
             assertTrue("shelf has the app's icon", shelfIcon.drawable === adapter.items[pos].icon)
