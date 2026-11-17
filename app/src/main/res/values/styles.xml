@@ -17,4 +17,8 @@
     <style name="LauncherTheme" parent="@android:style/Theme.Black.NoTitleBar.Fullscreen">
         <item name="android:windowAnimationStyle">@style/FadeWindows</item>
     </style>
+    <style name="DialogFade" parent="@android:style/Animation.Dialog">
+        <item name="android:windowEnterAnimation">@anim/pop_in</item>
+        <item name="android:windowExitAnimation">@anim/pop_out</item>
+    </style>
 </resources>

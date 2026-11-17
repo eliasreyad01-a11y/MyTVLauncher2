@@ -54,6 +54,9 @@ class MainActivity : Activity() {
     private lateinit var wxText: TextView
     private lateinit var prText: TextView
     private lateinit var wxPill: View
+    private lateinit var wxGlyph: WeatherGlyph
+    private lateinit var stopPill: View
+    private var adhanWasPlaying = false
     private lateinit var prPill: View
     private var builtAr = false
     private var leftForApp = false
@@ -93,8 +96,7 @@ class MainActivity : Activity() {
         content = FrameLayout(this)
         wallpaper = ImageView(this).apply {
             scaleType = ImageView.ScaleType.CENTER_CROP
-            setImageResource(R.drawable.wp_kirkjufell)
-            alpha = 0.6f
+            alpha = 0.92f
             visibility = View.GONE
         }
         bgGray = View(this).apply { setBackgroundColor(0xFF707072.toInt()); alpha = 0f }
@@ -119,20 +121,23 @@ class MainActivity : Activity() {
         content.addView(grid, FrameLayout.LayoutParams(-1, -1))
         root.addView(content, FrameLayout.LayoutParams(-1, -1))
         buildCapsule()
+        buildStopPill()
         setContentView(root)
         loadAppsAsync()
     }
 
     // ------------------------------------------------------------------ home info: clock, date, weather, next prayer
 
-    private fun pill(icon: Int, tv: TextView): View = LinearLayout(this).apply {
+    private fun pill(icon: View, tv: TextView, height: Float = 60f): View = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(u.i(20f), 0, u.i(26f), 0)
-        background = Glass.solid(0x2EFFFFFF, u.px(26f))
-        addView(ImageView(this@MainActivity).apply { setImageResource(icon); imageTintList = android.content.res.ColorStateList.valueOf(0xCCFFFFFF.toInt()) }, LinearLayout.LayoutParams(u.i(28f), u.i(28f)).apply { marginEnd = u.i(12f) })
+        setPadding(u.i(18f), 0, u.i(26f), 0)
+        background = Glass.glass(0x2EFFFFFF, u.px(height / 2), 1f, true)
+        addView(icon, LinearLayout.LayoutParams(u.i(height * 0.62f), u.i(height * 0.62f)).apply { marginEnd = u.i(14f) })
         addView(tv)
     }
+
+    private fun iconView(res: Int) = ImageView(this).apply { setImageResource(res); imageTintList = android.content.res.ColorStateList.valueOf(0xE6FFFFFF.toInt()) }
 
     private fun smallText(sizePx: Float, color: Int) = TextView(this).apply {
         setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(sizePx))
@@ -140,32 +145,75 @@ class MainActivity : Activity() {
         maxLines = 1
     }
 
+    private fun clockTypeface(style: String) = when (style) {
+        "bold" -> android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD)
+        "regular" -> android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
+        else -> android.graphics.Typeface.create("sans-serif-light", android.graphics.Typeface.NORMAL)
+    }
+
+    private fun clockSizePx(size: String) = when (size) { "m" -> 110f; "xl" -> 168f; else -> 138f }
+
     private fun buildInfo() {
         bigClock = TextClock(this).apply {
-            setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(96f))
-            setTextColor(0xF2FFFFFF.toInt())
-            typeface = android.graphics.Typeface.create("sans-serif-light", android.graphics.Typeface.NORMAL)
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(138f))
+            setTextColor(0xF7FFFFFF.toInt())
+            typeface = clockTypeface("light")
             includeFontPadding = false
+            setShadowLayer(u.px(10f), 0f, u.px(2f), 0x66000000)
         }
-        dateText = smallText(28f, 0xB3FFFFFF.toInt())
+        dateText = smallText(36f, 0xF2FFFFFF.toInt()).apply {
+            typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+            setShadowLayer(u.px(8f), 0f, u.px(2f), 0x80000000.toInt())
+        }
         wxText = smallText(26f, 0xE6FFFFFF.toInt())
-        prText = smallText(26f, 0xE6FFFFFF.toInt())
-        wxPill = pill(R.drawable.ic_sun, wxText)
-        prPill = pill(R.drawable.ic_prayer, prText)
+        prText = smallText(28f, 0xF2FFFFFF.toInt())
+        wxGlyph = WeatherGlyph(this)
+        wxPill = pill(wxGlyph, wxText, 68f)
+        prPill = pill(iconView(R.drawable.ic_prayer), prText, 68f)
         wxPill.visibility = View.GONE
         prPill.visibility = View.GONE
         val pills = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            addView(wxPill, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, u.i(52f)).apply { marginEnd = u.i(14f) })
-            addView(prPill, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, u.i(52f)))
+            addView(wxPill, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, u.i(68f)).apply { marginEnd = u.i(16f) })
+            addView(prPill, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, u.i(68f)))
         }
         infoBlock = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(bigClock)
-            addView(dateText, LinearLayout.LayoutParams(-2, -2).apply { topMargin = u.i(6f); bottomMargin = u.i(16f) })
+            addView(dateText, LinearLayout.LayoutParams(-2, -2).apply { topMargin = u.i(4f); bottomMargin = u.i(20f) })
             addView(pills)
         }
-        content.addView(infoBlock, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START).apply { leftMargin = u.i(80f); topMargin = u.i(56f) })
+        content.addView(infoBlock, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START).apply { leftMargin = u.i(80f); topMargin = u.i(40f) })
+    }
+
+    private fun buildStopPill() {
+        val tv = smallText(30f, Glass.text().defaultColor)
+        tv.setTextColor(Glass.text())
+        tv.text = L.t("Stop Adhan")
+        tv.isDuplicateParentStateEnabled = true
+        val icon = iconView(R.drawable.ic_prayer).apply { imageTintList = Glass.text(); isDuplicateParentStateEnabled = true }
+        stopPill = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(u.i(26f), 0, u.i(34f), 0)
+            isFocusable = true
+            isClickable = true
+            visibility = View.GONE
+            background = Glass.rowBg(u, 36f, 0x40FFFFFF, true)
+            addView(icon, LinearLayout.LayoutParams(u.i(40f), u.i(40f)).apply { marginEnd = u.i(14f) })
+            addView(tv)
+            setOnClickListener { AdhanService.stopNow(); updateStopPill() }
+        }
+        root.addView(stopPill, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, u.i(72f), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = u.i(46f) })
+    }
+
+    /** The Stop button exists on the home screen only while the Adhan is actually playing. */
+    private fun updateStopPill() {
+        val playing = AdhanService.isPlaying
+        stopPill.visibility = if (playing) View.VISIBLE else View.GONE
+        if (playing && !adhanWasPlaying && ccView == null && folderView == null && moving == null) stopPill.requestFocus()
+        if (!playing && adhanWasPlaying && stopPill.hasFocus()) lastFocusKey?.let { focusKey(it) }
+        adhanWasPlaying = playing
     }
 
     private fun dateString(): String {
@@ -183,7 +231,14 @@ class MainActivity : Activity() {
         val w = weather
         if (w == null) wxPill.visibility = View.GONE else {
             wxPill.visibility = View.VISIBLE
-            wxText.text = "${w.tempC}°  ${L.t(getString(Weather.labelRes(w.code)))}  ·  ${w.today.maxC}°/${w.today.minC}°  ·  ${L.t("Tomorrow")} ${w.tomorrow.maxC}°/${w.tomorrow.minC}°"
+            val night = !w.isDay
+            wxGlyph.set(w.code, night)
+            val temp = "${w.tempC}°"
+            val rest = "  ${L.t(getString(Weather.labelRes(w.code)))}  ·  ${w.today.maxC}°/${w.today.minC}°"
+            val sp2 = android.text.SpannableString(temp + rest)
+            sp2.setSpan(android.text.style.AbsoluteSizeSpan(u.i(38f)), 0, temp.length, 0)
+            sp2.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, temp.length, 0)
+            wxText.text = sp2
         }
         val n = nextPrayer
         if (n == null) prPill.visibility = View.GONE else {
@@ -197,6 +252,10 @@ class MainActivity : Activity() {
 
     private val infoTick = object : Runnable {
         override fun run() { updateInfo(); handler.postDelayed(this, 30_000) }
+    }
+
+    private val stopPoll = object : Runnable {
+        override fun run() { updateStopPill(); handler.postDelayed(this, 1000) }
     }
 
     private fun refreshInfoData() {
@@ -231,7 +290,7 @@ class MainActivity : Activity() {
             isClickable = true
             contentDescription = "Control Center"
             setPadding(u.i(26f), 0, u.i(10f), 0)
-            background = Glass.rowBg(u, 33f, 0x66333336)
+            background = Glass.rowBg(u, 33f, 0x66333336, true)
             addView(clock)
             addView(AvatarView(this@MainActivity), LinearLayout.LayoutParams(u.i(48f), u.i(48f)).apply { marginStart = u.i(16f) })
             setOnClickListener { toggleCC() }
@@ -261,7 +320,19 @@ class MainActivity : Activity() {
             .filter { it.activityInfo.packageName != packageName }
             .map { ri ->
                 val banner = try { ri.activityInfo.loadBanner(pm) ?: ri.activityInfo.applicationInfo.loadBanner(pm) } catch (_: Exception) { null }
-                AppItem(ri.activityInfo.packageName, ri.loadLabel(pm).toString(), ri.loadIcon(pm), banner, null).also { it.prepare() }
+                val label = try { ri.loadLabel(pm).toString() } catch (_: Exception) { ri.activityInfo.packageName }
+                // Try the activity icon, then the application icon, then its logo: the first one that actually shows something wins.
+                val candidates = listOf<() -> android.graphics.drawable.Drawable?>(
+                    { ri.loadIcon(pm) }, { ri.activityInfo.applicationInfo.loadIcon(pm) }, { ri.activityInfo.applicationInfo.loadLogo(pm) }, { pm.getApplicationIcon(ri.activityInfo.packageName) }
+                )
+                var icon: android.graphics.drawable.Drawable? = null
+                for (cand in candidates) {
+                    val d = try { cand() } catch (_: Throwable) { null } ?: continue
+                    if (icon == null) icon = d
+                    val bmp = Art.render(d, 96, 96)
+                    if (!Art.isBlank(bmp, Art.edgeColor(bmp))) { icon = d; break }
+                }
+                AppItem(ri.activityInfo.packageName, label, icon ?: GearDrawable(), banner, null).also { it.prepare() }
             }
     }
 
@@ -279,13 +350,38 @@ class MainActivity : Activity() {
         val changed = labels != adapter.alwaysLabels || calm != adapter.reduceMotion
         adapter.alwaysLabels = labels
         adapter.reduceMotion = calm
-        wallpaper.visibility = if (sp.getBoolean("wall", false)) View.VISIBLE else View.GONE
+        loadWallpaper()
         val f24 = TimeFmt.is24(this, Prefs(this))
         clock.format12Hour = if (f24) "HH:mm" else "h:mm"
         clock.format24Hour = "HH:mm"
         clock.timeZone = CityClock.gmtId(this)
         bigClock.format12Hour = clock.format12Hour; bigClock.format24Hour = "HH:mm"; bigClock.timeZone = clock.timeZone
+        bigClock.typeface = clockTypeface(sp.getString("clock_style", "light") ?: "light")
+        bigClock.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(clockSizePx(sp.getString("clock_size", "l") ?: "l")))
         return changed
+    }
+
+    private var wallKey = ""
+
+    private fun loadWallpaper() {
+        val key = Wallpapers.key(sp)
+        if (key == wallKey) return
+        wallKey = key
+        if (Wallpapers.mode(sp) == "none") {
+            wallpaper.visibility = View.GONE; wallpaper.setImageDrawable(null)
+            Backdrop.set(null); root.invalidate()
+            return
+        }
+        Thread {
+            val bmp = Wallpapers.decode(this, sp)
+            if (bmp != null) Backdrop.set(bmp)
+            runOnUiThread {
+                if (isDestroyed || key != wallKey) return@runOnUiThread
+                if (bmp == null) { wallpaper.visibility = View.GONE; Backdrop.set(null) }
+                else { wallpaper.setImageBitmap(bmp); wallpaper.visibility = View.VISIBLE }
+                root.invalidate()
+            }
+        }.start()
     }
 
     private fun relayout(focus: String?) {
@@ -452,6 +548,12 @@ class MainActivity : Activity() {
         updateDots(dots, 0, (cellsF.size + 8) / 9)
         folderView = fRoot
         root.addView(fRoot, FrameLayout.LayoutParams(-1, -1))
+        fRoot.alpha = 0f
+        panel.pivotX = u.px(598f); panel.pivotY = u.px(385f); panel.scaleX = 0.9f; panel.scaleY = 0.9f
+        fRoot.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        fRoot.animate().alpha(1f).setDuration(130).start()
+        panel.animate().scaleX(1f).scaleY(1f).setDuration(170).setInterpolator(android.view.animation.DecelerateInterpolator(1.8f))
+            .withEndAction { fRoot.setLayerType(View.LAYER_TYPE_NONE, null) }.start()
         rv.post { rv.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() }
     }
 
@@ -465,8 +567,10 @@ class MainActivity : Activity() {
 
     private fun closeFolder() {
         val v = folderView ?: return
-        root.removeView(v)
         folderView = null
+        (v as? ViewGroup)?.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+        v.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        v.animate().alpha(0f).setDuration(100).withEndAction { root.removeView(v) }.start()
         folderRv = null; folderAd = null
         val k = folderKey
         folderKey = null
@@ -540,14 +644,34 @@ class MainActivity : Activity() {
         layoutParams = LinearLayout.LayoutParams(u.i(112f), u.i(112f)).apply { setMargins(u.i(8f), u.i(8f), u.i(8f), u.i(8f)) }
     }
 
+    /** Network line for the Wi-Fi tile. Looks at every network (not only the "active" one, which some TV boxes report as none while the internet works). */
     private fun wifiState(): String {
         val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val caps = try { cm.getNetworkCapabilities(cm.activeNetwork) } catch (_: Exception) { null }
+        var wifi = false; var eth = false; var other = false
+        try {
+            for (n in cm.allNetworks) {
+                val c = cm.getNetworkCapabilities(n) ?: continue
+                if (!c.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) continue
+                when {
+                    c.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> wifi = true
+                    c.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> eth = true
+                    else -> other = true
+                }
+            }
+        } catch (_: Exception) {}
+        @Suppress("DEPRECATION")
+        val legacy = try { cm.activeNetworkInfo?.isConnected == true } catch (_: Exception) { false }
+        if (wifi) {
+            val ssid = try {
+                @Suppress("DEPRECATION")
+                (applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager).connectionInfo?.ssid?.trim('"')
+            } catch (_: Exception) { null }
+            return if (ssid.isNullOrBlank() || ssid == "<unknown ssid>") "Connected" else ssid
+        }
         return when {
-            caps == null -> "Not connected"
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Connected"
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet"
-            else -> "Connected"
+            eth -> "Ethernet"
+            other || legacy || weather != null || nextPrayer != null -> "Connected"
+            else -> "Not connected"
         }
     }
 
@@ -556,10 +680,18 @@ class MainActivity : Activity() {
         nm.isNotificationPolicyAccessGranted && nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
     } catch (_: Exception) { false }
 
+    private fun askLocationOnce() {
+        if (Build.VERSION.SDK_INT < 23 || sp.getBoolean("asked_loc", false)) return
+        if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED) return
+        sp.edit().putBoolean("asked_loc", true).apply()
+        try { requestPermissions(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION), 11) } catch (_: Exception) {}
+    }
+
     private fun openCC() {
+        askLocationOnce()
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = Glass.glass(0xA82A2A2E.toInt(), u.px(70f), 0.8f)
+            background = Glass.glass(0xA82A2A2E.toInt(), u.px(70f), 0.9f, true)
             setPadding(u.i(24f), u.i(24f), u.i(24f), u.i(24f))
         }
         val power = glassTile(230f, 316f, R.drawable.ic_power, "Sleep", null, true) { closeCC(); startScreensaver() }
@@ -597,8 +729,11 @@ class MainActivity : Activity() {
         root.addView(panel, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END).apply {
             topMargin = u.i(140f); marginEnd = u.i(45f)
         })
-        panel.alpha = 0f
-        panel.animate().alpha(1f).setDuration(120).start()
+        panel.pivotX = u.px(1000f); panel.pivotY = 0f
+        panel.alpha = 0f; panel.scaleX = 0.94f; panel.scaleY = 0.94f; panel.translationY = -u.px(24f)
+        panel.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        panel.animate().alpha(1f).scaleX(1f).scaleY(1f).translationY(0f).setDuration(190)
+            .setInterpolator(android.view.animation.DecelerateInterpolator(1.8f)).withEndAction { panel.setLayerType(View.LAYER_TYPE_NONE, null) }.start()
         power.requestFocus()
     }
 
@@ -661,8 +796,10 @@ class MainActivity : Activity() {
 
     private fun closeCC() {
         val v = ccView ?: return
-        root.removeView(v)
         ccView = null
+        (v as? ViewGroup)?.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+        v.animate().alpha(0f).scaleX(0.96f).scaleY(0.96f).translationY(-u.px(14f)).setDuration(120)
+            .withEndAction { root.removeView(v) }.start()
         lastFocusKey?.let { focusKey(it) }
     }
 
@@ -797,6 +934,7 @@ class MainActivity : Activity() {
             content.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(300).setInterpolator(android.view.animation.DecelerateInterpolator(1.6f))
                 .withEndAction { content.setLayerType(View.LAYER_TYPE_NONE, null) }.start()
         }
+        handler.removeCallbacks(stopPoll); handler.post(stopPoll)
         handler.removeCallbacks(infoTick); handler.postDelayed(infoTick, 400); handler.postDelayed({ if (!isDestroyed) refreshInfoData() }, 900)
         val app = applicationContext
         Thread {
@@ -806,7 +944,7 @@ class MainActivity : Activity() {
         }.start()
     }
 
-    override fun onPause() { super.onPause(); handler.removeCallbacks(idleRun); handler.removeCallbacks(infoTick) }
+    override fun onPause() { super.onPause(); handler.removeCallbacks(idleRun); handler.removeCallbacks(infoTick); handler.removeCallbacks(stopPoll) }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)

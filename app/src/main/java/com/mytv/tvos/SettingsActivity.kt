@@ -2,7 +2,10 @@ package com.mytv.tvos
 
 import android.app.Activity
 import android.content.Context
+import android.graphics.Bitmap
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.graphics.Typeface
 import android.os.Bundle
 import android.provider.Settings
@@ -97,7 +100,19 @@ class SettingsActivity : Activity() {
         listOf(
             Row.Toggle("Always Show App Names", "labels", "Show the name under every app instead of only the focused one."),
             Row.Toggle("Reduce Motion", "calm", "Turn off the shine and the wiggle in the move mode."),
-            Row.Toggle("Wallpaper", "wall", "Show a picture behind the home screen."),
+            Row.Nav("Wallpaper", { when (Wallpapers.mode(prefs)) { "custom" -> java.io.File(prefs.getString("wall_path", "") ?: "").name; "default" -> "Default"; else -> "None" } }) {
+                choose("Wallpaper", listOf(
+                    "None" to { prefs.edit().putString("wall_mode", "none").apply(); refresh() },
+                    "Default" to { prefs.edit().putString("wall_mode", "default").apply(); refresh() },
+                    "Choose from TV storage" to { pickWallpaper() }
+                ))
+            },
+            Row.Nav("Clock Style", { when (prefs.getString("clock_style", "light")) { "bold" -> "Bold"; "regular" -> "Regular"; else -> "Light" } }) {
+                choose("Clock Style", listOf("Light" to { prefs.edit().putString("clock_style", "light").apply(); refresh() }, "Regular" to { prefs.edit().putString("clock_style", "regular").apply(); refresh() }, "Bold" to { prefs.edit().putString("clock_style", "bold").apply(); refresh() }))
+            },
+            Row.Nav("Clock Size", { when (prefs.getString("clock_size", "l")) { "m" -> "Medium"; "xl" -> "Extra Large"; else -> "Large" } }) {
+                choose("Clock Size", listOf("Medium" to { prefs.edit().putString("clock_size", "m").apply(); refresh() }, "Large" to { prefs.edit().putString("clock_size", "l").apply(); refresh() }, "Extra Large" to { prefs.edit().putString("clock_size", "xl").apply(); refresh() }))
+            },
             Row.Label("LAYOUT"),
             Row.Nav("Reset Home Screen Layout") {
                 Store(this).reset()
@@ -128,9 +143,32 @@ class SettingsActivity : Activity() {
             Row.Label("PRAYERS TO ANNOUNCE")
         ) + names.map { n -> Row.Switch(n, { p.isPrayerEnabled(n) }, { on -> p.setPrayerEnabled(n, on); reschedule() }) } +
             listOf(Row.Label("MANUAL CORRECTION (MINUTES)")) +
-            names.map { n -> Row.Nav("$n correction", { (if (p.prayerOffset(n) > 0) "+" else "") + p.prayerOffset(n) }) {
-                p.setPrayerOffset(n, if (p.prayerOffset(n) >= 15) -15 else p.prayerOffset(n) + 5); reschedule()
+            names.map { n -> Row.Nav("$n correction", { (if (p.prayerOffset(n) > 0) "+" else "") + p.prayerOffset(n) + " " + L.t("min") }) {
+                val opts = listOf(0, 1, 2, 3, 4, 5, 10, 15, -1, -2, -3, -4, -5, -10, -15)
+                choose(L.t(n) + " - " + L.t("MANUAL CORRECTION (MINUTES)"), opts.map { v ->
+                    ((if (v > 0) "+" else "") + v + " " + L.t("min")) to { p.setPrayerOffset(n, v); reschedule(); refresh() }
+                })
             } }
+    }
+
+    private var storageThen: (() -> Unit)? = null
+
+    private fun pickWallpaper() {
+        val needed = if (Build.VERSION.SDK_INT >= 33) arrayOf(android.Manifest.permission.READ_MEDIA_IMAGES) else arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+        val open = {
+            FileBrowser.show(this, "Choose a picture", setOf("jpg", "jpeg", "png", "webp", "bmp")) { f ->
+                prefs.edit().putString("wall_mode", "custom").putString("wall_path", f.absolutePath).putLong("wall_stamp", System.currentTimeMillis()).apply()
+                toast("Wallpaper set")
+                refresh()
+            }
+        }
+        if (Build.VERSION.SDK_INT < 23 || needed.all { checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }) open()
+        else { storageThen = open; try { requestPermissions(needed, 21) } catch (_: Exception) { storageThen = null; open() } }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 21) { val then = storageThen; storageThen = null; then?.invoke() } // open even when refused: app folders still work
     }
 
     private fun searchCity() {
@@ -184,7 +222,8 @@ class SettingsActivity : Activity() {
         L.ar = Prefs(this).language == "ar"
         prefs = getSharedPreferences("tvos_settings", Context.MODE_PRIVATE)
         val frame = FrameLayout(this).apply { setBackgroundColor(0xFF1B1B1D.toInt()) }
-        val small = android.graphics.BitmapFactory.decodeResource(resources, R.drawable.wp_kirkjufell, android.graphics.BitmapFactory.Options().apply { inSampleSize = 16 })
+        val wallSrc = Wallpapers.decode(this, prefs, 480) ?: android.graphics.BitmapFactory.decodeResource(resources, R.drawable.wp_kirkjufell, android.graphics.BitmapFactory.Options().apply { inSampleSize = 16 })
+        val small = Bitmap.createScaledBitmap(wallSrc, 120, (120f * wallSrc.height / wallSrc.width).toInt().coerceAtLeast(68), true)
         val wall = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageBitmap(Blur.blur(small, 4)) }
         frame.addView(wall, FrameLayout.LayoutParams(-1, -1))
         frame.addView(View(this).apply { setBackgroundColor(0xB31B1B1D.toInt()) }, FrameLayout.LayoutParams(-1, -1))
@@ -237,6 +276,8 @@ class SettingsActivity : Activity() {
         titleView.text = L.t(p.title)
         descView.text = ""
         list.removeAllViews()
+        list.alpha = 0f
+        list.animate().alpha(1f).setDuration(140).start()
         for (r in p.rows()) list.addView(rowView(r), LinearLayout.LayoutParams(-1, u.i(66f)).apply { bottomMargin = u.i(14f) })
         list.post {
             val v = list.getChildAt(focusIndex.coerceIn(0, list.childCount - 1))

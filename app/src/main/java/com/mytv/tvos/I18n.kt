@@ -36,7 +36,10 @@ object L {
         "Type an app name" to "اكتب اسم التطبيق", "No apps found" to "ما في تطبيقات", "Control Center" to "مركز التحكم",
         "Today" to "اليوم", "Tomorrow" to "بكرة", "in" to "بعد", "h" to "س", "m" to "د",
         "Clear" to "صافي", "Partly cloudy" to "غائم جزئياً", "Cloudy" to "غائم", "Fog" to "ضباب", "Rain" to "مطر", "Snow" to "ثلج", "Thunderstorm" to "عاصفة رعدية",
-        "Loading…" to "جاري التحميل…", "Prayer Times" to "مواقيت الصلاة", "Weather" to "الطقس"
+        "None" to "بدون", "Default" to "الافتراضية", "Choose from TV storage" to "اختيار من ذاكرة التلفزيون", "Clock Style" to "شكل الساعة", "Clock Size" to "حجم الساعة",
+        "Light" to "رفيع", "Regular" to "عادي", "Bold" to "عريض", "Medium" to "متوسط", "Large" to "كبير", "Extra Large" to "كبير جداً",
+        "Up" to "للأعلى", "Choose a location" to "اختر المكان", "Cannot read this folder" to "ما بقدر أقرأ هالمجلد", "Internal storage" to "الذاكرة الداخلية",
+        "App folder" to "مجلد التطبيق", "Choose a picture" to "اختر صورة", "Wallpaper set" to "تم تعيين الخلفية", "Loading…" to "جاري التحميل…", "Prayer Times" to "مواقيت الصلاة", "Weather" to "الطقس"
     )
 
     fun t(s: String): String {
