@@ -190,7 +190,7 @@ class MainActivity : Activity() {
             addView(dateText, LinearLayout.LayoutParams(-2, -2).apply { topMargin = u.i(4f); bottomMargin = u.i(20f) })
             addView(pills)
         }
-        content.addView(infoBlock, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START).apply { leftMargin = u.i(80f); topMargin = u.i(124f) })
+        content.addView(infoBlock, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START).apply { leftMargin = u.i(80f); topMargin = u.i(146f) })
     }
 
     private fun buildStopPill() {
@@ -355,6 +355,7 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             background = Glass.glass(0xB02A2A2E.toInt(), u.px(58f), 0.9f, true)
             setPadding(u.i(48f), u.i(38f), u.i(48f), u.i(34f))
+            minimumWidth = u.i(1100f)
         }
         val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val city = Prefs(this).cityName
