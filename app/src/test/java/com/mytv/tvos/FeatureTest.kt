@@ -233,6 +233,7 @@ class FeatureTest {
         bar.getChildAt(3).requestFocus()
         val handled = a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_DOWN))
         assertTrue("DOWN on the bar is handled", handled)
+        idle()
         assertTrue("and focus is back on the tiles", grid.findContainingViewHolder(a.window.currentFocus ?: grid) != null)
     }
 
@@ -391,7 +392,7 @@ class FeatureTest {
     private fun renderDialogOver(a: android.app.Activity, d: Dialog): Bitmap {
         val base = render(a.window.decorView)
         val c = Canvas(base); c.drawColor(0x66000000)
-        val v = d.window!!.decorView
+        val v = d.window!!.decorView.findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
         v.measure(View.MeasureSpec.makeMeasureSpec(1920, View.MeasureSpec.AT_MOST), View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.AT_MOST))
         val w = v.measuredWidth.coerceAtLeast(1); val h = v.measuredHeight.coerceAtLeast(1)
         v.layout(0, 0, w, h)
