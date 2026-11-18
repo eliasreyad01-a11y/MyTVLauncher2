@@ -3,6 +3,9 @@ package com.mytv.tvos
 import android.app.Activity
 import android.app.Dialog
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -187,5 +190,159 @@ class FileBrowser private constructor(
 
     companion object {
         fun show(activity: Activity, title: String, extensions: Set<String>, onPick: (File) -> Unit) { FileBrowser(activity, title, extensions, onPick).build() }
+    }
+}
+
+/**
+ * Choosing the wallpaper from the TV's own files. Two ways are offered: the launcher's remote-friendly file browser (works on
+ * every TV, needs the storage permission) and the system picker (only where the TV has one). Whatever is chosen is shown in a
+ * preview first and, once applied, copied into the launcher's private storage: the wallpaper then survives a restart, a
+ * removed USB stick, and a revoked permission.
+ */
+object WallpaperPicker {
+    private const val REQ_PERM = 21
+    private const val REQ_DOC = 22
+    private val EXT = setOf("jpg", "jpeg", "png", "webp", "bmp")
+    private var afterPermission: (() -> Unit)? = null
+    private var done: (() -> Unit)? = null
+
+    private fun sp(a: Activity) = a.getSharedPreferences("tvos_settings", Context.MODE_PRIVATE)
+
+    fun show(a: Activity, onDone: () -> Unit) {
+        done = onDone
+        val s = sp(a)
+        val items = ArrayList<Pair<String, () -> Unit>>()
+        items.add("None" to { s.edit().putString("wall_mode", "none").apply(); onDone() })
+        items.add("Default" to { s.edit().putString("wall_mode", "default").apply(); onDone() })
+        items.add("Choose from TV storage" to { pickFromStorage(a) })
+        if (systemPickerIntent().resolveActivity(a.packageManager) != null) items.add("Choose with the system picker" to { pickWithSystem(a) })
+        Menus.show(a, "Wallpaper", items)
+    }
+
+    private fun systemPickerIntent() = Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*")
+        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+
+    private fun pickWithSystem(a: Activity) {
+        try { a.startActivityForResult(systemPickerIntent(), REQ_DOC) } catch (_: Exception) { toast(a, "Not available on this device") }
+    }
+
+    private fun pickFromStorage(a: Activity) {
+        val needed = if (Build.VERSION.SDK_INT >= 33) arrayOf(android.Manifest.permission.READ_MEDIA_IMAGES) else arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+        val open = {
+            FileBrowser.show(a, "Choose a picture", EXT) { f -> preview(a, f.name) { openFile(f) } }
+        }
+        if (Build.VERSION.SDK_INT < 23 || needed.all { a.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }) open()
+        else { afterPermission = open; try { a.requestPermissions(needed, REQ_PERM) } catch (_: Exception) { afterPermission = null; open() } }
+    }
+
+    /** Forward from the activity's onRequestPermissionsResult. The browser opens even when refused: the app's own folders still work. */
+    fun onPermission(requestCode: Int) {
+        if (requestCode != REQ_PERM) return
+        val then = afterPermission; afterPermission = null; then?.invoke()
+    }
+
+    /** Forward from the activity's onActivityResult. */
+    fun onActivityResult(a: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode != REQ_DOC || resultCode != Activity.RESULT_OK) return
+        val uri = data?.data ?: return
+        try { a.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) {}
+        preview(a, uri.lastPathSegment ?: "") { try { a.contentResolver.openInputStream(uri) } catch (_: Exception) { null } }
+    }
+
+    private fun openFile(f: File): java.io.InputStream? = try { java.io.FileInputStream(f) } catch (_: Exception) { null }
+
+    private fun toast(a: Activity, s: String) = Toast.makeText(a, L.t(s), Toast.LENGTH_SHORT).show()
+
+    /** Decodes at most [maxW] pixels wide (never the full-size picture) and turns it upright using its EXIF rotation. Blocking. */
+    fun decodeStream(open: () -> java.io.InputStream?, maxW: Int = 1920): Bitmap? {
+        return try {
+            val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            open()?.use { BitmapFactory.decodeStream(it, null, o) }
+            if (o.outWidth <= 0 || o.outHeight <= 0) return null
+            var s = 1
+            while (o.outWidth / (s * 2) >= maxW) s *= 2
+            val o2 = BitmapFactory.Options().apply { inSampleSize = s }
+            val bmp = open()?.use { BitmapFactory.decodeStream(it, null, o2) } ?: return null
+            val deg = try {
+                open()?.use { st ->
+                    when (android.media.ExifInterface(st).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1)) {
+                        android.media.ExifInterface.ORIENTATION_ROTATE_90 -> 90
+                        android.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                        android.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270
+                        else -> 0
+                    }
+                } ?: 0
+            } catch (_: Exception) { 0 }
+            if (deg == 0) bmp else {
+                val m = android.graphics.Matrix().apply { postRotate(deg.toFloat()) }
+                Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
+            }
+        } catch (_: Throwable) { null }
+    }
+
+    /** Saves the bitmap as the wallpaper: a private copy, so it never depends on the original file again. Blocking. */
+    fun saveAsWallpaper(ctx: Context, bmp: Bitmap): Boolean {
+        return try {
+            val s = ctx.getSharedPreferences("tvos_settings", Context.MODE_PRIVATE)
+            val dir = ctx.filesDir
+            val out = File(dir, "wallpaper_${System.currentTimeMillis()}.jpg")
+            out.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 92, it) }
+            val old = s.getString("wall_path", null)
+            s.edit().putString("wall_mode", "custom").putString("wall_path", out.absolutePath).putLong("wall_stamp", System.currentTimeMillis()).apply()
+            if (old != null && old != out.absolutePath && old.startsWith(dir.absolutePath)) File(old).delete()
+            true
+        } catch (_: Throwable) { false }
+    }
+
+    private fun preview(a: Activity, name: String, open: () -> java.io.InputStream?) {
+        Thread {
+            val bmp = decodeStream(open)
+            a.runOnUiThread {
+                if (a.isDestroyed) return@runOnUiThread
+                if (bmp == null) { toast(a, "This picture can't be opened"); return@runOnUiThread }
+                showPreview(a, name, bmp)
+            }
+        }.start()
+    }
+
+    private fun showPreview(a: Activity, name: String, bmp: Bitmap) {
+        val u = U(a)
+        val d = Dialog(a, android.R.style.Theme_Translucent_NoTitleBar)
+        val panel = LinearLayout(a).apply {
+            orientation = LinearLayout.VERTICAL
+            background = Glass.glass(0xE62A2A2C.toInt(), u.px(48f), 0.7f)
+            setPadding(u.i(36f), u.i(30f), u.i(36f), u.i(30f))
+        }
+        panel.addView(TextView(a).apply {
+            text = L.t("Preview") + " · " + name
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(30f)); setTextColor(0xB3FFFFFF.toInt()); maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
+        })
+        val img = android.widget.ImageView(a).apply { scaleType = android.widget.ImageView.ScaleType.CENTER_CROP; setImageBitmap(bmp) }
+        panel.addView(img, LinearLayout.LayoutParams(u.i(960f), u.i(540f)).apply { topMargin = u.i(14f); bottomMargin = u.i(16f) })
+        val bar = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL }
+        fun btn(label: String, act: () -> Unit) = TextView(a).apply {
+            text = L.t(label); setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(32f)); setTextColor(Glass.text()); gravity = Gravity.CENTER
+            isFocusable = true; isClickable = true; background = Glass.rowBg(u, 33f, 0x24FFFFFF)
+            setOnClickListener { act() }
+        }
+        val applyBtn = btn("Apply") {
+            d.dismiss()
+            Thread {
+                val ok = saveAsWallpaper(a, bmp)
+                a.runOnUiThread { if (ok) { toast(a, "Wallpaper set"); done?.invoke() } else toast(a, "Could not save the wallpaper") }
+            }.start()
+        }
+        bar.addView(applyBtn, LinearLayout.LayoutParams(0, u.i(70f), 1f).apply { marginEnd = u.i(12f) })
+        bar.addView(btn("Cancel") { d.dismiss() }, LinearLayout.LayoutParams(0, u.i(70f), 1f))
+        panel.addView(bar)
+        d.setContentView(panel, ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        d.window?.apply {
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+            setGravity(Gravity.CENTER); setDimAmount(0.6f)
+            addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        }
+        d.setOnShowListener { applyBtn.requestFocus() }
+        d.show()
     }
 }

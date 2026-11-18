@@ -101,17 +101,10 @@ class SettingsActivity : Activity() {
             Row.Toggle("Always Show App Names", "labels", "Show the name under every app instead of only the focused one."),
             Row.Toggle("Reduce Motion", "calm", "Turn off the shine and the wiggle in the move mode."),
             Row.Nav("Wallpaper", { when (Wallpapers.mode(prefs)) { "custom" -> java.io.File(prefs.getString("wall_path", "") ?: "").name; "default" -> "Default"; else -> "None" } }) {
-                choose("Wallpaper", listOf(
-                    "None" to { prefs.edit().putString("wall_mode", "none").apply(); refresh() },
-                    "Default" to { prefs.edit().putString("wall_mode", "default").apply(); refresh() },
-                    "Choose from TV storage" to { pickWallpaper() }
-                ))
+                WallpaperPicker.show(this) { refresh() }
             },
-            Row.Nav("Clock Style", { when (prefs.getString("clock_style", "light")) { "bold" -> "Bold"; "regular" -> "Regular"; else -> "Light" } }) {
-                choose("Clock Style", listOf("Light" to { prefs.edit().putString("clock_style", "light").apply(); refresh() }, "Regular" to { prefs.edit().putString("clock_style", "regular").apply(); refresh() }, "Bold" to { prefs.edit().putString("clock_style", "bold").apply(); refresh() }))
-            },
-            Row.Nav("Clock Size", { when (prefs.getString("clock_size", "l")) { "m" -> "Medium"; "xl" -> "Extra Large"; else -> "Large" } }) {
-                choose("Clock Size", listOf("Medium" to { prefs.edit().putString("clock_size", "m").apply(); refresh() }, "Large" to { prefs.edit().putString("clock_size", "l").apply(); refresh() }, "Extra Large" to { prefs.edit().putString("clock_size", "xl").apply(); refresh() }))
+            Row.Nav("Clock", { L.t(ClockCfg.KIND_LABEL[ClockCfg.load(prefs).kind] ?: "") }) {
+                ClockCustomizer.show(this, prefs) { refresh() }
             },
             Row.Switch("Smooth Icon Edges", { prefs.getBoolean("smooth_edges", true) }, { on -> prefs.edit().putBoolean("smooth_edges", on).apply() }, "Anti-aliased rounded corners on the icons. Turn this off if your TV draws the icons wrongly."),
             Row.Label("LAYOUT"),
@@ -144,32 +137,37 @@ class SettingsActivity : Activity() {
             Row.Label("PRAYERS TO ANNOUNCE")
         ) + names.map { n -> Row.Switch(n, { p.isPrayerEnabled(n) }, { on -> p.setPrayerEnabled(n, on); reschedule() }) } +
             listOf(Row.Label("MANUAL CORRECTION (MINUTES)")) +
-            names.map { n -> Row.Nav("$n correction", { (if (p.prayerOffset(n) > 0) "+" else "") + p.prayerOffset(n) + " " + L.t("min") }) {
-                val opts = listOf(0, 1, 2, 3, 4, 5, 10, 15, -1, -2, -3, -4, -5, -10, -15)
-                choose(L.t(n) + " - " + L.t("MANUAL CORRECTION (MINUTES)"), opts.map { v ->
-                    ((if (v > 0) "+" else "") + v + " " + L.t("min")) to { p.setPrayerOffset(n, v); reschedule(); refresh() }
-                })
-            } }
-    }
-
-    private var storageThen: (() -> Unit)? = null
-
-    private fun pickWallpaper() {
-        val needed = if (Build.VERSION.SDK_INT >= 33) arrayOf(android.Manifest.permission.READ_MEDIA_IMAGES) else arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
-        val open = {
-            FileBrowser.show(this, "Choose a picture", setOf("jpg", "jpeg", "png", "webp", "bmp")) { f ->
-                prefs.edit().putString("wall_mode", "custom").putString("wall_path", f.absolutePath).putLong("wall_stamp", System.currentTimeMillis()).apply()
-                toast("Wallpaper set")
-                refresh()
-            }
-        }
-        if (Build.VERSION.SDK_INT < 23 || needed.all { checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }) open()
-        else { storageThen = open; try { requestPermissions(needed, 21) } catch (_: Exception) { storageThen = null; open() } }
+            names.map { n ->
+                val raw = PrayerRepository.cachedRaw(this, PrayerRepository.cityToday(this))?.times?.get(n)
+                val is24 = TimeFmt.is24(this, p)
+                Row.Nav(n, {
+                    val off = p.prayerOffset(n)
+                    val sign = (if (off > 0) "+" else "") + off + " " + L.t("min")
+                    if (raw == null) sign else TimeFmt.display(raw, is24) + "  →  " + TimeFmt.display(PrayerRepository.shifted(raw, off), is24) + "   (" + sign + ")"
+                }) {
+                    val opts = listOf(0, 1, 2, 3, 4, -1, -2, -3, -4, 5, 10, 15, -5, -10, -15)
+                    choose(L.t(n) + (if (raw != null) "  ·  " + TimeFmt.display(raw, is24) else ""), opts.map { v ->
+                        val label = when (v) { 0 -> L.t("Original time (reset)"); else -> (if (v > 0) "+" else "") + v + " " + L.t("min") }
+                        (label + (if (raw != null) "   →   " + TimeFmt.display(PrayerRepository.shifted(raw, v), is24) else "")) to { p.setPrayerOffset(n, v); reschedule(); refresh() }
+                    })
+                }
+            } + listOf<Row>(
+                Row.Nav("Reset all corrections") { for (n in names) p.setPrayerOffset(n, 0); reschedule(); refresh() },
+                Row.Label("DURING THE ADHAN"),
+                Row.Switch("Pause Playback at Adhan", { prefs.getBoolean("pause_on_adhan", true) }, { on -> prefs.edit().putBoolean("pause_on_adhan", on).apply() },
+                    "Pauses the video or music that is playing when the Adhan starts, and resumes it afterwards. Some apps cannot be paused by another app.")
+            )
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 21) { val then = storageThen; storageThen = null; then?.invoke() } // open even when refused: app folders still work
+        WallpaperPicker.onPermission(requestCode)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        WallpaperPicker.onActivityResult(this, requestCode, resultCode, data)
     }
 
     private fun searchCity() {

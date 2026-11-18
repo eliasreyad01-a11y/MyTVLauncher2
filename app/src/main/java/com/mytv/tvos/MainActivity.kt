@@ -49,7 +49,7 @@ class MainActivity : Activity() {
     private lateinit var capsule: LinearLayout
     private lateinit var clock: TextClock
     private lateinit var infoBlock: LinearLayout
-    private lateinit var bigClock: TextClock
+    private lateinit var bigClock: ClockView
     private lateinit var dateText: TextView
     private lateinit var wxText: TextView
     private lateinit var prText: TextView
@@ -63,6 +63,9 @@ class MainActivity : Activity() {
     private var folderRv: RecyclerView? = null
     private var folderAd: HomeAdapter? = null
     private var nextPrayer: NextPrayer? = null
+    private lateinit var pagesBar: LinearLayout
+    private val pageItems = ArrayList<View>()
+    private var netListener: (() -> Unit)? = null
     private var weather: Weather? = null
     private lateinit var adapter: HomeAdapter
 
@@ -121,6 +124,7 @@ class MainActivity : Activity() {
         content.addView(grid, FrameLayout.LayoutParams(-1, -1))
         root.addView(content, FrameLayout.LayoutParams(-1, -1))
         buildCapsule()
+        buildPagesBar()
         buildStopPill()
         setContentView(root)
         loadAppsAsync()
@@ -145,22 +149,25 @@ class MainActivity : Activity() {
         maxLines = 1
     }
 
-    private fun clockTypeface(style: String) = when (style) {
-        "bold" -> android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD)
-        "regular" -> android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
-        else -> android.graphics.Typeface.create("sans-serif-light", android.graphics.Typeface.NORMAL)
+    /** Pushes the saved clock settings (design, size, colour, position, 12/24h, time zone, date line) into the home clock. */
+    private fun applyClock() {
+        val cfg = ClockCfg.load(sp)
+        bigClock.tz = CityClock.timeZone(this)
+        bigClock.is24 = TimeFmt.is24(this, Prefs(this))
+        bigClock.cfg = cfg
+        dateText.visibility = if (cfg.date) View.VISIBLE else View.GONE
+        dateText.setTextColor(cfg.color and 0x00FFFFFF or 0xF2000000.toInt())
+        val g = when (cfg.pos) { "center" -> Gravity.CENTER_HORIZONTAL; "right" -> Gravity.END; else -> Gravity.START }
+        infoBlock.gravity = g
+        (infoBlock.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
+            lp.gravity = Gravity.TOP or g
+            lp.leftMargin = u.i(80f); lp.rightMargin = u.i(80f)
+            infoBlock.layoutParams = lp
+        }
     }
 
-    private fun clockSizePx(size: String) = when (size) { "m" -> 110f; "xl" -> 168f; else -> 138f }
-
     private fun buildInfo() {
-        bigClock = TextClock(this).apply {
-            setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(138f))
-            setTextColor(0xF7FFFFFF.toInt())
-            typeface = clockTypeface("light")
-            includeFontPadding = false
-            setShadowLayer(u.px(10f), 0f, u.px(2f), 0x66000000)
-        }
+        bigClock = ClockView(this, u)
         dateText = smallText(36f, 0xF2FFFFFF.toInt()).apply {
             typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
             setShadowLayer(u.px(8f), 0f, u.px(2f), 0x80000000.toInt())
@@ -183,7 +190,7 @@ class MainActivity : Activity() {
             addView(dateText, LinearLayout.LayoutParams(-2, -2).apply { topMargin = u.i(4f); bottomMargin = u.i(20f) })
             addView(pills)
         }
-        content.addView(infoBlock, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START).apply { leftMargin = u.i(80f); topMargin = u.i(40f) })
+        content.addView(infoBlock, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START).apply { leftMargin = u.i(80f); topMargin = u.i(124f) })
     }
 
     private fun buildStopPill() {
@@ -204,12 +211,13 @@ class MainActivity : Activity() {
             addView(tv)
             setOnClickListener { AdhanService.stopNow(); updateStopPill() }
         }
-        root.addView(stopPill, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, u.i(72f), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = u.i(46f) })
+        root.addView(stopPill, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, u.i(72f), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = u.i(690f) })
     }
 
     /** The Stop button exists on the home screen only while the Adhan is actually playing. */
     private fun updateStopPill() {
         val playing = AdhanService.isPlaying
+        if (playing) ((stopPill as LinearLayout).getChildAt(1) as TextView).text = L.t("Stop Adhan") + (AdhanService.currentPrayer?.let { " · " + L.t(it) } ?: "")
         stopPill.visibility = if (playing) View.VISIBLE else View.GONE
         if (playing && !adhanWasPlaying && ccView == null && folderView == null && moving == null) stopPill.requestFocus()
         if (!playing && adhanWasPlaying && stopPill.hasFocus()) lastFocusKey?.let { focusKey(it) }
@@ -235,9 +243,12 @@ class MainActivity : Activity() {
             wxGlyph.set(w.code, night)
             val temp = "${w.tempC}°"
             val rest = "  ${L.t(getString(Weather.labelRes(w.code)))}  ·  ${w.today.maxC}°/${w.today.minC}°"
-            val sp2 = android.text.SpannableString(temp + rest)
-            sp2.setSpan(android.text.style.AbsoluteSizeSpan(u.i(38f)), 0, temp.length, 0)
-            sp2.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, temp.length, 0)
+            val city = Prefs(this).cityName.substringBefore(",").trim()
+            val head = if (city.isEmpty()) "" else "$city   "
+            val sp2 = android.text.SpannableString(head + temp + rest)
+            sp2.setSpan(android.text.style.AbsoluteSizeSpan(u.i(38f)), head.length, head.length + temp.length, 0)
+            sp2.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), head.length, head.length + temp.length, 0)
+            if (head.isNotEmpty()) sp2.setSpan(android.text.style.ForegroundColorSpan(0xB3FFFFFF.toInt()), 0, head.length, 0)
             wxText.text = sp2
         }
         val n = nextPrayer
@@ -269,10 +280,166 @@ class MainActivity : Activity() {
                 if (isDestroyed) return@runOnUiThread
                 if (n != null) nextPrayer = n
                 if (w != null) weather = w
-                bigClock.timeZone = CityClock.gmtId(this); clock.timeZone = CityClock.gmtId(this)
+                if (n != null || w != null) Net.evidence()
+                clock.timeZone = CityClock.gmtId(this)
+                applyClock()
                 updateInfo()
             }
         }.start()
+    }
+
+    // ------------------------------------------------------------------ pages bar
+
+    private val PAGES = listOf("Home" to R.drawable.ic_home, "Apps" to R.drawable.ic_apps, "Weather" to R.drawable.ic_sun,
+        "Wallpapers" to R.drawable.ic_image, "Clock" to R.drawable.ic_clock, "Settings" to R.drawable.ic_gear)
+
+    private fun pageBg() = android.graphics.drawable.StateListDrawable().apply {
+        addState(intArrayOf(android.R.attr.state_focused), GlossDrawable(u.px(30f), 0xFFFFFFFF.toInt(), 0.55f))
+        addState(intArrayOf(android.R.attr.state_selected), GlossDrawable(u.px(30f), 0x47FFFFFF, 1f))
+        addState(intArrayOf(), android.graphics.drawable.ColorDrawable(0))
+    }
+
+    /** The six pages along the top: Home, Apps, Weather, Wallpapers, Clock, Settings. Up from the dock reaches them, Down returns. */
+    private fun buildPagesBar() {
+        pagesBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            clipChildren = false
+            setPadding(u.i(8f), u.i(8f), u.i(8f), u.i(8f))
+            background = Glass.glass(0x38333336, u.px(38f), 1f, true)
+        }
+        PAGES.forEachIndexed { i, (label, icon) ->
+            val img = ImageView(this).apply { setImageResource(icon); imageTintList = Glass.text(); isDuplicateParentStateEnabled = true }
+            val tv = TextView(this).apply {
+                text = L.t(label); setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(26f)); setTextColor(Glass.text())
+                maxLines = 1; isDuplicateParentStateEnabled = true
+            }
+            val item = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                isFocusable = true
+                isClickable = true
+                setPadding(u.i(20f), 0, u.i(24f), 0)
+                background = pageBg()
+                contentDescription = label
+                addView(img, LinearLayout.LayoutParams(u.i(32f), u.i(32f)).apply { marginEnd = u.i(10f) })
+                addView(tv)
+                setOnClickListener { openPage(i) }
+                setOnKeyListener { _, code, ev -> if (ev.action == KeyEvent.ACTION_DOWN && code == KeyEvent.KEYCODE_DPAD_DOWN) { focusFirst(); true } else false }
+            }
+            pagesBar.addView(item, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, u.i(60f)).apply { if (i > 0) marginStart = u.i(4f) })
+            pageItems.add(item)
+        }
+        setPage(0)
+        root.addView(pagesBar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, u.i(76f), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = u.i(38f) })
+    }
+
+    private fun setPage(i: Int) { pageItems.forEachIndexed { j, v -> v.isSelected = j == i } }
+
+    private fun openPage(i: Int) {
+        when (i) {
+            0 -> { closeCC(); closeFolder(); setPage(0); focusFirst() }
+            1 -> { closeCC(); closeFolder(); setPage(1); lay.library.firstOrNull()?.let { focusKey(it.key) } ?: focusFirst() }
+            2 -> showWeather()
+            3 -> WallpaperPicker.show(this) { applyOptions() }
+            4 -> ClockCustomizer.show(this, sp) { applyOptions(); updateInfo() }
+            else -> startActivity(Intent(this, SettingsActivity::class.java))
+        }
+    }
+
+    // ------------------------------------------------------------------ weather page
+
+    private fun showWeather() {
+        val d = android.app.Dialog(this, android.R.style.Theme_Translucent_NoTitleBar)
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = Glass.glass(0xB02A2A2E.toInt(), u.px(58f), 0.9f, true)
+            setPadding(u.i(48f), u.i(38f), u.i(48f), u.i(34f))
+        }
+        val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val city = Prefs(this).cityName
+        panel.addView(TextView(this).apply {
+            text = city; setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(40f)); typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setTextColor(0xFFFFFFFF.toInt()); maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+        })
+        panel.addView(body)
+        val refresh = TextView(this).apply {
+            text = L.t("Refresh"); setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(32f)); setTextColor(Glass.text()); gravity = Gravity.CENTER
+            isFocusable = true; isClickable = true; background = Glass.rowBg(u, 33f, 0x24FFFFFF)
+        }
+        panel.addView(refresh, LinearLayout.LayoutParams(-1, u.i(70f)).apply { topMargin = u.i(22f) })
+
+        fun dayCard(label: String, f: DayForecast): View = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            background = Glass.glass(0x24FFFFFF, u.px(34f), 0.8f)
+            setPadding(u.i(22f), u.i(14f), u.i(22f), u.i(14f))
+            addView(WeatherGlyph(this@MainActivity).apply { set(f.code, false) }, LinearLayout.LayoutParams(u.i(78f), u.i(78f)).apply { marginEnd = u.i(16f) })
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(TextView(this@MainActivity).apply { text = L.t(label); setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(26f)); setTextColor(0xB3FFFFFF.toInt()) })
+                addView(TextView(this@MainActivity).apply { text = "${f.maxC}° / ${f.minC}°"; setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(36f)); setTextColor(0xFFFFFFFF.toInt()); typeface = android.graphics.Typeface.DEFAULT_BOLD })
+                addView(TextView(this@MainActivity).apply { text = L.t("Rain") + " " + f.rainPct + "%"; setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(24f)); setTextColor(0xB3FFFFFF.toInt()) })
+            })
+        }
+
+        fun fill(w: Weather?, loading: Boolean) {
+            body.removeAllViews()
+            if (w == null) {
+                body.addView(TextView(this).apply {
+                    text = L.t(if (loading) "Loading…" else "Not available (no internet)")
+                    setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(34f)); setTextColor(0xCCFFFFFF.toInt()); setPadding(0, u.i(40f), 0, u.i(40f))
+                })
+                return
+            }
+            val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(0, u.i(16f), 0, u.i(18f)) }
+            top.addView(WeatherGlyph(this).apply { set(w.code, !w.isDay) }, LinearLayout.LayoutParams(u.i(210f), u.i(210f)).apply { marginEnd = u.i(34f) })
+            val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            col.addView(TextView(this).apply {
+                text = "${w.tempC}°"; setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(150f)); setTextColor(0xFFFFFFFF.toInt())
+                typeface = android.graphics.Typeface.create("sans-serif-light", android.graphics.Typeface.NORMAL); includeFontPadding = false
+            })
+            col.addView(TextView(this).apply {
+                text = L.t(getString(Weather.labelRes(w.code))); setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(40f)); setTextColor(0xFFFFFFFF.toInt())
+            })
+            col.addView(TextView(this).apply {
+                text = L.t("Feels like") + " ${w.feelsC}°  ·  " + L.t("Humidity") + " ${w.humidity}%  ·  " + L.t("Wind") + " ${w.windKmh} km/h"
+                setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(26f)); setTextColor(0xB3FFFFFF.toInt()); setPadding(0, u.i(8f), 0, 0)
+            })
+            top.addView(col)
+            body.addView(top)
+            val days = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            days.addView(dayCard("Today", w.today), LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = u.i(14f) })
+            days.addView(dayCard("Tomorrow", w.tomorrow), LinearLayout.LayoutParams(0, -2, 1f))
+            body.addView(days)
+        }
+
+        fun load() {
+            fill(weather, weather == null)
+            val app = applicationContext
+            Thread {
+                val p = Prefs(app)
+                val w = WeatherRepository.fetch(p.latitude, p.longitude)
+                if (w != null) Net.evidence()
+                runOnUiThread {
+                    if (isDestroyed || !d.isShowing) return@runOnUiThread
+                    if (w != null) { weather = w; updateInfo() }
+                    fill(weather, false)
+                }
+            }.start()
+        }
+        refresh.setOnClickListener { load() }
+
+        d.setContentView(panel, ViewGroup.LayoutParams(u.i(1100f), ViewGroup.LayoutParams.WRAP_CONTENT))
+        d.window?.apply {
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.TRANSPARENT))
+            setGravity(Gravity.CENTER); setDimAmount(0.55f)
+            addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        }
+        d.setOnShowListener { refresh.requestFocus() }
+        d.setOnDismissListener { setPage(0) }
+        setPage(2)
+        d.show()
+        load()
     }
 
     // ------------------------------------------------------------------ capsule
@@ -356,9 +523,7 @@ class MainActivity : Activity() {
         clock.format12Hour = if (f24) "HH:mm" else "h:mm"
         clock.format24Hour = "HH:mm"
         clock.timeZone = CityClock.gmtId(this)
-        bigClock.format12Hour = clock.format12Hour; bigClock.format24Hour = "HH:mm"; bigClock.timeZone = clock.timeZone
-        bigClock.typeface = clockTypeface(sp.getString("clock_style", "light") ?: "light")
-        bigClock.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(clockSizePx(sp.getString("clock_size", "l") ?: "l")))
+        applyClock()
         return changed
     }
 
@@ -410,6 +575,7 @@ class MainActivity : Activity() {
 
     private fun onTileFocus(e: Entry) {
         lastFocusKey = e.key
+        setPage(if (adapter.cells.indexOf(e) >= Store.COLUMNS) 1 else 0)
     }
 
     private fun scrollFx() {
@@ -588,9 +754,12 @@ class MainActivity : Activity() {
 
     private fun toggleCC() { if (ccView == null) openCC() else closeCC() }
 
+    /** Translates every line of a multi-line text. */
+    private fun tl(s: String) = s.split("\n").joinToString("\n") { L.t(it) }
+
     private fun glassTile(w: Float, h: Float, icon: Int, title: String, sub: String?, vertical: Boolean, action: (TextView?) -> Unit): LinearLayout {
         val subView = TextView(this).apply {
-            text = L.t(sub ?: "")
+            text = tl(sub ?: "")
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(26f))
             setTextColor(Glass.dim())
             isDuplicateParentStateEnabled = true
@@ -615,15 +784,17 @@ class MainActivity : Activity() {
             if (vertical) bottomMargin = u.i(18f) else marginEnd = u.i(22f)
         })
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; isDuplicateParentStateEnabled = true }
-        col.addView(TextView(this).apply {
+        val titleView = TextView(this).apply {
             text = L.t(title)
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(32f))
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             setTextColor(Glass.text())
             isDuplicateParentStateEnabled = true
             maxLines = 1
-        })
+        }
+        col.addView(titleView)
         col.addView(subView)
+        l.tag = Pair(titleView, subView)
         l.addView(col)
         l.layoutParams = LinearLayout.LayoutParams(u.i(w), u.i(h)).apply { setMargins(u.i(8f), u.i(8f), u.i(8f), u.i(8f)) }
         return l
@@ -643,37 +814,6 @@ class MainActivity : Activity() {
         }
         setOnClickListener { closeCC(); action() }
         layoutParams = LinearLayout.LayoutParams(u.i(112f), u.i(112f)).apply { setMargins(u.i(8f), u.i(8f), u.i(8f), u.i(8f)) }
-    }
-
-    /** Network line for the Wi-Fi tile. Looks at every network (not only the "active" one, which some TV boxes report as none while the internet works). */
-    private fun wifiState(): String {
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        var wifi = false; var eth = false; var other = false
-        try {
-            for (n in cm.allNetworks) {
-                val c = cm.getNetworkCapabilities(n) ?: continue
-                if (!c.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) continue
-                when {
-                    c.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> wifi = true
-                    c.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> eth = true
-                    else -> other = true
-                }
-            }
-        } catch (_: Exception) {}
-        @Suppress("DEPRECATION")
-        val legacy = try { cm.activeNetworkInfo?.isConnected == true } catch (_: Exception) { false }
-        if (wifi) {
-            val ssid = try {
-                @Suppress("DEPRECATION")
-                (applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager).connectionInfo?.ssid?.trim('"')
-            } catch (_: Exception) { null }
-            return if (ssid.isNullOrBlank() || ssid == "<unknown ssid>") "Connected" else ssid
-        }
-        return when {
-            eth -> "Ethernet"
-            other || legacy || weather != null || nextPrayer != null -> "Connected"
-            else -> "Not connected"
-        }
     }
 
     private fun dndOn(): Boolean = try {
@@ -697,7 +837,17 @@ class MainActivity : Activity() {
         }
         val power = glassTile(230f, 316f, R.drawable.ic_power, "Sleep", null, true) { closeCC(); startScreensaver() }
         val vol = VolumePill(this).also { it.layoutParams = LinearLayout.LayoutParams(u.i(86f), u.i(316f)).apply { setMargins(u.i(8f), u.i(8f), u.i(8f), u.i(8f)) } }
-        val wifi = glassTile(560f, 150f, R.drawable.ic_wifi, "Wi-Fi", wifiState(), false) { closeCC(); startSafe(Intent(Settings.ACTION_WIFI_SETTINGS)) }
+        Net.refresh(this)
+        val (wt, ws) = Net.describe(Net.state)
+        val wifi = glassTile(560f, 150f, R.drawable.ic_wifi, wt, ws, false) { closeCC(); startSafe(Intent(Settings.ACTION_WIFI_SETTINGS)) }
+        @Suppress("UNCHECKED_CAST")
+        val wifiViews = wifi.tag as Pair<TextView, TextView>
+        val nl: () -> Unit = {
+            if (ccView != null) { val (t2, s2) = Net.describe(Net.state); wifiViews.first.text = L.t(t2); wifiViews.second.text = tl(s2) }
+        }
+        netListener?.let { Net.removeListener(it) }
+        netListener = nl
+        Net.addListener(nl)
         val dnd = glassTile(560f, 150f, R.drawable.ic_moon, "Do Not Disturb", if (dndOn()) "On" else "Off", false) { sub ->
             try {
                 val nm = getSystemService(NotificationManager::class.java)
@@ -796,6 +946,7 @@ class MainActivity : Activity() {
     }
 
     private fun closeCC() {
+        netListener?.let { Net.removeListener(it) }; netListener = null
         val v = ccView ?: return
         ccView = null
         (v as? ViewGroup)?.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
@@ -903,6 +1054,7 @@ class MainActivity : Activity() {
             screensaver != null -> stopScreensaver()
             folderView != null -> closeFolder()
             ccView != null -> closeCC()
+            pagesBar.hasFocus() || capsule.hasFocus() -> focusFirst()
             grid.findViewHolderForAdapterPosition(0) == null || (grid.findViewHolderForAdapterPosition(0)?.itemView?.top ?: 0) < u.i(HomeLayoutManager.REST_TOP) - 4 -> focusFirst()
             else -> {}
         }
@@ -915,9 +1067,10 @@ class MainActivity : Activity() {
             addDataScheme("package")
         }
         ContextCompat.registerReceiver(this, pkgReceiver, f, ContextCompat.RECEIVER_EXPORTED)
+        Net.start(applicationContext)
     }
 
-    override fun onStop() { super.onStop(); try { unregisterReceiver(pkgReceiver) } catch (_: Exception) {} }
+    override fun onStop() { super.onStop(); Net.stop(); try { unregisterReceiver(pkgReceiver) } catch (_: Exception) {} }
 
     override fun onResume() {
         super.onResume()
@@ -946,6 +1099,19 @@ class MainActivity : Activity() {
     }
 
     override fun onPause() { super.onPause(); handler.removeCallbacks(idleRun); handler.removeCallbacks(infoTick); handler.removeCallbacks(stopPoll) }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        WallpaperPicker.onPermission(requestCode)
+        if (requestCode == 11) Net.refresh(this) // the Wi-Fi name can only be read once Location is allowed
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        WallpaperPicker.onActivityResult(this, requestCode, resultCode, data)
+        applyOptions()
+    }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)

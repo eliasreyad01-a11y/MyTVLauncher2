@@ -71,6 +71,19 @@ object PrayerRepository {
         return DayTimings(zone, adjusted)
     }
 
+    /** The times exactly as the calculation returned them (no manual correction), from the cache only: never touches the network. */
+    fun cachedRaw(context: Context, date: LocalDate): DayTimings? {
+        val prefs = Prefs(context)
+        val key = "$date|${prefs.latitude}|${prefs.longitude}|${prefs.method}"
+        val s = loadCache(prefs).optString(key, "").takeIf { it.isNotEmpty() } ?: return null
+        return parse(s)
+    }
+
+    /** Applies a correction in minutes to an "HH:mm" time. */
+    fun shifted(hhmm: String, minutes: Int): String = try {
+        LocalTime.parse(hhmm).plusMinutes(minutes.toLong()).format(DateTimeFormatter.ofPattern("HH:mm"))
+    } catch (e: Exception) { hhmm }
+
     fun getTimings(context: Context, date: LocalDate): DayTimings? {
         val raw = getRawTimings(context, date) ?: return null
         return withOffsets(Prefs(context), raw, CityClock.zone(context))

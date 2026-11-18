@@ -37,6 +37,10 @@ class AdhanService : Service() {
         val isPlaying: Boolean
             get() = instance != null
 
+        /** English name of the prayer being announced ("Fajr"...), or null when nothing is playing. */
+        @Volatile
+        var currentPrayer: String? = null
+
         fun stopNow() {
             instance?.finishPlayback()
         }
@@ -46,8 +50,42 @@ class AdhanService : Service() {
     private var focusRequest: AudioFocusRequest? = null
 
     /** Takes transient audio focus: YouTube and other players pause while the Adhan plays and resume when it ends. */
+    private var pausedMedia = false
+
+    /**
+     * Pauses what is playing, as far as Android allows. Taking audio focus is the standard request (most players pause on it);
+     * for players that ignore it, a "pause" media key is sent to the active media session. Another app's playback can never be
+     * forced to stop, and it is only resumed afterwards if this launcher paused it.
+     */
+    private fun pauseOtherMedia(am: AudioManager) {
+        val enabled = getSharedPreferences("tvos_settings", MODE_PRIVATE).getBoolean("pause_on_adhan", true)
+        if (!enabled) return
+        try {
+            if (am.isMusicActive) {
+                val now = android.os.SystemClock.uptimeMillis()
+                am.dispatchMediaKeyEvent(android.view.KeyEvent(now, now, android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_MEDIA_PAUSE, 0))
+                am.dispatchMediaKeyEvent(android.view.KeyEvent(now, now, android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_MEDIA_PAUSE, 0))
+                pausedMedia = true
+            }
+        } catch (_: Exception) {}
+    }
+
+    private fun resumeOtherMedia() {
+        if (!pausedMedia) return
+        pausedMedia = false
+        val am = getSystemService(AudioManager::class.java) ?: return
+        try {
+            if (!am.isMusicActive) {
+                val now = android.os.SystemClock.uptimeMillis()
+                am.dispatchMediaKeyEvent(android.view.KeyEvent(now, now, android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_MEDIA_PLAY, 0))
+                am.dispatchMediaKeyEvent(android.view.KeyEvent(now, now, android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_MEDIA_PLAY, 0))
+            }
+        } catch (_: Exception) {}
+    }
+
     private fun takeAudioFocus() {
         val am = getSystemService(AudioManager::class.java) ?: return
+        pauseOtherMedia(am)
         val req = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -91,6 +129,7 @@ class AdhanService : Service() {
         }
 
         val prayer = intent?.getStringExtra(AdhanScheduler.EXTRA_PRAYER) ?: "Fajr"
+        currentPrayer = prayer
         val screen = stopScreenIntent(prayer)
         val notification = buildNotification(prayer, screen)
         if (Build.VERSION.SDK_INT >= 29) {
@@ -197,6 +236,8 @@ class AdhanService : Service() {
     fun finishPlayback() {
         releasePlayer()
         dropAudioFocus()
+        resumeOtherMedia()
+        currentPrayer = null
         // Playback is over from this moment: listeners (home Stop button, settings test button) must see isPlaying = false.
         if (instance === this) instance = null
         onChanged?.invoke()
