@@ -46,7 +46,7 @@ class FeatureTest {
     @Suppress("UNCHECKED_CAST")
     private fun <T> field(o: Any, n: String): T { val f = o.javaClass.getDeclaredField(n); f.isAccessible = true; return f.get(o) as T }
     private fun setField(o: Any, n: String, v: Any?) { val f = o.javaClass.getDeclaredField(n); f.isAccessible = true; f.set(o, v) }
-    private fun call(o: Any, n: String, vararg a: Any) { val m = o.javaClass.declaredMethods.first { it.name == n && it.parameterCount == a.size }; m.isAccessible = true; m.invoke(o, *a) }
+    private fun call(o: Any, n: String, vararg a: Any) { val m = o.javaClass.declaredMethods.first { (it.name == n || it.name.startsWith("$n$")) && it.parameterCount == a.size }; m.isAccessible = true; m.invoke(o, *a) }
 
     private fun allViews(root: View): List<View> {
         val out = ArrayList<View>(); fun walk(v: View) { out.add(v); if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i)) }; walk(root); return out
