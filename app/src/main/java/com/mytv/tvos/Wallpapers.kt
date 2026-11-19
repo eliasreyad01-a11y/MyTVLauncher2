@@ -226,6 +226,15 @@ object WallpaperPicker {
         try { a.startActivityForResult(systemPickerIntent(), REQ_DOC) } catch (_: Exception) { toast(a, "Not available on this device") }
     }
 
+    fun hasSystemPicker(a: Activity): Boolean = systemPickerIntent().resolveActivity(a.packageManager) != null
+
+    fun pickStorage(a: Activity, onDone: () -> Unit) { done = onDone; pickFromStorage(a) }
+
+    fun pickSystem(a: Activity, onDone: () -> Unit) { done = onDone; pickWithSystem(a) }
+
+    /** Preview of a bitmap that is already decoded (an online wallpaper), then apply or cancel. */
+    fun previewBitmap(a: Activity, name: String, bmp: Bitmap, onDone: () -> Unit) { done = onDone; showPreview(a, name, bmp) }
+
     private fun pickFromStorage(a: Activity) {
         val needed = if (Build.VERSION.SDK_INT >= 33) arrayOf(android.Manifest.permission.READ_MEDIA_IMAGES) else arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
         val open = {

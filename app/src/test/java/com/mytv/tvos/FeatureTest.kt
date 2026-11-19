@@ -240,26 +240,100 @@ class FeatureTest {
     @Test fun pagesOpenTheirScreens() {
         val a = home()
         val bar: LinearLayout = field(a, "pagesBar")
+        val grid: RecyclerView = field(a, "grid")
+        // Apps: a full page with every installed app.
         bar.getChildAt(1).performClick(); idle()
-        assertTrue("Apps selects the page", bar.getChildAt(1).isSelected || bar.getChildAt(0).isSelected)
+        var page: View? = field(a, "pageView")
+        assertNotNull("Apps page is open", page)
+        val appsRv = allViews(page!!).filterIsInstance<RecyclerView>().first()
+        assertEquals("all 14 apps plus Settings", 15, appsRv.adapter!!.itemCount)
+        assertEquals("the home grid steps aside", View.INVISIBLE, grid.visibility)
+        assertTrue(bar.getChildAt(1).isSelected)
+        save("f16_apps_page", render(a.window.decorView))
+        a.onBackPressed(); idle()
+        assertNull("Back closes the page", field<View?>(a, "pageView"))
+        assertEquals(View.VISIBLE, grid.visibility)
+        assertTrue("Home is selected again", bar.getChildAt(0).isSelected)
+
+        // Weather: a full page, not a small dialog.
         bar.getChildAt(2).performClick(); idle()
-        var d: Dialog = ShadowDialog.getLatestDialog()
-        assertTrue("Weather page is open", d.isShowing)
-        assertTrue(texts(d.window!!.decorView).any { it == "Refresh" || it.contains("internet") || it.contains("Loading") || it.contains("°") })
-        save("f13_weather_page", renderDialogOver(a, d))
-        d.dismiss(); idle()
+        page = field(a, "pageView")
+        assertNotNull("Weather page is open", page)
+        assertTrue(texts(page!!).contains("Refresh"))
+        save("f13_weather_page", render(a.window.decorView))
+        bar.getChildAt(0).performClick(); idle()
+        assertNull(field<View?>(a, "pageView"))
+
+        // Wallpapers: choices from the TV and an online gallery.
         bar.getChildAt(3).performClick(); idle()
-        d = ShadowDialog.getLatestDialog()
-        val t = texts(d.window!!.decorView)
-        assertTrue("wallpaper choices: $t", t.contains("None") && t.contains("Default") && t.contains("Choose from TV storage"))
-        d.dismiss(); idle()
+        page = field(a, "pageView")
+        val t = texts(page!!)
+        assertTrue("wallpaper choices: $t", t.contains("Choose from TV storage") && t.contains("Default") && t.contains("None"))
+        val gallery = allViews(page).filterIsInstance<RecyclerView>().first()
+        assertTrue("online gallery has tiles", gallery.adapter!!.itemCount >= Net2.PICSUM.size)
+        save("f17_wallpapers_page", render(a.window.decorView))
+        bar.getChildAt(0).performClick(); idle()
+
+        // Clock: the customiser.
         bar.getChildAt(4).performClick(); idle()
-        d = ShadowDialog.getLatestDialog()
+        var d: Dialog = ShadowDialog.getLatestDialog()
         assertTrue("Clock page is open", d.isShowing && texts(d.window!!.decorView).contains("Save"))
         d.dismiss(); idle()
         bar.getChildAt(5).performClick(); idle()
         assertNotNull("Settings starts", shadowOf(a).nextStartedActivity)
         save("f14_home_with_bar", render(a.window.decorView))
+    }
+
+    @Test fun glassStyleIsOneColourForEverything() {
+        val s = sp()
+        s.edit().clear().apply()
+        GlassStyle.load(s)
+        assertEquals(0, GlassStyle.tint); assertEquals(2, GlassStyle.level); assertEquals(1, GlassStyle.shade)
+        s.edit().putInt("glass_tint", 99).putInt("glass_level", -5).putInt("glass_shade", 7).apply()
+        GlassStyle.load(s)
+        assertEquals("values are clamped", GlassStyle.TINTS.size - 1, GlassStyle.tint); assertEquals(0, GlassStyle.level); assertEquals(2, GlassStyle.shade)
+        assertTrue(GlassStyle.bodyAlpha() < 0x30)
+        s.edit().putInt("glass_level", 3).apply(); GlassStyle.load(s)
+        assertTrue("Strong is more opaque than Clear", GlassStyle.bodyAlpha() > 0x50)
+        assertTrue(GlassStyle.isLightBase(0x38FFFFFF) && !GlassStyle.isLightBase(0xE62A2A2C.toInt()))
+        // The settings page changes it for real.
+        val a = Robolectric.buildActivity(SettingsActivity::class.java, Intent(ctx, SettingsActivity::class.java)).setup().get()
+        idle()
+        val row = allViews(a.window.decorView).first { v -> v is LinearLayout && v.isClickable && (v.getChildAt(0) as? TextView)?.text?.toString() == "Glass" }
+        row.performClick(); idle()
+        val tints = allViews(a.window.decorView).first { v -> v is LinearLayout && v.isClickable && (v.getChildAt(0) as? TextView)?.text?.toString() == "Glass Color" }
+        tints.performClick(); idle()
+        val dlg = ShadowDialog.getLatestDialog()
+        allViews(dlg.window!!.decorView).first { (it as? TextView)?.text?.toString() == "Mint" }.performClick(); idle()
+        assertEquals(GlassStyle.TINTS.indexOfFirst { it.first == "Mint" }, sp().getInt("glass_tint", -1))
+        assertEquals(GlassStyle.TINTS.indexOfFirst { it.first == "Mint" }, GlassStyle.tint)
+    }
+
+    @Test fun sleepScreenShowsGreetingTimeAndDate() {
+        val a = home()
+        call(a, "startScreensaver"); idle()
+        val f: View? = field(a, "screensaver")
+        assertNotNull(f)
+        val t = texts(f!!)
+        assertTrue("greeting in capitals: $t", t.any { it.startsWith("GOOD ") })
+        assertTrue("date in capitals: $t", t.any { it.contains(java.text.SimpleDateFormat("MMMM", java.util.Locale.ENGLISH).format(java.util.Date()).uppercase()) })
+        assertTrue("clock text view present", allViews(f).any { it is android.widget.TextClock })
+        save("f18_sleep", render(a.window.decorView))
+        call(a, "stopScreensaver")
+    }
+
+    @Test fun thumbTilesDrawWithAndWithoutPictures() {
+        val u = U(ctx)
+        val v = ThumbView(ctx, u)
+        v.measure(View.MeasureSpec.makeMeasureSpec(400, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(225, View.MeasureSpec.EXACTLY))
+        v.layout(0, 0, 400, 225)
+        val c = Canvas(Bitmap.createBitmap(400, 225, Bitmap.Config.ARGB_8888))
+        v.draw(c)
+        v.failed = true; v.draw(c)
+        v.bmp = Bitmap.createBitmap(64, 36, Bitmap.Config.ARGB_8888).also { it.eraseColor(Color.CYAN) }
+        v.draw(c)
+        v.requestFocus(); v.draw(c)
+        assertTrue(Net2.PICSUM.isNotEmpty())
     }
 
     @Test fun weatherShownWithCityAndConditionIcon() {

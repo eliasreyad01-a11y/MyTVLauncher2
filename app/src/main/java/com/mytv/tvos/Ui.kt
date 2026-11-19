@@ -42,6 +42,35 @@ class U(ctx: Context) {
     fun i(v: Float) = (v * s).toInt()
 }
 
+/**
+ * One glass colour for the whole launcher (clock, dock, top bar, Control Center, pages, rows): the user picks the tint, how
+ * opaque the glass is and how much it is darkened behind white text. Every glass surface reads these values when it is drawn.
+ */
+object GlassStyle {
+    val TINTS = listOf(
+        "Frost White" to 0xFFFFFFFF.toInt(), "Ice Blue" to 0xFFBFE3FF.toInt(), "Graphite" to 0xFF8E9096.toInt(), "Mint" to 0xFFBDF2D8.toInt(),
+        "Rose" to 0xFFFFC9D6.toInt(), "Amber" to 0xFFFFE0A8.toInt(), "Lavender" to 0xFFD9CCFF.toInt()
+    )
+    val LEVELS = listOf("Clear", "Soft", "Medium", "Strong")
+    val SHADES = listOf("None", "Soft", "Strong")
+    @Volatile var tint = 0
+    @Volatile var level = 2
+    @Volatile var shade = 1
+
+    fun load(sp: android.content.SharedPreferences) {
+        tint = sp.getInt("glass_tint", 0).coerceIn(0, TINTS.size - 1)
+        level = sp.getInt("glass_level", 2).coerceIn(0, LEVELS.size - 1)
+        shade = sp.getInt("glass_shade", 1).coerceIn(0, SHADES.size - 1)
+    }
+
+    fun tintRgb() = TINTS[tint].second and 0xFFFFFF
+    fun bodyAlpha() = intArrayOf(0x16, 0x2C, 0x46, 0x68)[level]
+    fun shadeAlpha(lightBackdrop: Boolean) = intArrayOf(0, 0x30, 0x58)[shade] + (if (lightBackdrop && shade > 0) 0x14 else 0)
+    fun scale() = floatArrayOf(0.5f, 1f, 1.5f, 2.2f)[level]
+    /** A light translucent surface follows the glass tint; a dark panel (menus) keeps its own dark colour so white text stays readable. */
+    fun isLightBase(c: Int): Boolean = (0.299 * Color.red(c) + 0.587 * Color.green(c) + 0.114 * Color.blue(c)) / 255.0 > 0.55
+}
+
 object Glass {
     const val WHITE = 0xFFFFFFFF.toInt()
 
@@ -437,6 +466,7 @@ object Backdrop {
  */
 class GlossDrawable(private val radius: Float, private val base: Int, private val strength: Float = 1f, private val backdrop: Boolean = false) : Drawable() {
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val shadeP = Paint(Paint.ANTI_ALIAS_FLAG)
     private val hi = Paint(Paint.ANTI_ALIAS_FLAG)
     private val spot = Paint(Paint.ANTI_ALIAS_FLAG)
     private val edge = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
@@ -500,10 +530,18 @@ class GlossDrawable(private val radius: Float, private val base: Int, private va
         var body = base
         if (bd != null) {
             drawBackdrop(c, bd)
-            body = if (Backdrop.light) 0x5C101014 else 0x1FFFFFFF
+        }
+        if (bd != null) {
+            body = (GlassStyle.bodyAlpha() shl 24) or GlassStyle.tintRgb()
+        } else if (Color.alpha(base) in 1..249 && GlassStyle.isLightBase(base)) {
+            body = Color.argb((Color.alpha(base) * GlassStyle.scale()).toInt().coerceIn(8, 215), Color.red(GlassStyle.tintRgb()), Color.green(GlassStyle.tintRgb()), Color.blue(GlassStyle.tintRgb()))
         }
         fill.color = body
         c.drawRoundRect(r, radius, radius, fill)
+        if (bd != null) {
+            val sa = GlassStyle.shadeAlpha(Backdrop.light)
+            if (sa > 0) { shadeP.color = Color.argb(sa, 12, 14, 20); c.drawRoundRect(r, radius, radius, shadeP) }
+        }
         c.drawRoundRect(r, radius, radius, hi)
         c.drawRoundRect(r, radius, radius, spot)
         c.drawRoundRect(rim, radius, radius, edge)
@@ -514,7 +552,7 @@ class GlossDrawable(private val radius: Float, private val base: Int, private va
     @Deprecated("Deprecated in Java") override fun getOpacity() = PixelFormat.TRANSLUCENT
 
     companion object {
-        private val SAT = android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix().apply { setSaturation(1.5f) })
+        private val SAT = android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix().apply { setSaturation(1.12f) })
     }
 }
 

@@ -60,6 +60,7 @@ class SettingsActivity : Activity() {
         listOf(
             Row.Nav("General") { push(general()) },
             Row.Nav("Home Screen") { push(home()) },
+            Row.Nav("Glass", { L.t(GlassStyle.TINTS[GlassStyle.tint].first) }) { push(glass()) },
             Row.Nav("Prayer and Adhan", { p.cityName }) { push(prayer()) },
             Row.Nav("Screen Saver", { ssText() }) { push(screensaver()) },
             Row.Nav("Video and Audio", go = sys(Settings.ACTION_SOUND_SETTINGS)),
@@ -93,6 +94,23 @@ class SettingsActivity : Activity() {
             },
             Row.Nav("Storage", go = sys(Settings.ACTION_INTERNAL_STORAGE_SETTINGS)),
             Row.Nav("About", go = { push(about()) })
+        )
+    }
+
+    private fun glassChanged() { GlassStyle.load(prefs); window.decorView.invalidate(); refresh() }
+
+    private fun glass() = Page("Glass") {
+        listOf<Row>(
+            Row.Nav("Glass Color", { L.t(GlassStyle.TINTS[GlassStyle.tint].first) }) {
+                choose("Glass Color", GlassStyle.TINTS.mapIndexed { i, tn -> tn.first to { prefs.edit().putInt("glass_tint", i).apply(); glassChanged() } })
+            },
+            Row.Nav("Glass Opacity", { L.t(GlassStyle.LEVELS[GlassStyle.level]) }) {
+                choose("Glass Opacity", GlassStyle.LEVELS.mapIndexed { i, n -> n to { prefs.edit().putInt("glass_level", i).apply(); glassChanged() } })
+            },
+            Row.Nav("Glass Shade", { L.t(GlassStyle.SHADES[GlassStyle.shade]) }) {
+                choose("Glass Shade", GlassStyle.SHADES.mapIndexed { i, n -> n to { prefs.edit().putInt("glass_shade", i).apply(); glassChanged() } })
+            },
+            Row.Nav("Reset Glass") { prefs.edit().remove("glass_tint").remove("glass_level").remove("glass_shade").apply(); glassChanged() }
         )
     }
 
@@ -220,6 +238,7 @@ class SettingsActivity : Activity() {
         u = U(this)
         L.ar = Prefs(this).language == "ar"
         prefs = getSharedPreferences("tvos_settings", Context.MODE_PRIVATE)
+        GlassStyle.load(prefs)
         val frame = FrameLayout(this).apply { setBackgroundColor(0xFF1B1B1D.toInt()) }
         val wallSrc = Wallpapers.decode(this, prefs, 480) ?: android.graphics.BitmapFactory.decodeResource(resources, R.drawable.wp_kirkjufell, android.graphics.BitmapFactory.Options().apply { inSampleSize = 16 })
         val small = Bitmap.createScaledBitmap(wallSrc, 120, (120f * wallSrc.height / wallSrc.width).toInt().coerceAtLeast(68), true)
