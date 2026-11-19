@@ -232,13 +232,14 @@ class Pages(private val a: MainActivity) {
                 body.addView(text(L.t(if (loading) "Loading…" else "Not available (no internet)"), 40f, 0xCCFFFFFF.toInt()), LinearLayout.LayoutParams(-2, -2).apply { topMargin = u.i(80f) })
                 return
             }
-            val now = glassCard().apply { setPadding(u.i(50f), u.i(40f), u.i(50f), u.i(40f)); gravity = Gravity.CENTER_HORIZONTAL }
+            val now = glassCard().apply { setPadding(u.i(50f), u.i(40f), u.i(50f), u.i(40f)); gravity = Gravity.CENTER }
             now.addView(WeatherGlyph(a).apply { set(w.code, !w.isDay) }, LinearLayout.LayoutParams(u.i(330f), u.i(330f)))
             now.addView(text("${w.tempC}°", 190f, 0xFFFFFFFF.toInt()).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
                 typeface = Typeface.create("sans-serif-light", Typeface.NORMAL); includeFontPadding = false
             })
-            now.addView(text(L.t(a.getString(Weather.labelRes(w.code))), 46f))
-            now.addView(text(L.t("Feels like") + " ${w.feelsC}°   ·   " + L.t("Humidity") + " ${w.humidity}%   ·   " + L.t("Wind") + " ${w.windKmh} km/h", 28f, 0xB3FFFFFF.toInt()).apply { setPadding(0, u.i(14f), 0, 0) })
+            now.addView(text(L.t(a.getString(Weather.labelRes(w.code))), 46f).apply { gravity = Gravity.CENTER_HORIZONTAL })
+            now.addView(text(L.t("Feels like") + " ${w.feelsC}°   ·   " + L.t("Humidity") + " ${w.humidity}%   ·   " + L.t("Wind") + " ${w.windKmh} km/h", 28f, 0xB3FFFFFF.toInt()).apply { gravity = Gravity.CENTER_HORIZONTAL; setPadding(0, u.i(14f), 0, 0) })
             body.addView(now, LinearLayout.LayoutParams(0, -1, 1.15f).apply { marginEnd = u.i(30f) })
             val right = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL }
             right.addView(dayCard("Today", w.today), LinearLayout.LayoutParams(-1, 0, 1f).apply { bottomMargin = u.i(24f) })
