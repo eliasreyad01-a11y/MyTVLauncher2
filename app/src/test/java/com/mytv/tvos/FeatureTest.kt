@@ -344,10 +344,13 @@ class FeatureTest {
         // The pages bar wraps: last -> first and first -> last.
         val got = bar.getChildAt(5).requestFocus()
         assertTrue("bar item 5 took focus (requestFocus=$got, focus=${a.window.currentFocus}, touch=${bar.isInTouchMode})", a.window.currentFocus === bar.getChildAt(5))
-        val m = a.javaClass.declaredMethods.first { it.name.startsWith("wrapRow") }; m.isAccessible = true
+        val ms = a.javaClass.declaredMethods.filter { it.name.startsWith("wrapRow") }
+        val m = ms.first { it.parameterCount == 1 }; m.isAccessible = true
+        val f0 = a.window.currentFocus!!; val par = f0.parent
+        val dbg = "methods=${ms.map { it.name + it.parameterCount }} parent=${par?.javaClass?.simpleName} same=${par === bar} orient=${(par as? LinearLayout)?.orientation} idx=${bar.indexOfChild(f0)}"
         val direct = m.invoke(a, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)
         val info = (0 until bar.childCount).map { val c = bar.getChildAt(it); "${c.isFocusable}/${c.visibility}/${c.hasFocus()}" }
-        assertTrue("direct wrapRow=$direct children=$info focus=${a.window.currentFocus}", a.window.currentFocus === bar.getChildAt(0))
+        assertTrue("$dbg direct wrapRow=$direct children=$info focus=${a.window.currentFocus}", a.window.currentFocus === bar.getChildAt(0))
         bar.getChildAt(5).requestFocus()
         a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)); idle()
         assertTrue("RIGHT on the last item wraps to Home (focus=${a.window.currentFocus})", a.window.currentFocus === bar.getChildAt(0))
