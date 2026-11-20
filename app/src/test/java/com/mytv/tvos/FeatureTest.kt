@@ -175,7 +175,7 @@ class FeatureTest {
     @Test fun clockCustomiserPreviewsSavesAndCancels() {
         val a = home()
         sp().edit().clear().apply()
-        ClockCustomizer.show(a, sp()) { }
+        ClockCustomizer.show(a, sp(), onSaved = { })
         idle()
         var dlg: Dialog = ShadowDialog.getLatestDialog()
         assertTrue(dlg.isShowing)
@@ -188,7 +188,7 @@ class FeatureTest {
         assertFalse(dlg.isShowing)
 
         var saved = false
-        ClockCustomizer.show(a, sp()) { saved = true }
+        ClockCustomizer.show(a, sp(), onSaved = { saved = true })
         idle(); dlg = ShadowDialog.getLatestDialog()
         val rows2 = allViews(dlg.window!!.decorView).filter { it.isFocusable && it.isClickable }
         rows2[0].performClick(); rows2[1].performClick(); rows2[5].performClick(); rows2[7].performClick(); idle()

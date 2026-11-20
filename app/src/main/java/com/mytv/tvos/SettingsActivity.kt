@@ -122,7 +122,7 @@ class SettingsActivity : Activity() {
                 WallpaperPicker.show(this) { refresh() }
             },
             Row.Nav("Clock", { L.t(ClockCfg.KIND_LABEL[ClockCfg.load(prefs).kind] ?: "") }) {
-                ClockCustomizer.show(this, prefs) { refresh() }
+                ClockCustomizer.show(this, prefs, onSaved = { refresh() })
             },
             Row.Switch("Smooth Icon Edges", { prefs.getBoolean("smooth_edges", true) }, { on -> prefs.edit().putBoolean("smooth_edges", on).apply() }, "Anti-aliased rounded corners on the icons. Turn this off if your TV draws the icons wrongly."),
             Row.Label("LAYOUT"),

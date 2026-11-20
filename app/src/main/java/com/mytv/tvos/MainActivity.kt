@@ -455,7 +455,7 @@ class MainActivity : Activity() {
             1 -> showPage(1, pages.apps())
             2 -> showPage(2, pages.weather())
             3 -> showPage(3, pages.wallpapers())
-            4 -> { closePage(false); ClockCustomizer.show(this, sp) { applyOptions(); updateInfo() } }
+            4 -> { closePage(false); ClockCustomizer.show(this, sp, onSaved = { applyOptions(); updateInfo() }) }
             else -> { closePage(false); startActivity(Intent(this, SettingsActivity::class.java)) }
         }
     }
