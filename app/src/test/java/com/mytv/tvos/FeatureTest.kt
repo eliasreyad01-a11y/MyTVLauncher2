@@ -316,7 +316,7 @@ class FeatureTest {
         val t = texts(f!!)
         assertTrue("greeting in capitals: $t", t.any { it.startsWith("GOOD ") })
         assertTrue("date in capitals: $t", t.any { it.contains(java.text.SimpleDateFormat("MMMM", java.util.Locale.ENGLISH).format(java.util.Date()).uppercase()) })
-        assertTrue("clock text view present", allViews(f).any { it is android.widget.TextClock })
+        assertTrue("clock view present", allViews(f).any { it is ClockView })
         save("f18_sleep", render(a.window.decorView))
         call(a, "stopScreensaver")
     }
