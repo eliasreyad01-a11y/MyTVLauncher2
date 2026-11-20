@@ -354,7 +354,7 @@ class FeatureTest {
         val dbg = dbg0 + "methods=${ms.map { it.name + it.parameterCount }} parent=${par?.javaClass?.simpleName} same=${par === bar} orient=${(par as? LinearLayout)?.orientation} idx=${bar.indexOfChild(f0)}"
         val direct = m.invoke(a, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)
         val info = (0 until bar.childCount).map { val c = bar.getChildAt(it); "${c.isFocusable}/${c.visibility}/${c.hasFocus()}" }
-        assertTrue("$dbg direct wrapRow=$direct children=$info focus=${a.window.currentFocus}", a.window.currentFocus === bar.getChildAt(0))
+        assertTrue("${field<String>(a, "wrapDebug")} $dbg direct wrapRow=$direct children=$info focus=${a.window.currentFocus}", a.window.currentFocus === bar.getChildAt(0))
         bar.getChildAt(5).requestFocus()
         a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)); idle()
         assertTrue("RIGHT on the last item wraps to Home (focus=${a.window.currentFocus})", a.window.currentFocus === bar.getChildAt(0))
