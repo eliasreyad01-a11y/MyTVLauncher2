@@ -308,10 +308,19 @@ class FeatureTest {
     @Test fun paleGlassTintGetsEnoughShadeToStayReadable() {
         val s = sp()
         s.edit().putInt("glass_tint", 0).putInt("glass_level", 3).putInt("glass_shade", 0).apply(); GlassStyle.load(s)
-        assertTrue("Frost White, Strong, shade None still darkened", GlassStyle.shadeAlpha(false) >= GlassStyle.bodyAlpha())
+        assertTrue("Frost White, Strong, shade None still darkened", GlassStyle.shadeAlpha(false) >= GlassStyle.bodyAlpha() / 2)
         val graphite = GlassStyle.TINTS.indexOfFirst { it.first == "Graphite" }
         s.edit().putInt("glass_tint", graphite).apply(); GlassStyle.load(s)
         assertEquals("a dark tint keeps the chosen shade", 0, GlassStyle.shadeAlpha(false))
+        s.edit().clear().apply(); GlassStyle.load(s)
+    }
+
+    @Test fun clearGlassLetsTheScreenShowThrough() {
+        assertTrue(GlassStyle.seeThrough().let { it in 0.1f..0.8f })
+        val s = sp()
+        s.edit().putInt("glass_level", 0).apply(); GlassStyle.load(s); val clear = GlassStyle.seeThrough()
+        s.edit().putInt("glass_level", 3).apply(); GlassStyle.load(s); val strong = GlassStyle.seeThrough()
+        assertTrue("Clear shows more of what is behind than Strong", clear < strong && clear < 0.3f)
         s.edit().clear().apply(); GlassStyle.load(s)
     }
 

@@ -68,8 +68,10 @@ object GlassStyle {
     fun shadeAlpha(lightBackdrop: Boolean): Int {
         val chosen = intArrayOf(0, 0x30, 0x58)[shade] + (if (lightBackdrop && shade > 0) 0x14 else 0)
         // A pale tint (Frost White, Amber ...) under white text would show nothing: the darker the glass body, the more shade it gets.
-        return if (isPale(tintRgb())) max(chosen, (bodyAlpha() * 1.1f).toInt() + 0x10) else chosen
+        return if (isPale(tintRgb())) max(chosen, (bodyAlpha() * 0.6f).toInt() + 0x08) else chosen
     }
+    /** How much of the blurred picture the glass shows (the rest is the live screen behind it): the clearer the glass, the more you see through it. */
+    fun seeThrough() = floatArrayOf(0.18f, 0.32f, 0.5f, 0.72f)[level]
     fun scale() = floatArrayOf(0.5f, 1f, 1.5f, 2.2f)[level]
     /** A light translucent surface follows the glass tint; a dark panel (menus) keeps its own dark colour so white text stays readable. */
     fun isPale(rgb: Int): Boolean = (0.299 * Color.red(rgb) + 0.587 * Color.green(rgb) + 0.114 * Color.blue(rgb)) / 255.0 > 0.72
@@ -458,7 +460,7 @@ object Backdrop {
             n++
         }
         val lum = if (n == 0) 0.0 else sum / n
-        val b = Blur.blur(small, 3)
+        val b = Blur.blur(small, 2)
         light = lum > 0.52
         bmp = b
         version++
@@ -527,6 +529,7 @@ class GlossDrawable(private val radius: Float, private val base: Int, private va
         m.postTranslate(-x, -y)
         shader!!.setLocalMatrix(m)
         bp.shader = shader
+        bp.alpha = (255 * GlassStyle.seeThrough()).toInt()
         c.drawRoundRect(r, radius, radius, bp)
     }
 
