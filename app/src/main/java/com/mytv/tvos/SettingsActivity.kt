@@ -217,7 +217,9 @@ class SettingsActivity : Activity() {
     }
 
     private fun screensaver() = Page("Screen Saver") {
-        listOf(0, 2, 5, 10, 15, 30).map { m ->
+        listOf<Row>(Row.Nav("Sleep Screen Clock", { L.t(ClockCfg.KIND_LABEL[ClockCfg.loadSleep(prefs).kind] ?: "") }) {
+            ClockCustomizer.show(this, prefs, { refresh() }, "sleep_", "Sleep Screen")
+        }, Row.Label("START AFTER")) + listOf(0, 2, 5, 10, 15, 30).map { m ->
             Row.Nav(if (m == 0) "Never" else "After $m minutes", { if (prefs.getInt("ss_min", 10) == m) "✓" else null }, false) {
                 prefs.edit().putInt("ss_min", m).apply(); pop()
             }
@@ -240,7 +242,7 @@ class SettingsActivity : Activity() {
         prefs = getSharedPreferences("tvos_settings", Context.MODE_PRIVATE)
         GlassStyle.load(prefs)
         val frame = FrameLayout(this).apply { setBackgroundColor(0xFF1B1B1D.toInt()) }
-        val wallSrc = Wallpapers.decode(this, prefs, 480) ?: android.graphics.BitmapFactory.decodeResource(resources, R.drawable.wp_kirkjufell, android.graphics.BitmapFactory.Options().apply { inSampleSize = 16 })
+        val wallSrc = Wallpapers.decode(this, prefs, 480) ?: DefaultWall.bitmap(480)
         val small = Bitmap.createScaledBitmap(wallSrc, 120, (120f * wallSrc.height / wallSrc.width).toInt().coerceAtLeast(68), true)
         val wall = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageBitmap(Blur.blur(small, 4)) }
         frame.addView(wall, FrameLayout.LayoutParams(-1, -1))

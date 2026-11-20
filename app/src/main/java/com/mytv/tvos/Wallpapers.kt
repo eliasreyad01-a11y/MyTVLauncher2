@@ -24,7 +24,7 @@ import java.io.File
 /** Which picture sits behind the home screen: none, the built-in one, or a file picked from the TV's own storage. */
 object Wallpapers {
     fun mode(sp: android.content.SharedPreferences): String =
-        sp.getString("wall_mode", null) ?: if (sp.getBoolean("wall", false)) "default" else "none"
+        sp.getString("wall_mode", null) ?: "default"
 
     fun key(sp: android.content.SharedPreferences): String = mode(sp) + ":" + (sp.getString("wall_path", "") ?: "") + ":" + (sp.getLong("wall_stamp", 0L))
 
@@ -32,7 +32,7 @@ object Wallpapers {
     fun decode(ctx: Context, sp: android.content.SharedPreferences, maxW: Int = 1920): Bitmap? {
         return try {
             when (mode(sp)) {
-                "default" -> sample(maxW) { o -> BitmapFactory.decodeResource(ctx.resources, R.drawable.wp_kirkjufell, o) }
+                "default" -> DefaultWall.bitmap(maxW)
                 "custom" -> {
                     val path = sp.getString("wall_path", null) ?: return null
                     if (!File(path).canRead()) null else sample(maxW) { o -> BitmapFactory.decodeFile(path, o) }
@@ -233,7 +233,7 @@ object WallpaperPicker {
     fun pickSystem(a: Activity, onDone: () -> Unit) { done = onDone; pickWithSystem(a) }
 
     /** Preview of a bitmap that is already decoded (an online wallpaper), then apply or cancel. */
-    fun previewBitmap(a: Activity, name: String, bmp: Bitmap, onDone: () -> Unit) { done = onDone; showPreview(a, name, bmp) }
+    fun previewBitmap(a: Activity, name: String, bmp: Bitmap, raw: ByteArray?, onDone: () -> Unit) { done = onDone; showPreview(a, name, bmp, raw) }
 
     private fun pickFromStorage(a: Activity) {
         val needed = if (Build.VERSION.SDK_INT >= 33) arrayOf(android.Manifest.permission.READ_MEDIA_IMAGES) else arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -289,6 +289,20 @@ object WallpaperPicker {
         } catch (_: Throwable) { null }
     }
 
+    /** Saves the original picture file as it is (a real 4K image keeps all its pixels). Blocking. */
+    fun saveBytesAsWallpaper(ctx: Context, raw: ByteArray): Boolean {
+        return try {
+            val s = ctx.getSharedPreferences("tvos_settings", Context.MODE_PRIVATE)
+            val dir = ctx.filesDir
+            val out = File(dir, "wallpaper_${System.currentTimeMillis()}.jpg")
+            out.writeBytes(raw)
+            val old = s.getString("wall_path", null)
+            s.edit().putString("wall_mode", "custom").putString("wall_path", out.absolutePath).putLong("wall_stamp", System.currentTimeMillis()).apply()
+            if (old != null && old != out.absolutePath && old.startsWith(dir.absolutePath)) File(old).delete()
+            true
+        } catch (_: Throwable) { false }
+    }
+
     /** Saves the bitmap as the wallpaper: a private copy, so it never depends on the original file again. Blocking. */
     fun saveAsWallpaper(ctx: Context, bmp: Bitmap): Boolean {
         return try {
@@ -305,16 +319,17 @@ object WallpaperPicker {
 
     private fun preview(a: Activity, name: String, open: () -> java.io.InputStream?) {
         Thread {
-            val bmp = decodeStream(open)
+            val raw = try { open()?.use { it.readBytes() }?.takeIf { it.size <= 30_000_000 } } catch (_: Throwable) { null }
+            val bmp = if (raw != null) decodeStream({ java.io.ByteArrayInputStream(raw) }, 1280) else decodeStream(open, 1280)
             a.runOnUiThread {
                 if (a.isDestroyed) return@runOnUiThread
                 if (bmp == null) { toast(a, "This picture can't be opened"); return@runOnUiThread }
-                showPreview(a, name, bmp)
+                showPreview(a, name, bmp, raw)
             }
         }.start()
     }
 
-    private fun showPreview(a: Activity, name: String, bmp: Bitmap) {
+    private fun showPreview(a: Activity, name: String, bmp: Bitmap, raw: ByteArray? = null) {
         val u = U(a)
         val d = Dialog(a, android.R.style.Theme_Translucent_NoTitleBar)
         val panel = LinearLayout(a).apply {
@@ -338,7 +353,7 @@ object WallpaperPicker {
         val applyBtn = btn("Apply") {
             d.dismiss()
             Thread {
-                val ok = saveAsWallpaper(a, bmp)
+                val ok = if (raw != null) saveBytesAsWallpaper(a, raw) else saveAsWallpaper(a, bmp)
                 a.runOnUiThread { if (ok) { toast(a, "Wallpaper set"); done?.invoke() } else toast(a, "Could not save the wallpaper") }
             }.start()
         }
@@ -353,5 +368,30 @@ object WallpaperPicker {
         }
         d.setOnShowListener { applyBtn.requestFocus() }
         d.show()
+    }
+}
+
+
+/**
+ * The built-in wallpaper, drawn in code (a deep blue-violet gradient with soft light): no picture file ships with the app,
+ * and it is created only when needed at a small size that the screen then scales smoothly.
+ */
+object DefaultWall {
+    fun bitmap(maxW: Int = 960): Bitmap {
+        val w = maxW.coerceIn(320, 960)
+        val h = w * 9 / 16
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = android.graphics.Canvas(bmp)
+        val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        p.shader = android.graphics.LinearGradient(0f, 0f, w * 0.35f, h.toFloat(), 0xFF0B1636.toInt(), 0xFF1B3764.toInt(), android.graphics.Shader.TileMode.CLAMP)
+        c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), p)
+        fun blob(cx: Float, cy: Float, r: Float, col: Int) {
+            p.shader = android.graphics.RadialGradient(cx * w, cy * h, r * w, col, col and 0x00FFFFFF, android.graphics.Shader.TileMode.CLAMP)
+            c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), p)
+        }
+        blob(0.18f, 0.88f, 0.62f, 0x663FC1C9)
+        blob(0.86f, 0.16f, 0.58f, 0x667B4DFF)
+        blob(0.55f, 0.45f, 0.40f, 0x2AFFFFFF)
+        return bmp
     }
 }

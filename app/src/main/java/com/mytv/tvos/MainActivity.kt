@@ -64,9 +64,13 @@ class MainActivity : Activity() {
     private var folderRv: RecyclerView? = null
     private var folderAd: HomeAdapter? = null
     private var nextPrayer: NextPrayer? = null
+    private lateinit var prayerStrip: LinearLayout
+    private val prayerCells = LinkedHashMap<String, Triple<View, TextView, TextView>>()
+    private var prayerTimes: Map<String, String>? = null
     private lateinit var pagesBar: LinearLayout
     private val pageItems = ArrayList<View>()
     private var netListener: (() -> Unit)? = null
+    private var lastFocusPos = 0
     internal var weather: Weather? = null
     private lateinit var adapter: HomeAdapter
 
@@ -157,6 +161,7 @@ class MainActivity : Activity() {
         bigClock.tz = CityClock.timeZone(this)
         bigClock.is24 = TimeFmt.is24(this, Prefs(this))
         bigClock.cfg = cfg
+        infoBlock.post { infoBlock.requestLayout() }
         dateText.visibility = if (cfg.date) View.VISIBLE else View.GONE
         dateText.setTextColor(cfg.color and 0x00FFFFFF or 0xF2000000.toInt())
         val g = when (cfg.pos) { "center" -> Gravity.CENTER_HORIZONTAL; "right" -> Gravity.END; else -> Gravity.START }
@@ -165,6 +170,41 @@ class MainActivity : Activity() {
             lp.gravity = Gravity.TOP or g
             lp.leftMargin = u.i(80f); lp.rightMargin = u.i(80f)
             infoBlock.layoutParams = lp
+        }
+    }
+
+    /** The five prayers of today in one small glass strip; the next one is lit. */
+    private fun buildPrayerStrip(): View {
+        prayerStrip = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(u.i(8f), u.i(6f), u.i(8f), u.i(6f))
+            background = Glass.glass(0x24FFFFFF, u.px(30f), 0.8f, true)
+            visibility = View.GONE
+        }
+        for (name in listOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")) {
+            val n = smallText(21f, 0xB3FFFFFF.toInt()).apply { gravity = Gravity.CENTER }
+            val tm = smallText(27f, 0xFFFFFFFF.toInt()).apply { gravity = Gravity.CENTER; typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL) }
+            val cell = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
+                setPadding(u.i(18f), u.i(8f), u.i(18f), u.i(8f))
+                addView(n); addView(tm)
+            }
+            prayerCells[name] = Triple(cell, n, tm)
+            prayerStrip.addView(cell)
+        }
+        return prayerStrip
+    }
+
+    private fun updateStrip() {
+        val times = prayerTimes
+        if (times == null) { prayerStrip.visibility = View.GONE; return }
+        prayerStrip.visibility = View.VISIBLE
+        val is24 = TimeFmt.is24(this, Prefs(this))
+        val next = nextPrayer?.name
+        for ((name, cell) in prayerCells) {
+            cell.second.text = L.t(name)
+            cell.third.text = TimeFmt.display(times[name], is24, L.locale())
+            cell.first.background = if (name == next) GlossDrawable(u.px(24f), 0x55FFFFFF, 1f) else null
         }
     }
 
@@ -188,9 +228,12 @@ class MainActivity : Activity() {
         }
         infoBlock = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            addView(bigClock)
+            clipChildren = false
+            clipToPadding = false
+            addView(bigClock, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(dateText, LinearLayout.LayoutParams(-2, -2).apply { topMargin = u.i(4f); bottomMargin = u.i(20f) })
             addView(pills)
+            addView(buildPrayerStrip(), LinearLayout.LayoutParams(-2, -2).apply { topMargin = u.i(14f) })
         }
         content.addView(infoBlock, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START).apply { leftMargin = u.i(80f); topMargin = u.i(146f) })
     }
@@ -237,6 +280,7 @@ class MainActivity : Activity() {
     /** Refreshes the text of the clock block; cheap, called every minute and after the data arrives. */
     internal fun updateInfo() {
         dateText.text = dateString()
+        updateStrip()
         val p = Prefs(this)
         val w = weather
         if (w == null) wxPill.visibility = View.GONE else {
@@ -278,8 +322,10 @@ class MainActivity : Activity() {
             CityClock.ensure(app)
             val n = try { PrayerRepository.nextPrayer(app, false) } catch (_: Exception) { null }
             val w = WeatherRepository.fetch(p.latitude, p.longitude)
+            val pt = try { PrayerRepository.getTimings(app, PrayerRepository.cityToday(app))?.times } catch (_: Exception) { null }
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread
+                if (pt != null) prayerTimes = pt
                 if (n != null) nextPrayer = n
                 if (w != null) weather = w
                 if (n != null || w != null) Net.evidence()
@@ -327,13 +373,45 @@ class MainActivity : Activity() {
                 addView(img, LinearLayout.LayoutParams(u.i(32f), u.i(32f)).apply { marginEnd = u.i(10f) })
                 addView(tv)
                 setOnClickListener { openPage(i) }
-                setOnKeyListener { _, code, ev -> if (ev.action == KeyEvent.ACTION_DOWN && code == KeyEvent.KEYCODE_DPAD_DOWN) { focusFirst(); true } else false }
+                setOnKeyListener { _, code, ev -> if (ev.action == KeyEvent.ACTION_DOWN && code == KeyEvent.KEYCODE_DPAD_DOWN) { downFromTop(); true } else false }
             }
             pagesBar.addView(item, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, u.i(60f)).apply { if (i > 0) marginStart = u.i(4f) })
             pageItems.add(item)
         }
         setPage(0)
         root.addView(pagesBar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, u.i(76f), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = u.i(38f) })
+    }
+
+    /** Down from the bar or the capsule goes into whatever is open: the page, or the home tiles when nothing is open. */
+    private fun downFromTop() {
+        val pv = pageView
+        if (pv != null) firstFocusable(pv)?.requestFocus() else if (ccView == null && folderView == null) focusFirst()
+    }
+
+    private fun isInside(v: View?, anc: View?): Boolean { var c = v; while (c != null) { if (c === anc) return true; c = c.parent as? View }; return false }
+
+    /**
+     * Keeps the remote from leaking between layers: with Control Center or a folder open, the cursor cannot leave it; with a page
+     * open it can only move inside the page, the pages bar and the capsule. Returns true when the key must be swallowed.
+     */
+    private fun containFocus(code: Int): Boolean {
+        val dir = when (code) {
+            KeyEvent.KEYCODE_DPAD_UP -> View.FOCUS_UP; KeyEvent.KEYCODE_DPAD_DOWN -> View.FOCUS_DOWN
+            KeyEvent.KEYCODE_DPAD_LEFT -> View.FOCUS_LEFT; KeyEvent.KEYCODE_DPAD_RIGHT -> View.FOCUS_RIGHT; else -> return false
+        }
+        val f = currentFocus
+        val scope: View? = ccView ?: folderView
+        if (scope != null) {
+            if (f == null || !isInside(f, scope)) { firstFocusable(scope)?.requestFocus(); return true }
+            val n = f.focusSearch(dir)
+            return n == null || !isInside(n, scope)
+        }
+        val pv = pageView
+        if (pv != null && f != null) {
+            val n = f.focusSearch(dir) ?: return false
+            return !(isInside(n, pv) || isInside(n, pagesBar) || n === capsule)
+        }
+        return false
     }
 
     private fun setPage(i: Int) { pageItems.forEachIndexed { j, v -> v.isSelected = j == i } }
@@ -402,7 +480,7 @@ class MainActivity : Activity() {
             addView(AvatarView(this@MainActivity), LinearLayout.LayoutParams(u.i(48f), u.i(48f)).apply { marginStart = u.i(16f) })
             setOnClickListener { toggleCC() }
             setOnKeyListener { _, code, ev ->
-                if (ev.action == KeyEvent.ACTION_DOWN && code == KeyEvent.KEYCODE_DPAD_DOWN) { focusFirst(); true } else false
+                if (ev.action == KeyEvent.ACTION_DOWN && code == KeyEvent.KEYCODE_DPAD_DOWN) { downFromTop(); true } else false
             }
         }
         root.addView(capsule, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, u.i(66f), Gravity.TOP or Gravity.END).apply {
@@ -495,14 +573,26 @@ class MainActivity : Activity() {
         lay = store.layout(apps)
         adapter.cells = lay.cells()
         adapter.notifyDataSetChanged()
-        if (focus != null) focusKey(focus) else if (grid.focusedChild == null && ccView == null && folderView == null) focusFirst()
+        if (focus != null) focusKey(focus) else if (grid.focusedChild == null && ccView == null && folderView == null && pageView == null) focusNear(lastFocusPos)
     }
 
     private fun focusFirst() { focusKey(lay.dock.firstOrNull()?.pkg ?: lay.library.firstOrNull()?.key ?: return) }
 
+    /** The cursor stays where it was after a change (an app removed, hidden, moved): the nearest tile at that position. */
+    private fun focusNear(p: Int) {
+        val cells = adapter.cells
+        if (cells.isEmpty() || pageView != null) return
+        val i = p.coerceIn(0, cells.size - 1)
+        var j = i
+        while (j < cells.size && cells[j].isSpacer) j++
+        if (j >= cells.size) { j = i; while (j >= 0 && cells[j].isSpacer) j-- }
+        if (j < 0) return
+        focusKey(cells[j].key)
+    }
+
     private fun focusKey(key: String) {
         val pos = adapter.cells.indexOfFirst { it.key == key }
-        if (pos < 0) { if (key != lay.dock.firstOrNull()?.pkg) focusFirst(); return }
+        if (pos < 0) { focusNear(lastFocusPos); return }
         grid.post {
             val vh = grid.findViewHolderForAdapterPosition(pos)
             if (vh != null) vh.itemView.requestFocus()
@@ -515,6 +605,7 @@ class MainActivity : Activity() {
 
     private fun onTileFocus(e: Entry) {
         lastFocusKey = e.key
+        lastFocusPos = adapter.cells.indexOf(e).coerceAtLeast(0)
         if (pageView == null) setPage(if (adapter.cells.indexOf(e) >= Store.COLUMNS) 1 else 0)
     }
 
@@ -643,7 +734,7 @@ class MainActivity : Activity() {
         ad.alwaysLabels = sp.getBoolean("labels", false)
         ad.reduceMotion = sp.getBoolean("calm", false)
         val rv = RecyclerView(this).apply {
-            layoutManager = GridLayoutManager(this@MainActivity, 3)
+            layoutManager = RowScrollGrid(this@MainActivity, 3)
             adapter = ad
             itemAnimator = null
             overScrollMode = View.OVER_SCROLL_NEVER
@@ -905,51 +996,45 @@ class MainActivity : Activity() {
         return L.t(when { h in 5..11 -> "Good morning"; h in 12..16 -> "Good afternoon"; h in 17..20 -> "Good evening"; else -> "Good night" })
     }
 
-    /** The sleep screen: the wallpaper, dimmed, with a greeting, a large thin clock and the date, centred and fixed. */
+    /** The sleep screen: the wallpaper, dimmed, with a greeting, the clock in the design chosen for it, and the date; fixed in the centre. */
     private fun startScreensaver() {
         if (screensaver != null) return
-        closeCC(); closeFolder()
+        closeCC(); closeFolder(); closePage(false)
+        val cfg = ClockCfg.loadSleep(sp)
         val f = FrameLayout(this).apply { setBackgroundColor(0xFF0A0B0E.toInt()) }
         val pic = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; alpha = 0f }
         f.addView(pic, FrameLayout.LayoutParams(-1, -1))
         f.addView(View(this).apply { setBackgroundColor(0x80000000.toInt()) }, FrameLayout.LayoutParams(-1, -1))
         val spaced = !L.ar
-        fun small(s: String, size: Float, color: Int) = TextView(this).apply {
+        fun small(s: String, size: Float) = TextView(this).apply {
             text = if (spaced) s.uppercase(L.locale()) else s
-            setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(size)); setTextColor(color); gravity = Gravity.CENTER
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(size)); setTextColor(cfg.color and 0x00FFFFFF or 0xE6000000.toInt()); gravity = Gravity.CENTER
             if (spaced) letterSpacing = 0.32f
             typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
         }
-        val time = TextClock(this).apply {
-            setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, u.px(250f))
-            setTextColor(0xFFFFFFFF.toInt())
-            typeface = android.graphics.Typeface.create("sans-serif-thin", android.graphics.Typeface.NORMAL)
-            includeFontPadding = false
-            format12Hour = if (TimeFmt.is24(this@MainActivity, Prefs(this@MainActivity))) "HH:mm" else "h:mm"
-            format24Hour = "HH:mm"
-            timeZone = CityClock.gmtId(this@MainActivity)
-            setShadowLayer(u.px(18f), 0f, u.px(3f), 0x59000000)
+        val time = ClockView(this, u).apply {
+            tz = CityClock.timeZone(this@MainActivity)
+            is24 = TimeFmt.is24(this@MainActivity, Prefs(this@MainActivity))
+            this.cfg = cfg
         }
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            addView(small(greeting(), 28f, 0xE6FFFFFF.toInt()))
-            addView(time, LinearLayout.LayoutParams(-2, -2).apply { topMargin = u.i(4f); bottomMargin = u.i(6f) })
-            addView(small(dateString().replace(",", ""), 30f, 0xE6FFFFFF.toInt()))
+            if (cfg.greeting) addView(small(greeting(), 28f))
+            addView(time, LinearLayout.LayoutParams(-2, -2).apply { topMargin = u.i(10f); bottomMargin = u.i(10f) })
+            if (cfg.date) addView(small(dateString().replace(",", ""), 30f))
         }
-        f.addView(col, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER).apply { bottomMargin = u.i(60f) })
+        f.addView(col, FrameLayout.LayoutParams(-2, -2, Gravity.CENTER).apply { bottomMargin = u.i(40f) })
         f.alpha = 0f
         screensaver = f
         root.addView(f, FrameLayout.LayoutParams(-1, -1))
         f.animate().alpha(1f).setDuration(500).start()
         val app = applicationContext
         Thread {
-            val bmp = Wallpapers.decode(app, sp, 1280) ?: try {
-                BitmapFactory.decodeResource(resources, R.drawable.wp_kirkjufell, BitmapFactory.Options().apply { inSampleSize = 2 })
-            } catch (_: Throwable) { null }
+            val bmp = Wallpapers.decode(app, sp, 1280) ?: DefaultWall.bitmap(960)
             runOnUiThread {
                 if (isDestroyed || screensaver !== f) return@runOnUiThread
-                if (bmp != null) { pic.setImageBitmap(bmp); pic.animate().alpha(1f).setDuration(600).start() }
+                pic.setImageBitmap(bmp); pic.animate().alpha(1f).setDuration(600).start()
             }
         }.start()
     }
@@ -980,6 +1065,7 @@ class MainActivity : Activity() {
                 }
                 return true
             }
+            if (containFocus(event.keyCode)) return true
             if ((event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT || event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) && wrapRow(event.keyCode)) return true
             when (event.keyCode) {
                 KeyEvent.KEYCODE_MENU -> {
@@ -996,6 +1082,33 @@ class MainActivity : Activity() {
     /** Last app of a row + Right goes to the first app of the row, and the other way round. */
     private fun wrapRow(code: Int): Boolean {
         val f = currentFocus ?: return false
+        // A horizontal row of buttons (the pages bar, the wallpaper buttons): last -> first, first -> last.
+        (f.parent as? LinearLayout)?.takeIf { it.orientation == LinearLayout.HORIZONTAL }?.let { row ->
+            val items = (0 until row.childCount).map { row.getChildAt(it) }.filter { it.isFocusable && it.visibility == View.VISIBLE }
+            val i = items.indexOf(f)
+            if (items.size >= 2 && i >= 0) {
+                if (code == KeyEvent.KEYCODE_DPAD_RIGHT && i == items.size - 1) { items.first().requestFocus(); return true }
+                if (code == KeyEvent.KEYCODE_DPAD_LEFT && i == 0) { items.last().requestFocus(); return true }
+            }
+        }
+        // A grid on a page (Apps, Wallpapers): the same wrap along each row.
+        pageView?.let { pv ->
+            var c: View? = f
+            while (c != null && c !== pv && c !is RecyclerView) c = c.parent as? View
+            val rv = c as? RecyclerView ?: return false
+            val span = (rv.layoutManager as? GridLayoutManager)?.spanCount ?: return false
+            val pos = rv.findContainingViewHolder(f)?.bindingAdapterPosition ?: return false
+            val count = rv.adapter?.itemCount ?: return false
+            val start = pos / span * span
+            val end = minOf(start + span, count) - 1
+            val target = when {
+                code == KeyEvent.KEYCODE_DPAD_RIGHT && pos == end && end > start -> start
+                code == KeyEvent.KEYCODE_DPAD_LEFT && pos == start && end > start -> end
+                else -> return false
+            }
+            rv.findViewHolderForAdapterPosition(target)?.itemView?.requestFocus() ?: run { rv.scrollToPosition(target); rv.post { rv.findViewHolderForAdapterPosition(target)?.itemView?.requestFocus() } }
+            return true
+        }
         val rv = if (folderView != null) folderRv else grid
         val ad = if (folderView != null) folderAd else adapter
         val span = if (folderView != null) 3 else Store.COLUMNS
@@ -1037,10 +1150,21 @@ class MainActivity : Activity() {
         Net.start(applicationContext)
     }
 
-    override fun onStop() { super.onStop(); Net.stop(); try { unregisterReceiver(pkgReceiver) } catch (_: Exception) {} }
+    override fun onStop() {
+        super.onStop()
+        Net.stop()
+        try { unregisterReceiver(pkgReceiver) } catch (_: Exception) {}
+        // Another app (a video, YouTube...) is in front: give back what the launcher holds, so that app has more memory.
+        Thumbs.clear()
+        handler.removeCallbacks(infoTick)
+        wallpaper.setImageDrawable(null)
+        Backdrop.set(null)
+        wallKey = ""
+    }
 
     override fun onResume() {
         super.onResume()
+        if (wallKey.isEmpty()) loadWallpaper()
         GlassStyle.load(sp)
         window.decorView.invalidate()
         val wantAr = Prefs(this).language == "ar"

@@ -38,13 +38,16 @@ class ClockCfg(
     var seconds: Boolean = false,
     var date: Boolean = true,
     var glass: Boolean = false,
-    var pos: String = "left"
+    var pos: String = "left",
+    var greeting: Boolean = true
 ) {
-    fun copy() = ClockCfg(kind, pct, color, font, seconds, date, glass, pos)
+    fun copy() = ClockCfg(kind, pct, color, font, seconds, date, glass, pos, greeting)
 
-    fun save(sp: SharedPreferences) {
-        sp.edit().putString("clock_kind", kind).putInt("clock_pct", pct).putInt("clock_color", color).putString("clock_font", font)
-            .putBoolean("clock_seconds", seconds).putBoolean("clock_date", date).putBoolean("clock_glass", glass).putString("clock_pos", pos).apply()
+    /** [prefix] is "" for the home clock and "sleep_" for the sleep screen clock: each has its own settings. */
+    fun save(sp: SharedPreferences, prefix: String = "") {
+        sp.edit().putString(prefix + "clock_kind", kind).putInt(prefix + "clock_pct", pct).putInt(prefix + "clock_color", color).putString(prefix + "clock_font", font)
+            .putBoolean(prefix + "clock_seconds", seconds).putBoolean(prefix + "clock_date", date).putBoolean(prefix + "clock_glass", glass)
+            .putString(prefix + "clock_pos", pos).putBoolean(prefix + "clock_greeting", greeting).apply()
     }
 
     companion object {
@@ -54,6 +57,7 @@ class ClockCfg(
             "analog_simple" to "Simple Analog", "flip" to "Flip", "minimal" to "Minimal", "glass_pill" to "Glass Digital"
         )
         val SIZES = listOf(70, 85, 100, 115, 130, 150)
+        val SIZES_SLEEP = listOf(120, 150, 180, 210, 250, 300)
         val FONTS = listOf("thin", "light", "regular", "bold", "serif", "condensed")
         val FONT_LABEL = mapOf("thin" to "Thin", "light" to "Light", "regular" to "Regular", "bold" to "Bold", "serif" to "Serif", "condensed" to "Condensed")
         val COLORS = listOf(
@@ -62,6 +66,23 @@ class ClockCfg(
         )
         val POSITIONS = listOf("left", "center", "right")
         val POS_LABEL = mapOf("left" to "Left", "center" to "Center", "right" to "Right")
+
+        /** The sleep screen clock: bigger and thinner by default. */
+        fun loadSleep(sp: SharedPreferences): ClockCfg {
+            val d = ClockCfg("digital_thin", 180, 0xFFFFFFFF.toInt(), "thin", false, true, false, "center", true)
+            val k = sp.getString("sleep_clock_kind", d.kind) ?: d.kind
+            return ClockCfg(
+                kind = if (k in KINDS) k else d.kind,
+                pct = sp.getInt("sleep_clock_pct", d.pct).coerceIn(60, 400),
+                color = sp.getInt("sleep_clock_color", d.color),
+                font = (sp.getString("sleep_clock_font", d.font) ?: d.font).let { if (it in FONTS) it else d.font },
+                seconds = sp.getBoolean("sleep_clock_seconds", d.seconds),
+                date = sp.getBoolean("sleep_clock_date", d.date),
+                glass = sp.getBoolean("sleep_clock_glass", d.glass),
+                pos = "center",
+                greeting = sp.getBoolean("sleep_clock_greeting", true)
+            )
+        }
 
         fun load(sp: SharedPreferences): ClockCfg {
             // The older two settings (font style light/regular/bold and size m/l/xl) become the defaults of the new ones.
@@ -125,7 +146,7 @@ class ClockView(context: Context, private val u: U) : View(context) {
         else -> Typeface.create("sans-serif-light", Typeface.NORMAL)
     }
 
-    private val s get() = cfg.pct / 100f
+    private val s get() = cfg.pct / 100f * fit
     private val isAnalog get() = cfg.kind.startsWith("analog")
     private val isFlip get() = cfg.kind == "flip"
     private val glassBg get() = cfg.glass || cfg.kind == "glass_pill"
@@ -136,17 +157,28 @@ class ClockView(context: Context, private val u: U) : View(context) {
     private fun timeText(c: Calendar): String {
         val h = if (is24) c.get(Calendar.HOUR_OF_DAY) else (c.get(Calendar.HOUR).let { if (it == 0) 12 else it })
         val m = c.get(Calendar.MINUTE)
-        return (if (is24) "%02d".format(h) else "$h") + ":" + "%02d".format(m)
+        return (if (is24) String.format(java.util.Locale.ENGLISH, "%02d", h) else "$h") + ":" + String.format(java.util.Locale.ENGLISH, "%02d", m)
     }
 
-    private fun secText(c: Calendar) = ":" + "%02d".format(c.get(Calendar.SECOND))
+    private fun secText(c: Calendar) = ":" + String.format(java.util.Locale.ENGLISH, "%02d", c.get(Calendar.SECOND))
 
     private val tileW get() = u.px(132f * s)
     private val tileH get() = u.px(176f * s)
     private val gap get() = u.px(10f * s)
     private val groupGap get() = u.px(34f * s)
 
+    private var fit = 1f
+
     override fun onMeasure(wSpec: Int, hSpec: Int) {
+        fit = 1f
+        var (w, h) = naturalSize()
+        // Never wider than 1700 or taller than 900 design pixels, however large the size: nothing is cut off at the screen edge.
+        val lim = u.px(1700f); val limH = u.px(900f)
+        if (w > lim || h > limH) { fit = minOf(lim / w, limH / h); val n = naturalSize(); w = n.first; h = n.second }
+        setMeasuredDimension(w.toInt() + 1, h.toInt() + 1)
+    }
+
+    private fun naturalSize(): Pair<Float, Float> {
         val w: Float
         val h: Float
         when {
@@ -163,7 +195,7 @@ class ClockView(context: Context, private val u: U) : View(context) {
                 h = size * (if (glassBg) 1.05f else 1.12f) + (if (glassBg) pad * 0.5f else 0f)
             }
         }
-        setMeasuredDimension(w.toInt() + 1, h.toInt() + 1)
+        return w to h
     }
 
     override fun onSizeChanged(w: Int, h: Int, ow: Int, oh: Int) { super.onSizeChanged(w, h, ow, oh); bgKey = "" }
@@ -210,8 +242,8 @@ class ClockView(context: Context, private val u: U) : View(context) {
     }
 
     private fun drawFlip(c: Canvas) {
-        val t = "%02d".format(if (is24) cal.get(Calendar.HOUR_OF_DAY) else cal.get(Calendar.HOUR).let { if (it == 0) 12 else it }) +
-            "%02d".format(cal.get(Calendar.MINUTE))
+        val t = String.format(java.util.Locale.ENGLISH, "%02d", if (is24) cal.get(Calendar.HOUR_OF_DAY) else cal.get(Calendar.HOUR).let { if (it == 0) 12 else it }) +
+            String.format(java.util.Locale.ENGLISH, "%02d", cal.get(Calendar.MINUTE))
         val tw = tileW; val th = tileH; val r = u.px(20f * s)
         var x = 0f
         p.typeface = typeface()
@@ -317,10 +349,12 @@ class ClockView(context: Context, private val u: U) : View(context) {
  */
 object ClockCustomizer {
 
-    fun show(a: Activity, sp: SharedPreferences, onSaved: () -> Unit) {
+    fun show(a: Activity, sp: SharedPreferences, onSaved: () -> Unit, prefix: String = "", title: String = "Clock") {
         val u = U(a)
         val prefs = Prefs(a)
-        val work = ClockCfg.load(sp)
+        val sleep = prefix == "sleep_"
+        val work = if (sleep) ClockCfg.loadSleep(sp) else ClockCfg.load(sp)
+        val sizes = if (sleep) ClockCfg.SIZES_SLEEP else ClockCfg.SIZES
         var fmt = prefs.timeFormat
 
         val d = Dialog(a, android.R.style.Theme_Translucent_NoTitleBar)
@@ -344,13 +378,13 @@ object ClockCustomizer {
 
         val list = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
         val title = TextView(a).apply {
-            text = L.t("Clock"); setTextSize(TypedValue.COMPLEX_UNIT_PX, u.px(48f)); typeface = Typeface.DEFAULT_BOLD
+            text = L.t(title); setTextSize(TypedValue.COMPLEX_UNIT_PX, u.px(48f)); typeface = Typeface.DEFAULT_BOLD
             setTextColor(0x99FFFFFF.toInt()); gravity = Gravity.CENTER
         }
 
         fun refreshPreview() {
             preview.is24 = when (fmt) { "12" -> false; "24" -> true; else -> android.text.format.DateFormat.is24HourFormat(a) }
-            preview.cfg = work.copy()
+            preview.cfg = work.copy().also { if (sleep) it.pct = (it.pct * 0.42f).toInt().coerceAtLeast(50) }
             dateView.visibility = if (work.date) View.VISIBLE else View.GONE
             dateView.setTextColor(work.color)
             dateView.text = java.text.SimpleDateFormat("EEEE, d MMMM", L.locale()).apply { timeZone = CityClock.timeZone(a) }.format(java.util.Date())
@@ -362,15 +396,16 @@ object ClockCustomizer {
 
         val defs = listOf(
             RowDef("Style", { L.t(ClockCfg.KIND_LABEL[work.kind] ?: work.kind) }) { dir -> work.kind = cycle(ClockCfg.KINDS, work.kind, dir) },
-            RowDef("Size", { "${work.pct}%" }) { dir -> work.pct = cycle(ClockCfg.SIZES, work.pct.let { v -> ClockCfg.SIZES.minByOrNull { Math.abs(it - v) } ?: 100 }, dir) },
+            RowDef("Size", { "${work.pct}%" }) { dir -> work.pct = cycle(sizes, work.pct.let { v -> sizes.minByOrNull { Math.abs(it - v) } ?: 100 }, dir) },
             RowDef("Font", { L.t(ClockCfg.FONT_LABEL[work.font] ?: work.font) }) { dir -> work.font = cycle(ClockCfg.FONTS, work.font, dir) },
             RowDef("Color", { L.t(ClockCfg.COLORS.firstOrNull { it.first == work.color }?.second ?: "Custom") }) { dir ->
                 val i = ClockCfg.COLORS.indexOfFirst { it.first == work.color }.let { if (it < 0) 0 else it }
                 work.color = ClockCfg.COLORS[(i + dir + ClockCfg.COLORS.size) % ClockCfg.COLORS.size].first
             },
-            RowDef("Position", { L.t(ClockCfg.POS_LABEL[work.pos] ?: work.pos) }) { dir -> work.pos = cycle(ClockCfg.POSITIONS, work.pos, dir) },
+            RowDef("Position", { L.t(ClockCfg.POS_LABEL[work.pos] ?: work.pos) }) { dir -> if (!sleep) work.pos = cycle(ClockCfg.POSITIONS, work.pos, dir) },
             RowDef("Seconds", { L.t(if (work.seconds) "On" else "Off") }) { work.seconds = !work.seconds },
             RowDef("Show Date", { L.t(if (work.date) "On" else "Off") }) { work.date = !work.date },
+            RowDef("Greeting", { L.t(if (work.greeting) "On" else "Off") }) { if (sleep) work.greeting = !work.greeting },
             RowDef("Glass Look", { L.t(if (work.glass || work.kind == "glass_pill") "On" else "Off") }) { if (work.kind != "glass_pill") work.glass = !work.glass },
             RowDef("Time Format", { L.t(when (fmt) { "12" -> "12-Hour"; "24" -> "24-Hour"; else -> "System" }) }) { dir ->
                 fmt = cycle(listOf("24", "12", "system"), fmt, dir)
@@ -378,7 +413,8 @@ object ClockCustomizer {
         )
 
         val rows = ArrayList<View>()
-        for (def in defs) {
+        val shown = defs.filter { it.title != "Greeting" || sleep }
+        for (def in shown) {
             val t = TextView(a).apply { text = L.t(def.title); setTextSize(TypedValue.COMPLEX_UNIT_PX, u.px(32f)); setTextColor(Glass.text()); isDuplicateParentStateEnabled = true }
             val v = TextView(a).apply { setTextSize(TypedValue.COMPLEX_UNIT_PX, u.px(30f)); setTextColor(Glass.dim()); isDuplicateParentStateEnabled = true }
             val row = LinearLayout(a).apply {
@@ -409,13 +445,14 @@ object ClockCustomizer {
 
         val bar = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL }
         bar.addView(button("Save") {
-            work.save(sp); prefs.timeFormat = fmt; d.dismiss(); onSaved()
+            work.save(sp, prefix); prefs.timeFormat = fmt; d.dismiss(); onSaved()
         }, LinearLayout.LayoutParams(0, u.i(70f), 1f).apply { marginEnd = u.i(10f) })
         bar.addView(button("Reset") {
-            val def = ClockCfg(); work.kind = def.kind; work.pct = def.pct; work.color = def.color; work.font = def.font
-            work.seconds = def.seconds; work.date = def.date; work.glass = def.glass; work.pos = def.pos
+            val def = if (sleep) ClockCfg("digital_thin", 180, 0xFFFFFFFF.toInt(), "thin", false, true, false, "center", true) else ClockCfg()
+            work.kind = def.kind; work.pct = def.pct; work.color = def.color; work.font = def.font
+            work.seconds = def.seconds; work.date = def.date; work.glass = def.glass; work.pos = def.pos; work.greeting = def.greeting
             fmt = "24"
-            defs.forEachIndexed { i, _ -> ((rows[i] as LinearLayout).getChildAt(1) as TextView).text = defs[i].value() }
+            shown.forEachIndexed { i, _ -> ((rows[i] as LinearLayout).getChildAt(1) as TextView).text = shown[i].value() }
             refreshPreview()
         }, LinearLayout.LayoutParams(0, u.i(70f), 1f).apply { marginEnd = u.i(10f) })
         bar.addView(button("Cancel") { d.dismiss() }, LinearLayout.LayoutParams(0, u.i(70f), 1f))

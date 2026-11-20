@@ -123,11 +123,11 @@ class HomeLayoutManager(ctx: Context, span: Int, private val u: U) : GridLayoutM
         val desired = when {
             row == 0 -> rest
             row == 1 -> lift
-            else -> top.toFloat().coerceIn(lift, u.px(700f))
+            else -> lift
         }
         val dy = (top - desired).toInt()
         if (dy == 0) return false
-        if (immediate) parent.scrollBy(0, dy) else parent.smoothScrollBy(0, dy, DecelerateInterpolator(1.7f), 380)
+        if (immediate) parent.scrollBy(0, dy) else parent.smoothScrollBy(0, dy, DecelerateInterpolator(1.7f), 300)
         return true
     }
 
@@ -153,5 +153,19 @@ class PlateDecoration(private val u: U) : RecyclerView.ItemDecoration() {
         glass.setBounds(0, 0, w, h)
         glass.setOrigin(l, t, parent.width.toFloat(), parent.height.toFloat())
         c.save(); c.translate(l, t); glass.draw(c); c.restore()
+    }
+}
+
+
+/**
+ * A grid that scrolls the moment the focus moves to another row: the focused row is always brought to the top edge of the list,
+ * so the page never looks as if it were waiting for the cursor to reach the bottom.
+ */
+class RowScrollGrid(ctx: Context, span: Int) : GridLayoutManager(ctx, span) {
+    override fun requestChildRectangleOnScreen(parent: RecyclerView, child: View, rect: Rect, immediate: Boolean, focusedChildVisible: Boolean): Boolean {
+        val dy = child.top - parent.paddingTop
+        if (kotlin.math.abs(dy) < 3) return false
+        if (immediate) parent.scrollBy(0, dy) else parent.smoothScrollBy(0, dy, DecelerateInterpolator(1.6f), 240)
+        return true
     }
 }
