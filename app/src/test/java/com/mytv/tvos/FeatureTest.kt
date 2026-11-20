@@ -347,7 +347,11 @@ class FeatureTest {
         val ms = a.javaClass.declaredMethods.filter { it.name.startsWith("wrapRow") }
         val m = ms.first { it.parameterCount == 1 }; m.isAccessible = true
         val f0 = a.window.currentFocus!!; val par = f0.parent
-        val dbg = "methods=${ms.map { it.name + it.parameterCount }} parent=${par?.javaClass?.simpleName} same=${par === bar} orient=${(par as? LinearLayout)?.orientation} idx=${bar.indexOfChild(f0)}"
+        val rowX = (f0.parent as? LinearLayout)
+        val itemsX = (0 until rowX!!.childCount).map { rowX.getChildAt(it) }.filter { it.isFocusable && it.visibility == View.VISIBLE }
+        val ix = itemsX.indexOf(f0)
+        val dbg0 = "items=${itemsX.size} i=$ix key=${android.view.KeyEvent.KEYCODE_DPAD_RIGHT} pv=${field<View?>(a, "pageView") != null} cc=${field<View?>(a, "ccView") != null} "
+        val dbg = dbg0 + "methods=${ms.map { it.name + it.parameterCount }} parent=${par?.javaClass?.simpleName} same=${par === bar} orient=${(par as? LinearLayout)?.orientation} idx=${bar.indexOfChild(f0)}"
         val direct = m.invoke(a, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)
         val info = (0 until bar.childCount).map { val c = bar.getChildAt(it); "${c.isFocusable}/${c.visibility}/${c.hasFocus()}" }
         assertTrue("$dbg direct wrapRow=$direct children=$info focus=${a.window.currentFocus}", a.window.currentFocus === bar.getChildAt(0))
