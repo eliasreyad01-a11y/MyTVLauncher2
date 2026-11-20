@@ -342,9 +342,10 @@ class FeatureTest {
             assertNull("focus reached the hidden home grid", grid.findContainingViewHolder(a.window.currentFocus ?: grid))
         }
         // The pages bar wraps: last -> first and first -> last.
-        bar.getChildAt(5).requestFocus()
+        val got = bar.getChildAt(5).requestFocus()
+        assertTrue("bar item 5 took focus (requestFocus=$got, focus=${a.window.currentFocus}, touch=${bar.isInTouchMode})", a.window.currentFocus === bar.getChildAt(5))
         a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)); idle()
-        assertTrue("RIGHT on the last item wraps to Home", a.window.currentFocus === bar.getChildAt(0))
+        assertTrue("RIGHT on the last item wraps to Home (focus=${a.window.currentFocus})", a.window.currentFocus === bar.getChildAt(0))
         a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_LEFT)); idle()
         assertTrue("LEFT on the first item wraps to Settings", a.window.currentFocus === bar.getChildAt(5))
     }
