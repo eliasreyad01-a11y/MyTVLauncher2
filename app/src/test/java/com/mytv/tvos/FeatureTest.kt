@@ -344,6 +344,11 @@ class FeatureTest {
         // The pages bar wraps: last -> first and first -> last.
         val got = bar.getChildAt(5).requestFocus()
         assertTrue("bar item 5 took focus (requestFocus=$got, focus=${a.window.currentFocus}, touch=${bar.isInTouchMode})", a.window.currentFocus === bar.getChildAt(5))
+        val m = a.javaClass.declaredMethods.first { it.name.startsWith("wrapRow") }; m.isAccessible = true
+        val direct = m.invoke(a, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)
+        val info = (0 until bar.childCount).map { val c = bar.getChildAt(it); "${c.isFocusable}/${c.visibility}/${c.hasFocus()}" }
+        assertTrue("direct wrapRow=$direct children=$info focus=${a.window.currentFocus}", a.window.currentFocus === bar.getChildAt(0))
+        bar.getChildAt(5).requestFocus()
         a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)); idle()
         assertTrue("RIGHT on the last item wraps to Home (focus=${a.window.currentFocus})", a.window.currentFocus === bar.getChildAt(0))
         a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_LEFT)); idle()
