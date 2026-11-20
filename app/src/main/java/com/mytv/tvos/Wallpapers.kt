@@ -29,7 +29,10 @@ object Wallpapers {
     fun key(sp: android.content.SharedPreferences): String = mode(sp) + ":" + (sp.getString("wall_path", "") ?: "") + ":" + (sp.getLong("wall_stamp", 0L))
 
     /** Decodes the wallpaper at roughly [maxW] pixels wide (never the full-size image: that would waste memory). Blocking. */
-    fun decode(ctx: Context, sp: android.content.SharedPreferences, maxW: Int = 1920): Bitmap? {
+    /** The width the wallpaper is decoded at: the full 3840 on a 4K screen, 2560 otherwise (so a 4K picture stays sharp, without wasting memory). */
+    fun fullWidth(ctx: Context): Int = if (ctx.resources.displayMetrics.widthPixels >= 3000) 3840 else 2560
+
+    fun decode(ctx: Context, sp: android.content.SharedPreferences, maxW: Int = fullWidth(ctx)): Bitmap? {
         return try {
             when (mode(sp)) {
                 "default" -> DefaultWall.bitmap(maxW)
