@@ -1066,8 +1066,8 @@ class MainActivity : Activity() {
                 }
                 return true
             }
-            if (containFocus(event.keyCode)) return true
             if ((event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT || event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) && wrapRow(event.keyCode)) return true
+            if (containFocus(event.keyCode)) return true
             when (event.keyCode) {
                 KeyEvent.KEYCODE_MENU -> {
                     val f = currentFocus
