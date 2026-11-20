@@ -400,7 +400,7 @@ class MainActivity : Activity() {
             KeyEvent.KEYCODE_DPAD_UP -> View.FOCUS_UP; KeyEvent.KEYCODE_DPAD_DOWN -> View.FOCUS_DOWN
             KeyEvent.KEYCODE_DPAD_LEFT -> View.FOCUS_LEFT; KeyEvent.KEYCODE_DPAD_RIGHT -> View.FOCUS_RIGHT; else -> return false
         }
-        val f = currentFocus
+        val f = window?.decorView?.findFocus() ?: currentFocus
         val scope: View? = ccView ?: folderView
         if (scope != null) {
             if (f == null || !isInside(f, scope)) { firstFocusable(scope)?.requestFocus(); return true }
@@ -1083,7 +1083,7 @@ class MainActivity : Activity() {
     /** Last app of a row + Right goes to the first app of the row, and the other way round. */
     internal var wrapDebug = "not reached"
     private fun wrapRow(code: Int): Boolean {
-        val f = currentFocus ?: return false
+        val f = window?.decorView?.findFocus() ?: currentFocus ?: return false
         // A horizontal row of buttons (the pages bar, the wallpaper buttons): last -> first, first -> last.
         (f.parent as? LinearLayout)?.takeIf { it.orientation == LinearLayout.HORIZONTAL }?.let { row ->
             val items = (0 until row.childCount).map { row.getChildAt(it) }.filter { it.isFocusable && it.visibility == View.VISIBLE }
