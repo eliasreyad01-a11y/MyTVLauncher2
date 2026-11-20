@@ -256,6 +256,11 @@ class Prefs(context: Context) {
         get() = sp.getString("time_format", "24") ?: "24"
         set(value) = putString("time_format", value)
 
+    /** "auto", "latin" or "arabic": the digits used for the clock, dates and prayer times. */
+    var numerals: String
+        get() = sp.getString("numerals", "auto") ?: "auto"
+        set(value) = putString("numerals", value)
+
     /** "system", "ar" or "en". */
     var language: String
         get() = sp.getString("language", "system") ?: "system"

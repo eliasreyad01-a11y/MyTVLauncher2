@@ -95,6 +95,7 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         L.ar = Prefs(this).language == "ar"
+        Digits.load(Prefs(this))
         builtAr = L.ar
         GlassStyle.load(getSharedPreferences("tvos_settings", Context.MODE_PRIVATE))
         u = U(this)
@@ -274,7 +275,7 @@ class MainActivity : Activity() {
         val today = PrayerRepository.cityToday(this)
         val g = java.text.SimpleDateFormat("EEEE, d MMMM", L.locale()).apply { timeZone = CityClock.timeZone(this@MainActivity) }.format(java.util.Date())
         val h = HijriDate.format(this, today, L.locale())
-        return when (p.dateMode) { 1 -> g; 2 -> h; else -> if (h.isEmpty()) g else "$g  ·  $h" }
+        return Digits.fix(when (p.dateMode) { 1 -> g; 2 -> h; else -> if (h.isEmpty()) g else "$g  ·  $h" })
     }
 
     /** Refreshes the text of the clock block; cheap, called every minute and after the data arrives. */

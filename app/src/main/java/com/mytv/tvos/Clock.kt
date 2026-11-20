@@ -157,10 +157,10 @@ class ClockView(context: Context, private val u: U) : View(context) {
     private fun timeText(c: Calendar): String {
         val h = if (is24) c.get(Calendar.HOUR_OF_DAY) else (c.get(Calendar.HOUR).let { if (it == 0) 12 else it })
         val m = c.get(Calendar.MINUTE)
-        return (if (is24) String.format(java.util.Locale.ENGLISH, "%02d", h) else "$h") + ":" + String.format(java.util.Locale.ENGLISH, "%02d", m)
+        return Digits.fix((if (is24) String.format(java.util.Locale.ENGLISH, "%02d", h) else "$h") + ":" + String.format(java.util.Locale.ENGLISH, "%02d", m))
     }
 
-    private fun secText(c: Calendar) = ":" + String.format(java.util.Locale.ENGLISH, "%02d", c.get(Calendar.SECOND))
+    private fun secText(c: Calendar) = Digits.fix(":" + String.format(java.util.Locale.ENGLISH, "%02d", c.get(Calendar.SECOND)))
 
     private val tileW get() = u.px(132f * s)
     private val tileH get() = u.px(176f * s)
@@ -242,8 +242,8 @@ class ClockView(context: Context, private val u: U) : View(context) {
     }
 
     private fun drawFlip(c: Canvas) {
-        val t = String.format(java.util.Locale.ENGLISH, "%02d", if (is24) cal.get(Calendar.HOUR_OF_DAY) else cal.get(Calendar.HOUR).let { if (it == 0) 12 else it }) +
-            String.format(java.util.Locale.ENGLISH, "%02d", cal.get(Calendar.MINUTE))
+        val t = Digits.fix(String.format(java.util.Locale.ENGLISH, "%02d", if (is24) cal.get(Calendar.HOUR_OF_DAY) else cal.get(Calendar.HOUR).let { if (it == 0) 12 else it }) +
+            String.format(java.util.Locale.ENGLISH, "%02d", cal.get(Calendar.MINUTE)))
         val tw = tileW; val th = tileH; val r = u.px(20f * s)
         var x = 0f
         p.typeface = typeface()
@@ -356,6 +356,8 @@ object ClockCustomizer {
         val work = if (sleep) ClockCfg.loadSleep(sp) else ClockCfg.load(sp)
         val sizes = if (sleep) ClockCfg.SIZES_SLEEP else ClockCfg.SIZES
         var fmt = prefs.timeFormat
+        val origDigits = Digits.mode
+        var saved = false
 
         val d = Dialog(a, android.R.style.Theme_Translucent_NoTitleBar)
         val root = FrameLayout(a)
@@ -387,7 +389,8 @@ object ClockCustomizer {
             preview.cfg = work.copy().also { if (sleep) it.pct = (it.pct * 0.42f).toInt().coerceAtLeast(50) }
             dateView.visibility = if (work.date) View.VISIBLE else View.GONE
             dateView.setTextColor(work.color)
-            dateView.text = java.text.SimpleDateFormat("EEEE, d MMMM", L.locale()).apply { timeZone = CityClock.timeZone(a) }.format(java.util.Date())
+            dateView.text = Digits.fix(java.text.SimpleDateFormat("EEEE, d MMMM", L.locale()).apply { timeZone = CityClock.timeZone(a) }.format(java.util.Date()))
+            preview.invalidate()
         }
 
         class RowDef(val title: String, val value: () -> String, val step: (Int) -> Unit)
@@ -407,6 +410,9 @@ object ClockCustomizer {
             RowDef("Show Date", { L.t(if (work.date) "On" else "Off") }) { work.date = !work.date },
             RowDef("Greeting", { L.t(if (work.greeting) "On" else "Off") }) { if (sleep) work.greeting = !work.greeting },
             RowDef("Glass Look", { L.t(if (work.glass || work.kind == "glass_pill") "On" else "Off") }) { if (work.kind != "glass_pill") work.glass = !work.glass },
+            RowDef("Numerals", { L.t(when (Digits.mode) { "latin" -> "English (0-9)"; "arabic" -> "Arabic (٠-٩)"; else -> "Automatic" }) }) { dir ->
+                Digits.mode = cycle(listOf("auto", "latin", "arabic"), Digits.mode, dir)
+            },
             RowDef("Time Format", { L.t(when (fmt) { "12" -> "12-Hour"; "24" -> "24-Hour"; else -> "System" }) }) { dir ->
                 fmt = cycle(listOf("24", "12", "system"), fmt, dir)
             }
@@ -445,13 +451,13 @@ object ClockCustomizer {
 
         val bar = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL }
         bar.addView(button("Save") {
-            work.save(sp, prefix); prefs.timeFormat = fmt; d.dismiss(); onSaved()
+            work.save(sp, prefix); prefs.timeFormat = fmt; prefs.numerals = Digits.mode; saved = true; d.dismiss(); onSaved()
         }, LinearLayout.LayoutParams(0, u.i(70f), 1f).apply { marginEnd = u.i(10f) })
         bar.addView(button("Reset") {
             val def = if (sleep) ClockCfg("digital_thin", 180, 0xFFFFFFFF.toInt(), "thin", false, true, false, "center", true) else ClockCfg()
             work.kind = def.kind; work.pct = def.pct; work.color = def.color; work.font = def.font
             work.seconds = def.seconds; work.date = def.date; work.glass = def.glass; work.pos = def.pos; work.greeting = def.greeting
-            fmt = "24"
+            fmt = "24"; Digits.mode = "auto"
             shown.forEachIndexed { i, _ -> ((rows[i] as LinearLayout).getChildAt(1) as TextView).text = shown[i].value() }
             refreshPreview()
         }, LinearLayout.LayoutParams(0, u.i(70f), 1f).apply { marginEnd = u.i(10f) })
@@ -472,6 +478,7 @@ object ClockCustomizer {
             setLayout(-1, -1)
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         }
+        d.setOnDismissListener { if (!saved) Digits.mode = origDigits }
         d.setOnShowListener { rows.firstOrNull()?.requestFocus() }
         d.show()
     }

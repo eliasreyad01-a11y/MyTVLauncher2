@@ -65,7 +65,11 @@ object GlassStyle {
 
     fun tintRgb() = TINTS[tint].second and 0xFFFFFF
     fun bodyAlpha() = intArrayOf(0x16, 0x2C, 0x46, 0x68)[level]
-    fun shadeAlpha(lightBackdrop: Boolean) = intArrayOf(0, 0x30, 0x58)[shade] + (if (lightBackdrop && shade > 0) 0x14 else 0)
+    fun shadeAlpha(lightBackdrop: Boolean): Int {
+        val chosen = intArrayOf(0, 0x30, 0x58)[shade] + (if (lightBackdrop && shade > 0) 0x14 else 0)
+        // A pale tint (Frost White, Amber ...) under white text would show nothing: the darker the glass body, the more shade it gets.
+        return if (isLightBase(0xFF000000.toInt() or tintRgb())) max(chosen, (bodyAlpha() * 1.1f).toInt() + 0x10) else chosen
+    }
     fun scale() = floatArrayOf(0.5f, 1f, 1.5f, 2.2f)[level]
     /** A light translucent surface follows the glass tint; a dark panel (menus) keeps its own dark colour so white text stays readable. */
     fun isLightBase(c: Int): Boolean = (0.299 * Color.red(c) + 0.587 * Color.green(c) + 0.114 * Color.blue(c)) / 255.0 > 0.55

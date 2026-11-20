@@ -283,6 +283,84 @@ class FeatureTest {
         save("f14_home_with_bar", render(a.window.decorView))
     }
 
+    @Test fun numeralsCanBeEnglishArabicOrAutomatic() {
+        try {
+            assertEquals("٠١٢:٣٤", Digits.convert("012:34", "arabic"))
+            assertEquals("12:30", Digits.convert("١٢:٣٠", "latin"))
+            assertEquals("12:30", Digits.convert("12:30", "auto"))
+            Digits.mode = "arabic"
+            assertEquals("٠٥:٣٠", TimeFmt.display("05:30", true))
+            Digits.mode = "auto"
+            // The clock page has the row, and Save keeps it.
+            val a = home()
+            ClockCustomizer.show(a, sp(), onSaved = { })
+            idle()
+            val d = ShadowDialog.getLatestDialog()
+            val row = allViews(d.window!!.decorView).first { v -> v is LinearLayout && v.isClickable && (v.getChildAt(0) as? TextView)?.text?.toString() == "Numerals" }
+            row.performClick(); idle()
+            row.performClick(); idle()
+            assertEquals("arabic", Digits.mode)
+            allViews(d.window!!.decorView).first { (it as? TextView)?.text?.toString() == "Save" }.performClick(); idle()
+            assertEquals("arabic", Prefs(ctx).numerals)
+        } finally { Digits.mode = "auto" }
+    }
+
+    @Test fun paleGlassTintGetsEnoughShadeToStayReadable() {
+        val s = sp()
+        s.edit().putInt("glass_tint", 0).putInt("glass_level", 3).putInt("glass_shade", 0).apply(); GlassStyle.load(s)
+        assertTrue("Frost White, Strong, shade None still darkened", GlassStyle.shadeAlpha(false) >= GlassStyle.bodyAlpha())
+        val graphite = GlassStyle.TINTS.indexOfFirst { it.first == "Graphite" }
+        s.edit().putInt("glass_tint", graphite).apply(); GlassStyle.load(s)
+        assertEquals("a dark tint keeps the chosen shade", 0, GlassStyle.shadeAlpha(false))
+        s.edit().clear().apply(); GlassStyle.load(s)
+    }
+
+    @Test fun focusStaysInsideControlCenter() {
+        val a = home()
+        call(a, "openCC"); idle()
+        val cc: View = field(a, "ccView")
+        for (k in listOf(android.view.KeyEvent.KEYCODE_DPAD_DOWN, android.view.KeyEvent.KEYCODE_DPAD_DOWN, android.view.KeyEvent.KEYCODE_DPAD_DOWN, android.view.KeyEvent.KEYCODE_DPAD_DOWN,
+            android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_DPAD_LEFT, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)) {
+            a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, k)); idle()
+            var c: View? = a.window.currentFocus; var inside = false
+            while (c != null) { if (c === cc) inside = true; c = c.parent as? View }
+            assertTrue("focus left Control Center on key $k", inside)
+        }
+    }
+
+    @Test fun focusStaysInsideAPageAndWrapsAround() {
+        val a = home()
+        val bar: LinearLayout = field(a, "pagesBar")
+        val grid: RecyclerView = field(a, "grid")
+        // Wallpapers page: Down never reaches the home tiles behind it.
+        bar.getChildAt(3).performClick(); idle(); layout(a.window.decorView); idle()
+        val page: View = field(a, "pageView")
+        a.window.decorView.requestFocus()
+        allViews(page).first { it.isFocusable }.requestFocus()
+        repeat(12) {
+            a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_DOWN)); idle()
+            assertNull("focus reached the hidden home grid", grid.findContainingViewHolder(a.window.currentFocus ?: grid))
+        }
+        // The pages bar wraps: last -> first and first -> last.
+        bar.getChildAt(5).requestFocus()
+        a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)); idle()
+        assertTrue("RIGHT on the last item wraps to Home", a.window.currentFocus === bar.getChildAt(0))
+        a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_LEFT)); idle()
+        assertTrue("LEFT on the first item wraps to Settings", a.window.currentFocus === bar.getChildAt(5))
+    }
+
+    @Test fun cursorStaysNearWhereItWasWhenTheListChanges() {
+        val a = home()
+        val grid: RecyclerView = field(a, "grid")
+        val tile = grid.findViewHolderForAdapterPosition(6)!!.itemView
+        tile.requestFocus(); idle()
+        a.setApps(fake(13)); idle(); layout(a.window.decorView); idle()
+        val f = a.window.currentFocus
+        assertNotNull("something still has focus", f)
+        val pos = grid.findContainingViewHolder(f!!)?.bindingAdapterPosition ?: -1
+        assertTrue("the cursor stayed in the grid near position 6, not at the start (was $pos)", pos >= 4)
+    }
+
     @Test fun glassStyleIsOneColourForEverything() {
         val s = sp()
         s.edit().clear().apply()

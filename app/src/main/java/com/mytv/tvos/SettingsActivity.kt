@@ -83,6 +83,9 @@ class SettingsActivity : Activity() {
             Row.Nav("Time Format", { when (p.timeFormat) { "12" -> "12-Hour"; "system" -> "System"; else -> "24-Hour" } }) {
                 choose("Time Format", listOf("24-Hour" to { p.timeFormat = "24"; refresh() }, "12-Hour" to { p.timeFormat = "12"; refresh() }, "System" to { p.timeFormat = "system"; refresh() }))
             },
+            Row.Nav("Numerals", { when (p.numerals) { "latin" -> "English (0-9)"; "arabic" -> "Arabic (٠-٩)"; else -> "Automatic" } }) {
+                choose("Numerals", listOf("Automatic" to { p.numerals = "auto"; Digits.load(p); refresh() }, "English (0-9)" to { p.numerals = "latin"; Digits.load(p); refresh() }, "Arabic (٠-٩)" to { p.numerals = "arabic"; Digits.load(p); refresh() }))
+            },
             Row.Nav("Time Zone", { zones.firstOrNull { it.first == p.tzMode }?.second?.substringBefore(" (") ?: "Automatic" }) {
                 choose("Time Zone", zones.map { z -> z.second to { p.tzMode = z.first; Thread { CityClock.ensure(applicationContext); AdhanScheduler.rescheduleBlocking(applicationContext) }.start(); refresh() } })
             },
