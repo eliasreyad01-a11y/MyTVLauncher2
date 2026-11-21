@@ -1263,18 +1263,20 @@ class MainActivity : Activity() {
         if (system && !updated) { toast("This is a system app: it cannot be uninstalled"); return }
         val uri = Uri.parse("package:$pkg")
         reloadAppsOnStart = true
-        try { startActivity(Intent(Intent.ACTION_DELETE, uri)) }
+        try { startActivity(Intent(Intent.ACTION_DELETE, uri)); fadeOut() }
         catch (_: Exception) {
-            try { startActivity(Intent(Intent.ACTION_UNINSTALL_PACKAGE, uri)) }
+            try { startActivity(Intent(Intent.ACTION_UNINSTALL_PACKAGE, uri)); fadeOut() }
             catch (_: Exception) { reloadAppsOnStart = false; toast("Not available on this device") }
         }
     }
 
+    /** The same soft fade as when an app is opened, instead of the system slide/zoom that makes the home screen jump. */
+    private fun fadeOut() = overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+
     private fun startSafe(i: Intent) {
         try {
             startActivity(i)
-            // The same soft fade as when an app is opened, instead of the system slide/zoom that makes the home screen jump.
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+            fadeOut()
         } catch (_: Exception) { toast("Not available on this device") }
     }
 }
