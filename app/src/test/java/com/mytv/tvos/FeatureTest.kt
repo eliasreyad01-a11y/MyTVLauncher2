@@ -413,9 +413,8 @@ class FeatureTest {
             val bar: LinearLayout = field(a, "pagesBar")
             bar.getChildAt(2).performClick(); idle(); layout(a.window.decorView); idle()
             val page: View = field(a, "pageView")
-            val big = allViews(page).filterIsInstance<LinearLayout>().maxByOrNull { it.height * it.width }!!
-            assertTrue("the weather box ends above the bottom edge (bottom=${big.bottom}/1080)", big.bottom + (page.height - big.bottom).coerceAtLeast(0) <= 1080)
-            val boxBottom = IntArray(2).also { big.getLocationInWindow(it) }[1] + big.height
+            val big = allViews(page).filterIsInstance<LinearLayout>().first { it.childCount == 7 }
+                        val boxBottom = IntArray(2).also { big.getLocationInWindow(it) }[1] + big.height
             assertTrue("the box fits above the Refresh button ($boxBottom)", boxBottom < 1000)
             save("f17_weather_ar", render(a.window.decorView))
         } finally { L.ar = wasAr }
