@@ -84,30 +84,37 @@ object Net2 {
     }
 
     /**
-     * The online wallpaper list, all of it real 4K (3840 x 2160 or larger) from two public, well-known sources:
-     * Bing's daily picture archive ("_UHD" files) and the featured landscape photographs of Wikimedia Commons.
+     * The online wallpaper list, all of it real 4K (3840 x 2160 or larger): the month's top-rated wallpapers of Wallhaven (the search itself
+     * only returns pictures of at least 3840 x 2160, safe-for-work, 16:9), then the featured landscape photographs of Wikimedia Commons.
      */
     fun wallpapers(): List<OnlineWp> {
         val out = ArrayList<OnlineWp>()
-        try {
-            // Today's picture first, then the week before it: the list changes every day.
-            for (idx in listOf(0, 8)) {
-                val body = download("https://www.bing.com/HPImageArchive.aspx?format=js&idx=$idx&n=8&mkt=en-US", 400_000)?.toString(Charsets.UTF_8)
-                if (body != null) out.addAll(parseBing(body))
-            }
-        } catch (_: Exception) {}
+        for (page in 1..2) {
+            val body = try {
+                download("https://wallhaven.cc/api/v1/search?categories=100&purity=100&atleast=3840x2160&ratios=16x9&sorting=toplist&topRange=1M&page=$page", 600_000)?.toString(Charsets.UTF_8)
+            } catch (_: Exception) { null }
+            if (body != null) out.addAll(parseWallhaven(body))
+        }
         for (cat in listOf("Featured_pictures_of_landscapes", "Featured_pictures_of_skies")) out.addAll(commons(cat))
         return out
     }
 
-    fun parseBing(json: String): List<OnlineWp> {
+    /** Wallhaven API v1: {"data":[{"id","path","resolution","thumbs":{"large","original","small"}}]}. Only pictures of at least 3840 x 2160 are kept. */
+    fun parseWallhaven(json: String): List<OnlineWp> {
         val out = ArrayList<OnlineWp>()
         try {
-            val arr = JSONObject(json).getJSONArray("images")
+            val arr = JSONObject(json).getJSONArray("data")
             for (i in 0 until arr.length()) {
                 val o = arr.getJSONObject(i)
-                val base = "https://www.bing.com" + o.getString("urlbase")
-                out.add(OnlineWp(o.optString("title", "Bing"), base + "_1280x720.jpg", base + "_UHD.jpg"))
+                val res = o.optString("resolution").split("x")
+                val w = res.getOrNull(0)?.toIntOrNull() ?: 0
+                val h = res.getOrNull(1)?.toIntOrNull() ?: 0
+                if (w < 3840 || h < 2160) continue
+                val th = o.optJSONObject("thumbs") ?: continue
+                val thumb = th.optString("original").ifEmpty { th.optString("large") }
+                val path = o.optString("path")
+                if (thumb.isEmpty() || !path.startsWith("https://")) continue
+                out.add(OnlineWp("$w×$h · ${o.optString("id")}", thumb, path))
             }
         } catch (_: Exception) {}
         return out

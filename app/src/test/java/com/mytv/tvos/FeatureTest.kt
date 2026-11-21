@@ -315,6 +315,18 @@ class FeatureTest {
         s.edit().clear().apply(); GlassStyle.load(s)
     }
 
+    @Test fun wallhavenListKeepsOnlyRealFourK() {
+        val json = """{"data":[
+          {"id":"abc123","path":"https://w.wallhaven.cc/full/ab/wallhaven-abc123.jpg","resolution":"3840x2160","thumbs":{"large":"https://th/l.jpg","original":"https://th/o.jpg","small":"https://th/s.jpg"}},
+          {"id":"low001","path":"https://w.wallhaven.cc/full/lo/wallhaven-low001.jpg","resolution":"1920x1080","thumbs":{"large":"https://th/l2.jpg","original":"https://th/o2.jpg","small":"https://th/s2.jpg"}},
+          {"id":"big002","path":"https://w.wallhaven.cc/full/bg/wallhaven-big002.png","resolution":"5120x2880","thumbs":{"large":"https://th/l3.jpg"}}],"meta":{"current_page":1}}"""
+        val l = Net2.parseWallhaven(json)
+        assertEquals(listOf("3840×2160 · abc123", "5120×2880 · big002"), l.map { it.title })
+        assertEquals("https://th/o.jpg", l[0].thumb)
+        assertEquals("falls back to the large thumbnail", "https://th/l3.jpg", l[1].thumb)
+        assertTrue(Net2.parseWallhaven("not json").isEmpty())
+    }
+
     @Test fun contrastMakesTextSolidAndGlassDarker() {
         try {
             Contrast.level = 0

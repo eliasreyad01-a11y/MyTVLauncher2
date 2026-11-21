@@ -579,12 +579,13 @@ class MainActivity : Activity() {
         }.start()
     }
 
-    private fun relayout(focus: String?) {
+    private fun relayout(focus: String?, near: Int? = null) {
         applyOptions()
         lay = store.layout(apps)
         adapter.cells = lay.cells()
         adapter.notifyDataSetChanged()
-        if (focus != null) focusKey(focus) else if (grid.focusedChild == null && ccView == null && folderView == null && pageView == null) focusNear(lastFocusPos)
+        if (focus != null) focusKey(focus)
+        else if (ccView == null && folderView == null && pageView == null) focusNear(near ?: lastFocusPos)   // the cursor stays where it was
     }
 
     private fun focusFirst() { focusKey(lay.dock.firstOrNull()?.pkg ?: lay.library.firstOrNull()?.key ?: return) }
@@ -657,14 +658,14 @@ class MainActivity : Activity() {
             val a = e.app ?: return
             items.add("Open" to { launch(a) })
             if (compact) {
-                if (lay.dock.any { it.pkg == a.pkg }) items.add("Remove from Favorites" to { store.removeFromDock(lay, a.pkg); relayout(null) })
-                else items.add("Add to Favorites" to { if (store.addToDock(lay, a.pkg)) relayout(null) else toast("Favorites are full") })
+                if (lay.dock.any { it.pkg == a.pkg }) items.add("Remove from Favorites" to { val p = lastFocusPos; store.removeFromDock(lay, a.pkg); relayout(null, p) })
+                else items.add("Add to Favorites" to { val p = lastFocusPos; if (store.addToDock(lay, a.pkg)) relayout(null, p) else toast("Favorites are full") })
             } else if (!inFolder) {
                 items.add("Move" to { startMove(e) })
-                if (lay.dock.any { it.pkg == a.pkg }) items.add("Remove from Favorites" to { store.removeFromDock(lay, a.pkg); relayout(a.pkg) })
-                else items.add("Add to Favorites" to { if (store.addToDock(lay, a.pkg)) relayout(a.pkg) else toast("Favorites are full") })
+                if (lay.dock.any { it.pkg == a.pkg }) items.add("Remove from Favorites" to { val p = lastFocusPos; store.removeFromDock(lay, a.pkg); relayout(null, p) })
+                else items.add("Add to Favorites" to { val p = lastFocusPos; if (store.addToDock(lay, a.pkg)) relayout(null, p) else toast("Favorites are full") })
                 items.add("New Folder with This App" to { val id = store.newFolder(lay, a.pkg); relayout("f:$id") })
-                for ((k, n) in store.folderKeys(lay)) items.add("Add to $n" to { store.addToFolder(lay, k, a.pkg); relayout(k) })
+                for ((k, n) in store.folderKeys(lay)) items.add("Add to $n" to { val p = lastFocusPos; store.addToFolder(lay, k, a.pkg); relayout(null, p) })
             } else {
                 items.add("Remove from Folder" to { store.removeFromFolder(lay, a.pkg); closeFolder(); relayout(a.pkg) })
             }
@@ -1248,6 +1249,7 @@ class MainActivity : Activity() {
         // Home pressed: back to the dock.
         if (screensaver != null) stopScreensaver()
         closeFolder(); closeCC()
+        if (pageView != null) closePage()
         focusFirst()
     }
 
