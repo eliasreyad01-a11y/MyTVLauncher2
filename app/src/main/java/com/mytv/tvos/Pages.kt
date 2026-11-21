@@ -84,39 +84,14 @@ object Net2 {
     }
 
     /**
-     * The online wallpaper list, all of it real 4K (3840 x 2160 or larger): the month's top-rated wallpapers of Wallhaven (the search itself
-     * only returns pictures of at least 3840 x 2160, safe-for-work, 16:9), then the featured landscape photographs of Wikimedia Commons.
+     * The online wallpaper list, all of it real 4K (3840 x 2160 or larger) and from a safe, curated source only: the "Featured pictures"
+     * of Wikimedia Commons, which the community reviews and votes on one by one (no anonymous uploads, nothing unreviewed).
      */
     fun wallpapers(): List<OnlineWp> {
         val out = ArrayList<OnlineWp>()
-        for (page in 1..2) {
-            val body = try {
-                download("https://wallhaven.cc/api/v1/search?categories=100&purity=100&atleast=3840x2160&ratios=16x9&sorting=toplist&topRange=1M&page=$page", 600_000)?.toString(Charsets.UTF_8)
-            } catch (_: Exception) { null }
-            if (body != null) out.addAll(parseWallhaven(body))
-        }
-        for (cat in listOf("Featured_pictures_of_landscapes", "Featured_pictures_of_skies")) out.addAll(commons(cat))
-        return out
-    }
-
-    /** Wallhaven API v1: {"data":[{"id","path","resolution","thumbs":{"large","original","small"}}]}. Only pictures of at least 3840 x 2160 are kept. */
-    fun parseWallhaven(json: String): List<OnlineWp> {
-        val out = ArrayList<OnlineWp>()
-        try {
-            val arr = JSONObject(json).getJSONArray("data")
-            for (i in 0 until arr.length()) {
-                val o = arr.getJSONObject(i)
-                val res = o.optString("resolution").split("x")
-                val w = res.getOrNull(0)?.toIntOrNull() ?: 0
-                val h = res.getOrNull(1)?.toIntOrNull() ?: 0
-                if (w < 3840 || h < 2160) continue
-                val th = o.optJSONObject("thumbs") ?: continue
-                val thumb = th.optString("original").ifEmpty { th.optString("large") }
-                val path = o.optString("path")
-                if (thumb.isEmpty() || !path.startsWith("https://")) continue
-                out.add(OnlineWp("$w×$h · ${o.optString("id")}", thumb, path))
-            }
-        } catch (_: Exception) {}
+        val cats = listOf("Featured_pictures_of_landscapes", "Featured_pictures_of_skies", "Featured_pictures_of_mountains",
+            "Featured_pictures_of_sunsets", "Featured_pictures_of_lakes", "Featured_pictures_of_beaches")
+        for (cat in cats) for (w in commons(cat)) if (out.none { it.full == w.full }) out.add(w)
         return out
     }
 
@@ -128,7 +103,7 @@ object Net2 {
         return parseCommons(body)
     }
 
-    fun parseCommons(json: String, max: Int = 16): List<OnlineWp> {
+    fun parseCommons(json: String, max: Int = 14): List<OnlineWp> {
         val out = ArrayList<OnlineWp>()
         try {
             val pages = JSONObject(json).getJSONObject("query").getJSONObject("pages")
