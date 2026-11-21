@@ -90,8 +90,11 @@ object Net2 {
     fun wallpapers(): List<OnlineWp> {
         val out = ArrayList<OnlineWp>()
         try {
-            val body = download("https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=8&mkt=en-US", 400_000)?.toString(Charsets.UTF_8)
-            if (body != null) out.addAll(parseBing(body))
+            // Today's picture first, then the week before it: the list changes every day.
+            for (idx in listOf(0, 8)) {
+                val body = download("https://www.bing.com/HPImageArchive.aspx?format=js&idx=$idx&n=8&mkt=en-US", 400_000)?.toString(Charsets.UTF_8)
+                if (body != null) out.addAll(parseBing(body))
+            }
         } catch (_: Exception) {}
         for (cat in listOf("Featured_pictures_of_landscapes", "Featured_pictures_of_skies")) out.addAll(commons(cat))
         return out
@@ -113,7 +116,7 @@ object Net2 {
     /** Wikimedia Commons: files of a category that are at least 3840 x 2160, with a 3840-wide and a 500-wide address each. */
     fun commons(category: String): List<OnlineWp> {
         val url = "https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=categorymembers&gcmtitle=Category:$category" +
-            "&gcmtype=file&gcmlimit=60&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=3840"
+            "&gcmtype=file&gcmsort=timestamp&gcmdir=descending&gcmlimit=60&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=3840"
         val body = try { download(url, 2_000_000)?.toString(Charsets.UTF_8) } catch (_: Exception) { null } ?: return emptyList()
         return parseCommons(body)
     }

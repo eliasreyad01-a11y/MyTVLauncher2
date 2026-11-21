@@ -280,7 +280,8 @@ class SettingsActivity : Activity() {
             gravity = Gravity.CENTER_HORIZONTAL
         }
         frame.addView(descView, FrameLayout.LayoutParams(u.i(540f), ViewGroup.LayoutParams.WRAP_CONTENT).apply { leftMargin = u.i(255f); topMargin = u.i(800f) })
-        list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
+        // Bottom padding: the last row can scroll up away from the screen edge instead of sitting cut off on it.
+        list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; clipChildren = false; setPadding(0, 0, 0, u.i(120f)) }
         scroll = ScrollView(this).apply { isVerticalScrollBarEnabled = false; clipChildren = false; clipToPadding = false; addView(list) }
         frame.addView(scroll, FrameLayout.LayoutParams(u.i(789f), u.i(900f)).apply { leftMargin = u.i(1056f); topMargin = u.i(180f) })
         setContentView(frame)

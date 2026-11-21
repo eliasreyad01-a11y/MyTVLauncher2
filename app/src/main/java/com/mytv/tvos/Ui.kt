@@ -200,6 +200,12 @@ object Menus {
             setPadding(0, 0, 0, u.i(18f))
         })
         val rows = ArrayList<View>()
+        // Long lists (the +-15 minute corrections, cities) must scroll: the panel never grows taller than the screen.
+        val listBox = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
+        val rowH = u.i(72f) + u.i(12f)
+        val maxH = (a.resources.displayMetrics.heightPixels * 0.78f).toInt() - (if (title != null) u.i(60f) else 0)
+        val scroller = android.widget.ScrollView(a).apply { isVerticalScrollBarEnabled = false; clipChildren = false; clipToPadding = false; overScrollMode = View.OVER_SCROLL_NEVER; addView(listBox) }
+        panel.addView(scroller, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, min(rowH * items.size, maxH).coerceAtLeast(rowH)))
         for ((label, action) in items) {
             val row = TextView(a).apply {
                 text = L.t(label)
@@ -214,7 +220,7 @@ object Menus {
                 setOnClickListener { d.dismiss(); action() }
             }
             rows.add(row)
-            panel.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, u.i(72f)).apply { topMargin = u.i(6f); bottomMargin = u.i(6f) })
+            listBox.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, u.i(72f)).apply { topMargin = u.i(6f); bottomMargin = u.i(6f) })
         }
         d.setContentView(panel, ViewGroup.LayoutParams(u.i(820f), ViewGroup.LayoutParams.WRAP_CONTENT))
         d.window?.apply {

@@ -569,7 +569,7 @@ class MainActivity : Activity() {
                 if (!isDestroyed && key == wallKey) { wallpaper.setImageBitmap(low); wallpaper.visibility = View.VISIBLE; Backdrop.set(low); root.invalidate() }
             }
             val bmp = Wallpapers.decode(this, sp)
-            if (bmp != null) Backdrop.set(bmp)
+            if (bmp != null && key == wallKey) Backdrop.set(bmp)
             runOnUiThread {
                 if (isDestroyed || key != wallKey) return@runOnUiThread
                 if (bmp == null) { wallpaper.visibility = View.GONE; Backdrop.set(null) }
@@ -657,12 +657,12 @@ class MainActivity : Activity() {
             val a = e.app ?: return
             items.add("Open" to { launch(a) })
             if (compact) {
-                if (lay.dock.any { it.pkg == a.pkg }) items.add("Remove from Dock" to { store.removeFromDock(lay, a.pkg); relayout(null) })
-                else items.add("Add to Dock" to { if (store.addToDock(lay, a.pkg)) relayout(null) else toast("The dock is full") })
+                if (lay.dock.any { it.pkg == a.pkg }) items.add("Remove from Favorites" to { store.removeFromDock(lay, a.pkg); relayout(null) })
+                else items.add("Add to Favorites" to { if (store.addToDock(lay, a.pkg)) relayout(null) else toast("Favorites are full") })
             } else if (!inFolder) {
                 items.add("Move" to { startMove(e) })
-                if (lay.dock.any { it.pkg == a.pkg }) items.add("Remove from Dock" to { store.removeFromDock(lay, a.pkg); relayout(a.pkg) })
-                else items.add("Add to Dock" to { if (store.addToDock(lay, a.pkg)) relayout(a.pkg) else toast("The dock is full") })
+                if (lay.dock.any { it.pkg == a.pkg }) items.add("Remove from Favorites" to { store.removeFromDock(lay, a.pkg); relayout(a.pkg) })
+                else items.add("Add to Favorites" to { if (store.addToDock(lay, a.pkg)) relayout(a.pkg) else toast("Favorites are full") })
                 items.add("New Folder with This App" to { val id = store.newFolder(lay, a.pkg); relayout("f:$id") })
                 for ((k, n) in store.folderKeys(lay)) items.add("Add to $n" to { store.addToFolder(lay, k, a.pkg); relayout(k) })
             } else {
@@ -671,7 +671,7 @@ class MainActivity : Activity() {
             if (a.pkg != Store.SETTINGS_PKG) {
                 items.add("Hide" to { store.hidden = store.hidden + a.pkg; closeFolder(); closePage(false); relayout(null) })
                 items.add("App Info" to { startSafe(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${a.pkg}"))) })
-                items.add("Uninstall" to { startSafe(Intent(Intent.ACTION_DELETE, Uri.parse("package:${a.pkg}"))) })
+                items.add("Uninstall" to { uninstall(a.pkg) })
             }
         }
         Menus.show(this, e.title, items)
@@ -1181,6 +1181,7 @@ class MainActivity : Activity() {
             addDataScheme("package")
         }
         ContextCompat.registerReceiver(this, pkgReceiver, f, ContextCompat.RECEIVER_EXPORTED)
+        if (reloadAppsOnStart) { reloadAppsOnStart = false; loadAppsAsync() }
         Net.start(applicationContext)
     }
 
@@ -1248,6 +1249,25 @@ class MainActivity : Activity() {
         if (screensaver != null) stopScreensaver()
         closeFolder(); closeCC()
         focusFirst()
+    }
+
+    /** True after the system uninstaller was opened: the package receiver is off while we are stopped, so the app list is reloaded on return. */
+    private var reloadAppsOnStart = false
+
+    private fun uninstall(pkg: String) {
+        val info = try { packageManager.getApplicationInfo(pkg, 0) } catch (_: Exception) { null }
+        if (info == null) { loadAppsAsync(); return }
+        val system = info.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM != 0
+        val updated = info.flags and android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP != 0
+        // A built-in app (often YouTube on a TV) cannot be removed by any app: only its updates can be.
+        if (system && !updated) { toast("This is a system app: it cannot be uninstalled"); return }
+        val uri = Uri.parse("package:$pkg")
+        reloadAppsOnStart = true
+        try { startActivity(Intent(Intent.ACTION_DELETE, uri)) }
+        catch (_: Exception) {
+            try { startActivity(Intent(Intent.ACTION_UNINSTALL_PACKAGE, uri)) }
+            catch (_: Exception) { reloadAppsOnStart = false; toast("Not available on this device") }
+        }
     }
 
     private fun startSafe(i: Intent) {
