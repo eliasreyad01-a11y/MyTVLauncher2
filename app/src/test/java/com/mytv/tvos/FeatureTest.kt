@@ -191,7 +191,7 @@ class FeatureTest {
         ClockCustomizer.show(a, sp(), onSaved = { saved = true })
         idle(); dlg = ShadowDialog.getLatestDialog()
         val rows2 = allViews(dlg.window!!.decorView).filter { it.isFocusable && it.isClickable }
-        rows2[0].performClick(); rows2[1].performClick(); rows2[5].performClick(); rows2[7].performClick(); idle()
+        rows2[0].performClick(); rows2[1].performClick(); rows2[6].performClick(); rows2[8].performClick(); idle()
         rows2.first { (it as? TextView)?.text?.toString() == "Save" }.performClick(); idle()
         val c = ClockCfg.load(ctx.getSharedPreferences("tvos_settings", Context.MODE_PRIVATE))
         assertTrue(saved)
