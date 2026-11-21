@@ -98,7 +98,6 @@ class MainActivity : Activity() {
         Digits.load(Prefs(this))
         window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener(focusGuard)
         builtAr = L.ar
-        Contrast.load(sp); builtContrast = Contrast.level
         GlassStyle.load(getSharedPreferences("tvos_settings", Context.MODE_PRIVATE))
         u = U(this)
         store = Store(this)
@@ -401,7 +400,7 @@ class MainActivity : Activity() {
         return isInside(v, pv) || isInside(v, pagesBar) || v === capsule
     }
 
-    private var builtContrast = 0
+    private var builtContrast = -1
     private var reverting = false
 
     /**
@@ -1181,6 +1180,7 @@ class MainActivity : Activity() {
         window.decorView.invalidate()
         val wantAr = Prefs(this).language == "ar"
         if (wantAr != builtAr) { L.ar = wantAr; recreate(); return }
+        if (builtContrast < 0) builtContrast = Contrast.level
         if (Contrast.level != builtContrast) { recreate(); return }
         if (apps.isNotEmpty() && applyOptions()) { adapter.notifyDataSetChanged() }
         if (apps.isNotEmpty()) { lay = store.layout(apps); if (lay.cells().map { it.key } != adapter.cells.map { it.key }) relayout(lastFocusKey) }
