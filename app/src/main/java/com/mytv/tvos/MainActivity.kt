@@ -436,6 +436,14 @@ class MainActivity : Activity() {
         v.post { firstFocusable(v)?.requestFocus() }
     }
 
+    /** A page that fills its grid after it is shown: if the cursor is still on the pages bar, it enters the grid now. */
+    internal fun enterPageIfOnBar(rv: RecyclerView) {
+        if (pageView == null || !rv.isAttachedToWindow) return
+        val f = window?.decorView?.findFocus()
+        if (f != null && f !in pageItems) return
+        (rv.findViewHolderForAdapterPosition(0)?.itemView ?: firstFocusable(rv))?.requestFocus()
+    }
+
     private fun firstFocusable(v: View): View? {
         if (v.visibility != View.VISIBLE) return null
         if (v.isFocusable) return v   // a focusable tile or row counts even though it is a ViewGroup (the app tiles are)

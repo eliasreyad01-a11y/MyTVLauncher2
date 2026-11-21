@@ -202,7 +202,6 @@ class Pages(private val a: MainActivity) {
         col.addView(text(L.t("Apps"), 54f, 0xCCFFFFFF.toInt(), true), LinearLayout.LayoutParams(-2, -2).apply { bottomMargin = u.i(10f) })
         val cells = a.apps.sortedBy { it.label.lowercase() }.map { Entry(it.pkg, it) }
         val ad = HomeAdapter(u, false, { }, { e -> e.app?.let { a.launch(it) } }, { e -> a.showMenu(e, false, true) })
-        ad.cells = cells
         ad.alwaysLabels = true
         ad.reduceMotion = a.sp.getBoolean("calm", false)
         val rv = RecyclerView(a).apply {
@@ -215,6 +214,13 @@ class Pages(private val a: MainActivity) {
         }
         col.addView(rv, LinearLayout.LayoutParams(-1, 0, 1f))
         root.addView(col, FrameLayout.LayoutParams(-1, -1))
+        // The page shows at once (title and background); the tiles, which are the slow part on a weak TV, are filled in on the next frame.
+        // Until then the remote keeps working, instead of the whole launcher stalling while it builds sixty tiles.
+        rv.post {
+            ad.cells = cells
+            ad.notifyDataSetChanged()
+            rv.post { a.enterPageIfOnBar(rv) }
+        }
         return root
     }
 
