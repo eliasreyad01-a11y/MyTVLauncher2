@@ -345,6 +345,20 @@ class FeatureTest {
         assertTrue("saved colour is not one of the presets", ClockCfg.load(sp()).color.let { c -> ClockCfg.COLORS.none { it.first == c } })
     }
 
+    @Test fun wallpaperIsDecodedInFullColourNotSixteenBit() {
+        val a = home()
+        val bmp = android.graphics.Bitmap.createBitmap(1600, 900, android.graphics.Bitmap.Config.ARGB_8888).also { it.eraseColor(0xFF3A7BD5.toInt()) }
+        val f = java.io.File(a.cacheDir, "wp_test.jpg")
+        f.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 95, it) }
+        val s = sp()
+        s.edit().putString("wall_mode", "custom").putString("wall_path", f.absolutePath).apply()
+        val out = Wallpapers.decode(a, s)
+        assertNotNull(out)
+        assertEquals("no 16-bit blocks and bands", android.graphics.Bitmap.Config.ARGB_8888, out!!.config)
+        assertTrue("the picture keeps its size up to the screen width", out.width >= 1600)
+        s.edit().clear().apply()
+    }
+
     @Test fun weatherPageBuilds() {
         val a = home()
         val page = Pages(a).weather()

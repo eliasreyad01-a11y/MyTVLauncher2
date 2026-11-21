@@ -1271,6 +1271,10 @@ class MainActivity : Activity() {
     }
 
     private fun startSafe(i: Intent) {
-        try { startActivity(i) } catch (_: Exception) { toast("Not available on this device") }
+        try {
+            startActivity(i)
+            // The same soft fade as when an app is opened, instead of the system slide/zoom that makes the home screen jump.
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        } catch (_: Exception) { toast("Not available on this device") }
     }
 }

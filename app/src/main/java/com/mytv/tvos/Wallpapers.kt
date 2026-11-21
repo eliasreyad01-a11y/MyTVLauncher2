@@ -37,7 +37,14 @@ object Wallpapers {
 
     /** Decodes the wallpaper at roughly [maxW] pixels wide (never the full-size image: that would waste memory). Blocking. */
     /** The width the wallpaper is decoded at: the full 3840 on a 4K screen, 2560 otherwise (so a 4K picture stays sharp, without wasting memory). */
-    fun fullWidth(ctx: Context): Int = if (ctx.resources.displayMetrics.widthPixels >= 3000) 3840 else 2560
+    fun fullWidth(ctx: Context): Int {
+        val mem = (ctx.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager)?.memoryClass ?: 128
+        return when {
+            ctx.resources.displayMetrics.widthPixels >= 3000 && mem >= 256 -> 3840
+            mem >= 192 -> 2560
+            else -> 1920
+        }
+    }
 
     fun decode(ctx: Context, sp: android.content.SharedPreferences, maxW: Int = fullWidth(ctx)): Bitmap? {
         return try {
@@ -58,8 +65,13 @@ object Wallpapers {
         if (o.outWidth <= 0) return null
         var s = 1
         while (o.outWidth / (s * 2) >= maxW) s *= 2
-        val o2 = BitmapFactory.Options().apply { inSampleSize = s; inPreferredConfig = Bitmap.Config.RGB_565 }
-        return decode(o2)
+        // Full colour (ARGB_8888): the old 16-bit format showed visible blocks and bands in skies and other soft gradients.
+        // Only if the device really has no memory left does it fall back to 16-bit.
+        return try {
+            decode(BitmapFactory.Options().apply { inSampleSize = s; inPreferredConfig = Bitmap.Config.ARGB_8888 })
+        } catch (_: OutOfMemoryError) {
+            decode(BitmapFactory.Options().apply { inSampleSize = s * 2; inPreferredConfig = Bitmap.Config.ARGB_8888 })
+        }
     }
 }
 
