@@ -297,7 +297,7 @@ class Pages(private val a: MainActivity) {
                         addView(text(vl, 32f, 0xFFFFFFFF.toInt(), true).apply { maxLines = 1 })
                     }, LinearLayout.LayoutParams(0, -2, 1f))
                 }
-                factsGrid.addView(rowL, LinearLayout.LayoutParams(-1, 0, 1f))
+                factsGrid.addView(rowL, LinearLayout.LayoutParams(-1, -2).apply { if (r == 0) bottomMargin = u.i(12f) })
             }
 
             fun divider() = View(a).apply { setBackgroundColor(0x33FFFFFF) }
