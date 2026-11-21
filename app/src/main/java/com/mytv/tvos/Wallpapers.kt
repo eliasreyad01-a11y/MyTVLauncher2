@@ -23,6 +23,13 @@ import java.io.File
 
 /** Which picture sits behind the home screen: none, the built-in one, or a file picked from the TV's own storage. */
 object Wallpapers {
+    private var quickKey = ""
+    private var quickBmp: Bitmap? = null
+
+    /** A small copy of the current wallpaper that survives while another app is in front (about 3 MB), so coming back is instant. */
+    @Synchronized fun quick(key: String): Bitmap? = if (quickKey == key && quickBmp?.isRecycled == false) quickBmp else null
+    @Synchronized fun keepQuick(key: String, b: Bitmap) { quickKey = key; quickBmp = b }
+
     fun mode(sp: android.content.SharedPreferences): String =
         sp.getString("wall_mode", null) ?: "default"
 

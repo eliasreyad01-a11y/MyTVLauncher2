@@ -299,14 +299,7 @@ class MainActivity : Activity() {
             if (head.isNotEmpty()) sp2.setSpan(android.text.style.ForegroundColorSpan(0xB3FFFFFF.toInt()), 0, head.length, 0)
             wxText.text = sp2
         }
-        val n = nextPrayer
-        if (n == null) prPill.visibility = View.GONE else {
-            val mins = java.time.Duration.between(java.time.Instant.now(), n.time.toInstant()).toMinutes()
-            if (mins < 0) { prPill.visibility = View.GONE; return }
-            prPill.visibility = View.VISIBLE
-            val hhmm = n.time.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
-            prText.text = L.t(n.name) + "  " + TimeFmt.display(hhmm, TimeFmt.is24(this, p), L.locale()) + "  ·  " + L.t("in") + " " + (if (mins >= 60) "${mins / 60}${L.t("h")} " else "") + "${mins % 60}${L.t("m")}"
-        }
+        prPill.visibility = View.GONE // the full prayer strip shows every time; the extra "next prayer" capsule is gone
     }
 
     private val infoTick = object : Runnable {
@@ -444,7 +437,8 @@ class MainActivity : Activity() {
     }
 
     private fun firstFocusable(v: View): View? {
-        if (v.isFocusable && v.visibility == View.VISIBLE && v !is ViewGroup) return v
+        if (v.visibility != View.VISIBLE) return null
+        if (v.isFocusable) return v   // a focusable tile or row counts even though it is a ViewGroup (the app tiles are)
         if (v is ViewGroup) for (i in 0 until v.childCount) firstFocusable(v.getChildAt(i))?.let { return it }
         return null
     }
@@ -566,7 +560,14 @@ class MainActivity : Activity() {
             Backdrop.set(null); root.invalidate()
             return
         }
+        // Show a small copy at once (kept in memory between visits), then swap in the full-size one when it is ready.
+        val quick = Wallpapers.quick(key)
+        if (quick != null) { wallpaper.setImageBitmap(quick); wallpaper.visibility = View.VISIBLE; Backdrop.set(quick); root.invalidate() }
         Thread {
+            val low = quick ?: Wallpapers.decode(this, sp, 1024)?.also { Wallpapers.keepQuick(key, it) }
+            if (quick == null && low != null) runOnUiThread {
+                if (!isDestroyed && key == wallKey) { wallpaper.setImageBitmap(low); wallpaper.visibility = View.VISIBLE; Backdrop.set(low); root.invalidate() }
+            }
             val bmp = Wallpapers.decode(this, sp)
             if (bmp != null) Backdrop.set(bmp)
             runOnUiThread {
@@ -1076,6 +1077,7 @@ class MainActivity : Activity() {
                 return true
             }
             if ((event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT || event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) && wrapRow(event.keyCode)) return true
+            if (event.keyCode == KeyEvent.KEYCODE_DPAD_UP && upFromPageTop()) return true
             when (event.keyCode) {
                 KeyEvent.KEYCODE_MENU -> {
                     val f = currentFocus
@@ -1086,6 +1088,21 @@ class MainActivity : Activity() {
             }
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    /** Up from the first row of a page's grid (Apps, Wallpapers) goes to the pages bar, on the item of the open page. */
+    private fun upFromPageTop(): Boolean {
+        val pv = pageView ?: return false
+        val f = window?.decorView?.findFocus() ?: return false
+        var c: View? = f
+        while (c != null && c !== pv && c !is RecyclerView) c = c.parent as? View
+        val rv = c as? RecyclerView ?: return false
+        val span = (rv.layoutManager as? GridLayoutManager)?.spanCount ?: return false
+        val pos = rv.findContainingViewHolder(f)?.bindingAdapterPosition ?: return false
+        if (pos < 0 || pos >= span) return false
+        val target = pageItems.firstOrNull { it.isSelected } ?: pageItems.firstOrNull() ?: return false
+        target.requestFocus()
+        return true
     }
 
     /** Last app of a row + Right goes to the first app of the row, and the other way round. */

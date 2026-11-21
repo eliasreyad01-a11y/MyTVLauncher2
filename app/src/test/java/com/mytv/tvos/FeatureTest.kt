@@ -389,6 +389,27 @@ class FeatureTest {
         assertFalse("a home tile behind the page never keeps the cursor", isIn(a.window.decorView.findFocus(), grid))
     }
 
+    @Test fun downFromTheBarEntersTheAppsPageAndUpComesBack() {
+        val a = home()
+        val bar: LinearLayout = field(a, "pagesBar")
+        bar.getChildAt(1).performClick(); idle(); layout(a.window.decorView); idle()
+        val page: View = field(a, "pageView")
+        bar.getChildAt(1).requestFocus(); idle()
+        a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_DOWN)); idle()
+        val rv = allViews(page).filterIsInstance<RecyclerView>().first()
+        val f = a.window.decorView.findFocus()
+        assertTrue("the cursor is on an app tile of the Apps page (focus=$f)", f != null && isIn(f, rv))
+        a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_UP)); idle()
+        assertTrue("Up from the first row returns to the pages bar", a.window.decorView.findFocus() === bar.getChildAt(1))
+    }
+
+    @Test fun weatherIsOneBoxAndNoNextPrayerCapsule() {
+        val a = home()
+        val pill: View = field(a, "prPill")
+        call(a, "updateInfo"); idle()
+        assertEquals("the extra prayer capsule is gone", View.GONE, pill.visibility)
+    }
+
     @Test fun pagesBarWrapsAround() {
         val a = home()
         val bar: LinearLayout = field(a, "pagesBar")
