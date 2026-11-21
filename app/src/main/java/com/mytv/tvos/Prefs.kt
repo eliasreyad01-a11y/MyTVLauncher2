@@ -119,6 +119,19 @@ class Prefs(context: Context) {
         get() = (sp.getString("lon", null) ?: "35.9106").toDoubleOrNull() ?: 35.9106
         set(value) = putString("lon", value.toString())
 
+    /** The weather city: its own choice, or the prayer city when none was chosen. */
+    var weatherCustom: Boolean
+        get() = sp.getString("wx_lat", null) != null
+        set(value) { if (!value) sp.edit().remove("wx_lat").remove("wx_lon").remove("wx_city").apply() }
+
+    val weatherCityName: String get() = if (weatherCustom) sp.getString("wx_city", cityName) ?: cityName else cityName
+    val weatherLat: Double get() = if (weatherCustom) sp.getString("wx_lat", null)?.toDoubleOrNull() ?: latitude else latitude
+    val weatherLon: Double get() = if (weatherCustom) sp.getString("wx_lon", null)?.toDoubleOrNull() ?: longitude else longitude
+
+    fun setWeatherCity(name: String, lat: Double, lon: Double) {
+        sp.edit().putString("wx_city", name).putString("wx_lat", lat.toString()).putString("wx_lon", lon.toString()).apply()
+    }
+
     /** Aladhan calculation method id. 23 = Jordan (Ministry of Awqaf). */
     var method: Int
         get() = sp.getInt("method", 23)

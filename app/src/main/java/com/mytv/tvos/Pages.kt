@@ -257,7 +257,7 @@ class Pages(private val a: MainActivity) {
         val root = scrim()
         val col = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL; setPadding(safe, u.i(140f), safe, u.i(60f)) }
         val head = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL }
-        head.addView(text(Prefs(a).cityName, 54f, 0xFFFFFFFF.toInt(), true).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END })
+        head.addView(text(Prefs(a).weatherCityName, 54f, 0xFFFFFFFF.toInt(), true).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END })
         col.addView(head)
         val body = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL }
         col.addView(body, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = u.i(16f) })
@@ -383,7 +383,7 @@ class Pages(private val a: MainActivity) {
             val app = a.applicationContext
             Thread {
                 val p = Prefs(app)
-                val w = WeatherRepository.fetch(p.latitude, p.longitude)
+                val w = WeatherRepository.fetch(p.weatherLat, p.weatherLon)
                 if (w != null) Net.evidence()
                 ui.post {
                     if (a.isDestroyed || root.parent == null) return@post

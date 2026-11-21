@@ -285,13 +285,13 @@ class MainActivity : Activity() {
         updateStrip()
         val p = Prefs(this)
         val w = weather
-        if (w == null) wxPill.visibility = View.GONE else {
+        if (w == null || sp.getBoolean("wx_hide", false)) wxPill.visibility = View.GONE else {
             wxPill.visibility = View.VISIBLE
             val night = !w.isDay
             wxGlyph.set(w.code, night)
             val temp = "${w.tempC}°"
             val rest = "  ${L.t(getString(Weather.labelRes(w.code)))}  ·  ${w.today.maxC}°/${w.today.minC}°"
-            val city = Prefs(this).cityName.substringBefore(",").trim()
+            val city = Prefs(this).weatherCityName.substringBefore(",").trim()
             val head = if (city.isEmpty()) "" else "$city   "
             val sp2 = android.text.SpannableString(head + temp + rest)
             sp2.setSpan(android.text.style.AbsoluteSizeSpan(u.i(38f)), head.length, head.length + temp.length, 0)
@@ -316,7 +316,7 @@ class MainActivity : Activity() {
             val p = Prefs(app)
             CityClock.ensure(app)
             val n = try { PrayerRepository.nextPrayer(app, false) } catch (_: Exception) { null }
-            val w = WeatherRepository.fetch(p.latitude, p.longitude)
+            val w = WeatherRepository.fetch(p.weatherLat, p.weatherLon)
             val pt = try { PrayerRepository.getTimings(app, PrayerRepository.cityToday(app))?.times } catch (_: Exception) { null }
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread

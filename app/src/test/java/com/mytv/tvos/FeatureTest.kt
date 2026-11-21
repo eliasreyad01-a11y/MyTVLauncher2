@@ -422,6 +422,20 @@ class FeatureTest {
         } finally { L.ar = wasAr }
     }
 
+    @Test fun weatherHasItsOwnCityAndCanFollowThePrayerCity() {
+        sp().edit().clear().apply()
+        val p = Prefs(ctx)
+        assertEquals("by default the weather uses the prayer city", p.cityName, p.weatherCityName)
+        assertEquals(p.latitude, p.weatherLat, 0.0)
+        p.setWeatherCity("Aqaba, Jordan", 29.53, 35.0)
+        assertTrue(p.weatherCustom)
+        assertEquals("Aqaba, Jordan", p.weatherCityName); assertEquals(29.53, p.weatherLat, 0.0001)
+        assertEquals("the prayer city is untouched", "Amman, Jordan", p.cityName)
+        p.weatherCustom = false
+        assertEquals(p.cityName, p.weatherCityName)
+        sp().edit().clear().apply()
+    }
+
     @Test fun weatherIsOneBoxAndNoNextPrayerCapsule() {
         val a = home()
         val pill: View = field(a, "prPill")

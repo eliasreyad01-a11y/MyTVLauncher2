@@ -61,6 +61,7 @@ class SettingsActivity : Activity() {
             Row.Nav("General") { push(general()) },
             Row.Nav("Home Screen") { push(home()) },
             Row.Nav("Glass", { L.t(GlassStyle.TINTS[GlassStyle.tint].first) }) { push(glass()) },
+            Row.Nav("Weather", { p.weatherCityName }) { push(weatherSettings()) },
             Row.Nav("Prayer and Adhan", { p.cityName }) { push(prayer()) },
             Row.Nav("Screen Saver", { ssText() }) { push(screensaver()) },
             Row.Nav("Video and Audio", go = sys(Settings.ACTION_SOUND_SETTINGS)),
@@ -194,7 +195,17 @@ class SettingsActivity : Activity() {
         WallpaperPicker.onActivityResult(this, requestCode, resultCode, data)
     }
 
-    private fun searchCity() {
+    private fun weatherSettings() = Page("Weather") {
+        listOf<Row>(
+            Row.Nav("City", { p.weatherCityName }) { searchCity { c -> p.setWeatherCity(c.display, c.lat, c.lon); weatherChanged() } },
+            Row.Nav("Use Prayer City", { if (p.weatherCustom) null else "✓" }, false) { p.weatherCustom = false; weatherChanged() },
+            Row.Toggle("Hide Weather on Home Screen", "wx_hide", "Show the weather only on the Weather page.")
+        )
+    }
+
+    private fun weatherChanged() { refresh() }
+
+    private fun searchCity(onPick: ((City) -> Unit)? = null) {
         val input = android.widget.EditText(this).apply { setSingleLine(); hint = L.t("City name") }
         android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog)
             .setTitle(L.t("Search City"))
@@ -206,7 +217,7 @@ class SettingsActivity : Activity() {
                     runOnUiThread {
                         if (isDestroyed) return@runOnUiThread
                         if (res.isEmpty()) toast("No city found (check internet)")
-                        else choose("Choose City", res.map { c -> c.display to { pickCity(c) } })
+                        else choose("Choose City", res.map { c -> c.display to { if (onPick != null) onPick(c) else pickCity(c) } })
                     }
                 }.start()
             }
