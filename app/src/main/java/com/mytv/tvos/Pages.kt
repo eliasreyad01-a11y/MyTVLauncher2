@@ -347,7 +347,7 @@ class Pages(private val a: MainActivity) {
             val fmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ENGLISH)
             val dayFmt = java.text.SimpleDateFormat("EEE", L.locale())
             val row3 = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL }
-            val list = if (w.days.isNotEmpty()) w.days.take(5) else listOf(w.today, w.tomorrow)
+            val list = if (w.days.isNotEmpty()) w.days.take(5) else listOf(DayDetail("", w.today.code, w.today.maxC, w.today.minC, w.today.rainPct), DayDetail("", w.tomorrow.code, w.tomorrow.maxC, w.tomorrow.minC, w.tomorrow.rainPct))
             for ((i, d) in list.withIndex()) {
                 val name = if (i == 0) L.t("Today") else try { dayFmt.format(fmt.parse(d.date)!!) } catch (_: Exception) { L.t("Tomorrow") }
                 val card = glassCard(40f).apply { gravity = Gravity.CENTER; setPadding(u.i(10f), u.i(8f), u.i(10f), u.i(8f)) }
