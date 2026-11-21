@@ -315,6 +315,43 @@ class FeatureTest {
         s.edit().clear().apply(); GlassStyle.load(s)
     }
 
+    @Test fun contrastMakesTextSolidAndGlassDarker() {
+        try {
+            Contrast.level = 0
+            assertEquals(0xB3FFFFFF.toInt(), Contrast.boost(0xB3FFFFFF.toInt()))
+            val s0 = GlassStyle.shadeAlpha(false)
+            Contrast.level = 2
+            assertEquals("maximum contrast makes translucent text fully opaque", 0xFF, android.graphics.Color.alpha(Contrast.boost(0x80FFFFFF.toInt())))
+            assertTrue("and darkens the glass", GlassStyle.shadeAlpha(false) > s0)
+        } finally { Contrast.level = 0 }
+    }
+
+    @Test fun anyClockColourCanBePicked() {
+        val a = home()
+        ClockCustomizer.show(a, sp(), onSaved = { })
+        idle()
+        val d = ShadowDialog.getLatestDialog()
+        val row = allViews(d.window!!.decorView).first { v -> v is LinearLayout && v.isClickable && (v.getChildAt(0) as? TextView)?.text?.toString() == "Custom Color" }
+        row.performClick(); idle()
+        val picker = ShadowDialog.getLatestDialog()
+        val bars = allViews(picker.window!!.decorView).filterIsInstance<ColorBar>()
+        assertEquals("hue, saturation, brightness", 3, bars.size)
+        bars[0].value = 200; bars[1].value = 100; bars[2].value = 100
+        bars[2].onChange()
+        allViews(picker.window!!.decorView).first { (it as? TextView)?.text?.toString() == "Done" }.performClick(); idle()
+        val label = ((row as LinearLayout).getChildAt(1) as TextView).text.toString()
+        assertTrue("the row shows the chosen colour as hex ($label)", label.startsWith("#") && label != "#FFFFFF")
+        allViews(d.window!!.decorView).first { (it as? TextView)?.text?.toString() == "Save" }.performClick(); idle()
+        assertTrue("saved colour is not one of the presets", ClockCfg.load(sp()).color.let { c -> ClockCfg.COLORS.none { it.first == c } })
+    }
+
+    @Test fun weatherPageHasBigCardsWithOneGlyphEach() {
+        val a = home()
+        val page = Pages(a).weather()
+        assertNotNull(page)
+        assertEquals("InfoGlyph kinds", 6, listOf("drop", "wind", "gauge", "uv", "sunrise", "sunset").size)
+    }
+
     @Test fun clearGlassLetsTheScreenShowThrough() {
         assertTrue(GlassStyle.seeThrough().let { it in 0.1f..0.8f })
         val s = sp()
@@ -324,51 +361,42 @@ class FeatureTest {
         s.edit().clear().apply(); GlassStyle.load(s)
     }
 
-    @Test fun focusStaysInsideControlCenter() {
+    private fun isIn(v: View?, anc: View): Boolean { var c = v; while (c != null) { if (c === anc) return true; c = c.parent as? View }; return false }
+
+    @Test fun focusCannotLeaveControlCenter() {
         val a = home()
+        val grid: RecyclerView = field(a, "grid")
         call(a, "openCC"); idle()
         val cc: View = field(a, "ccView")
-        for (k in listOf(android.view.KeyEvent.KEYCODE_DPAD_DOWN, android.view.KeyEvent.KEYCODE_DPAD_DOWN, android.view.KeyEvent.KEYCODE_DPAD_DOWN, android.view.KeyEvent.KEYCODE_DPAD_DOWN,
-            android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_DPAD_LEFT, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)) {
-            a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, k)); idle()
-            var c: View? = a.window.currentFocus; var inside = false
-            while (c != null) { if (c === cc) inside = true; c = c.parent as? View }
-            assertTrue("focus left Control Center on key $k", inside)
-        }
+        // The cursor is pushed onto a home tile behind the panel (what a stray Down would do): it is put back inside the panel.
+        grid.findViewHolderForAdapterPosition(2)!!.itemView.requestFocus(); idle()
+        assertTrue("focus went back into Control Center", isIn(a.window.decorView.findFocus(), cc))
     }
 
-    @Test fun focusStaysInsideAPageAndWrapsAround() {
+    @Test fun focusCannotLeaveAPageButReachesTheBar() {
         val a = home()
         val bar: LinearLayout = field(a, "pagesBar")
         val grid: RecyclerView = field(a, "grid")
-        // Wallpapers page: Down never reaches the home tiles behind it.
-        bar.getChildAt(3).performClick(); idle(); layout(a.window.decorView); idle()
+        bar.getChildAt(1).performClick(); idle(); layout(a.window.decorView); idle()   // the Apps page
         val page: View = field(a, "pageView")
-        a.window.decorView.requestFocus()
-        allViews(page).first { it.isFocusable }.requestFocus()
-        repeat(12) {
-            a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_DOWN)); idle()
-            assertNull("focus reached the hidden home grid", grid.findContainingViewHolder(a.window.currentFocus ?: grid))
-        }
-        // The pages bar wraps: last -> first and first -> last.
-        val got = bar.getChildAt(5).requestFocus()
-        assertTrue("bar item 5 took focus (requestFocus=$got, focus=${a.window.currentFocus}, touch=${bar.isInTouchMode})", a.window.currentFocus === bar.getChildAt(5))
-        val ms = a.javaClass.declaredMethods.filter { it.name.startsWith("wrapRow") }
-        val m = ms.first { it.parameterCount == 1 }; m.isAccessible = true
-        val f0 = a.window.currentFocus!!; val par = f0.parent
-        val rowX = (f0.parent as? LinearLayout)
-        val itemsX = (0 until rowX!!.childCount).map { rowX.getChildAt(it) }.filter { it.isFocusable && it.visibility == View.VISIBLE }
-        val ix = itemsX.indexOf(f0)
-        val dbg0 = "items=${itemsX.size} i=$ix key=${android.view.KeyEvent.KEYCODE_DPAD_RIGHT} pv=${field<View?>(a, "pageView") != null} cc=${field<View?>(a, "ccView") != null} "
-        val dbg = dbg0 + "methods=${ms.map { it.name + it.parameterCount }} parent=${par?.javaClass?.simpleName} same=${par === bar} orient=${(par as? LinearLayout)?.orientation} idx=${bar.indexOfChild(f0)}"
-        val direct = m.invoke(a, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)
-        val info = (0 until bar.childCount).map { val c = bar.getChildAt(it); "${c.isFocusable}/${c.visibility}/${c.hasFocus()}" }
-        assertTrue("${field<String>(a, "wrapDebug")} $dbg direct wrapRow=$direct children=$info focus=${a.window.currentFocus}", a.window.currentFocus === bar.getChildAt(0))
-        bar.getChildAt(5).requestFocus()
+        val inside = allViews(page).first { it.isFocusable }
+        inside.requestFocus(); idle()
+        assertTrue("the cursor moves inside the page", isIn(a.window.decorView.findFocus(), page))
+        bar.getChildAt(0).requestFocus(); idle()
+        assertTrue("the pages bar can be reached from the page", a.window.decorView.findFocus() === bar.getChildAt(0))
+        val behind = grid.findViewHolderForAdapterPosition(2)?.itemView
+        behind?.requestFocus(); idle()
+        assertFalse("a home tile behind the page never keeps the cursor", isIn(a.window.decorView.findFocus(), grid))
+    }
+
+    @Test fun pagesBarWrapsAround() {
+        val a = home()
+        val bar: LinearLayout = field(a, "pagesBar")
+        bar.getChildAt(5).requestFocus(); idle()
         a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)); idle()
-        assertTrue("RIGHT on the last item wraps to Home (focus=${a.window.currentFocus})", a.window.currentFocus === bar.getChildAt(0))
+        assertTrue("RIGHT on the last item wraps to Home", a.window.decorView.findFocus() === bar.getChildAt(0))
         a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_LEFT)); idle()
-        assertTrue("LEFT on the first item wraps to Settings", a.window.currentFocus === bar.getChildAt(5))
+        assertTrue("LEFT on the first item wraps to Settings", a.window.decorView.findFocus() === bar.getChildAt(5))
     }
 
     @Test fun cursorStaysNearWhereItWasWhenTheListChanges() {

@@ -96,7 +96,9 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         L.ar = Prefs(this).language == "ar"
         Digits.load(Prefs(this))
+        window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener(focusGuard)
         builtAr = L.ar
+        Contrast.load(sp); builtContrast = Contrast.level
         GlassStyle.load(getSharedPreferences("tvos_settings", Context.MODE_PRIVATE))
         u = U(this)
         store = Store(this)
@@ -391,28 +393,36 @@ class MainActivity : Activity() {
 
     private fun isInside(v: View?, anc: View?): Boolean { var c = v; while (c != null) { if (c === anc) return true; c = c.parent as? View }; return false }
 
-    /**
-     * Keeps the remote from leaking between layers: with Control Center or a folder open, the cursor cannot leave it; with a page
-     * open it can only move inside the page, the pages bar and the capsule. Returns true when the key must be swallowed.
-     */
-    private fun containFocus(code: Int): Boolean {
-        val dir = when (code) {
-            KeyEvent.KEYCODE_DPAD_UP -> View.FOCUS_UP; KeyEvent.KEYCODE_DPAD_DOWN -> View.FOCUS_DOWN
-            KeyEvent.KEYCODE_DPAD_LEFT -> View.FOCUS_LEFT; KeyEvent.KEYCODE_DPAD_RIGHT -> View.FOCUS_RIGHT; else -> return false
-        }
-        val f = window?.decorView?.findFocus() ?: currentFocus
+    /** Where the cursor may be right now: inside Control Center / the open folder, or inside the open page, the pages bar and the capsule. */
+    private fun focusAllowed(v: View): Boolean {
         val scope: View? = ccView ?: folderView
-        if (scope != null) {
-            if (f == null || !isInside(f, scope)) { firstFocusable(scope)?.requestFocus(); return true }
-            val n = f.focusSearch(dir)
-            return n == null || !isInside(n, scope)
+        if (scope != null) return isInside(v, scope)
+        val pv = pageView ?: return true
+        return isInside(v, pv) || isInside(v, pagesBar) || v === capsule
+    }
+
+    private var builtContrast = 0
+    private var reverting = false
+
+    /**
+     * Keeps the remote from leaking between layers. It does not search ahead (a look-ahead search makes a RecyclerView scroll
+     * twice per key press): it only reacts when the cursor has actually landed outside the allowed layer and puts it back.
+     */
+    private val focusGuard = android.view.ViewTreeObserver.OnGlobalFocusChangeListener { old, new ->
+        if (!reverting && new != null && !focusAllowed(new)) {
+            reverting = true
+            try {
+                val scope: View? = ccView ?: folderView ?: pageView
+                (old?.takeIf { it.isAttachedToWindow && focusAllowed(it) } ?: scope?.let { firstFocusable(it) })?.requestFocus()
+            } finally { reverting = false }
         }
-        val pv = pageView
-        if (pv != null && f != null) {
-            val n = f.focusSearch(dir) ?: return false
-            return !(isInside(n, pv) || isInside(n, pagesBar) || n === capsule)
-        }
-        return false
+    }
+
+    /** For tests and for a key press: put the cursor back inside the allowed layer if it is outside. */
+    internal fun enforceFocusScope() {
+        val f = window?.decorView?.findFocus()
+        val scope: View? = ccView ?: folderView ?: pageView
+        if (scope != null && (f == null || !focusAllowed(f))) firstFocusable(scope)?.requestFocus()
     }
 
     private fun setPage(i: Int) { pageItems.forEachIndexed { j, v -> v.isSelected = j == i } }
@@ -1067,7 +1077,6 @@ class MainActivity : Activity() {
                 return true
             }
             if ((event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT || event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) && wrapRow(event.keyCode)) return true
-            if (containFocus(event.keyCode)) return true
             when (event.keyCode) {
                 KeyEvent.KEYCODE_MENU -> {
                     val f = currentFocus
@@ -1172,6 +1181,7 @@ class MainActivity : Activity() {
         window.decorView.invalidate()
         val wantAr = Prefs(this).language == "ar"
         if (wantAr != builtAr) { L.ar = wantAr; recreate(); return }
+        if (Contrast.level != builtContrast) { recreate(); return }
         if (apps.isNotEmpty() && applyOptions()) { adapter.notifyDataSetChanged() }
         if (apps.isNotEmpty()) { lay = store.layout(apps); if (lay.cells().map { it.key } != adapter.cells.map { it.key }) relayout(lastFocusKey) }
         resetIdle()

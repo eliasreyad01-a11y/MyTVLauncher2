@@ -194,8 +194,9 @@ class Pages(private val a: MainActivity) {
     private val ui = Handler(Looper.getMainLooper())
 
     private fun text(s: String, size: Float, color: Int = 0xFFFFFFFF.toInt(), bold: Boolean = false) = TextView(a).apply {
-        text = s; setTextSize(TypedValue.COMPLEX_UNIT_PX, u.px(size)); setTextColor(color)
+        text = s; setTextSize(TypedValue.COMPLEX_UNIT_PX, u.px(size)); setTextColor(Contrast.boost(color))
         if (bold) typeface = Typeface.DEFAULT_BOLD
+        if (Contrast.level > 0) setShadowLayer(u.px(4f), 0f, u.px(1.5f), 0xAA000000.toInt())
     }
 
     private fun scrim(): FrameLayout = FrameLayout(a).apply { setBackgroundColor(0xB30C0E13.toInt()) }
@@ -297,6 +298,14 @@ class Pages(private val a: MainActivity) {
             addView(text(sub, 22f, 0x99FFFFFF.toInt()).apply { gravity = Gravity.CENTER_HORIZONTAL; maxLines = 1 })
         }
 
+        // One big card = one big picture + its information (no rows of small icons).
+        fun bigCard(kind: String, label: String, value: String, glyph: View? = null): View = glassCard(40f).apply {
+            gravity = Gravity.CENTER; setPadding(u.i(14f), u.i(10f), u.i(14f), u.i(10f))
+            addView(glyph ?: InfoGlyph(a).apply { this.kind = kind }, LinearLayout.LayoutParams(u.i(120f), u.i(120f)))
+            addView(text(L.t(label), 26f, Contrast.boost(0xCCFFFFFF.toInt())).apply { gravity = Gravity.CENTER; maxLines = 1 })
+            addView(text(value, 40f, 0xFFFFFFFF.toInt(), true).apply { gravity = Gravity.CENTER; maxLines = 1 })
+        }
+
         fun fill(w: Weather?, loading: Boolean) {
             body.removeAllViews()
             if (w == null) {
@@ -304,60 +313,51 @@ class Pages(private val a: MainActivity) {
                 return
             }
             val is24 = TimeFmt.is24(a, Prefs(a))
+            fun clockText(s: String) = if (s.isEmpty()) "—" else TimeFmt.display(s, is24, L.locale())
+
+            // Row 1: the weather now (one big picture) and the air.
             val row1 = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL }
-            val now = glassCard().apply { setPadding(u.i(30f), u.i(14f), u.i(30f), u.i(14f)); gravity = Gravity.CENTER_VERTICAL }
+            val now = glassCard(40f).apply { gravity = Gravity.CENTER; setPadding(u.i(24f), u.i(12f), u.i(24f), u.i(12f)) }
             val nowRow = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-            nowRow.addView(WeatherGlyph(a).apply { set(w.code, !w.isDay) }, LinearLayout.LayoutParams(u.i(230f), u.i(230f)).apply { marginEnd = u.i(24f) })
+            nowRow.addView(WeatherGlyph(a).apply { set(w.code, !w.isDay) }, LinearLayout.LayoutParams(u.i(250f), u.i(250f)).apply { marginEnd = u.i(20f) })
             val nowCol = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL }
             nowCol.addView(text("${w.tempC}°", 150f, 0xFFFFFFFF.toInt()).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL); includeFontPadding = false })
             nowCol.addView(text(L.t(a.getString(Weather.labelRes(w.code))), 40f))
-            nowCol.addView(text("${L.t("High")} ${w.today.maxC}°   ${L.t("Low")} ${w.today.minC}°", 28f, 0xCCFFFFFF.toInt()))
-            nowCol.addView(text(L.t("Feels like") + " ${w.feelsC}°", 28f, 0xB3FFFFFF.toInt()))
+            nowCol.addView(text("${L.t("High")} ${w.today.maxC}°   ${L.t("Low")} ${w.today.minC}°", 28f, Contrast.boost(0xCCFFFFFF.toInt())))
+            nowCol.addView(text(L.t("Feels like") + " ${w.feelsC}°", 28f, Contrast.boost(0xB3FFFFFF.toInt())))
             nowRow.addView(nowCol)
             now.addView(nowRow)
-            row1.addView(now, LinearLayout.LayoutParams(0, -1, 1.2f).apply { marginEnd = u.i(20f) })
+            row1.addView(now, LinearLayout.LayoutParams(0, -1, 2.3f).apply { marginEnd = u.i(16f) })
+            row1.addView(bigCard("drop", "Humidity", "${w.humidity}%"), LinearLayout.LayoutParams(0, -1, 1f).apply { marginEnd = u.i(16f) })
+            row1.addView(bigCard("wind", "Wind", ("${w.windKmh} km/h " + compass(w.windDirDeg)).trim()), LinearLayout.LayoutParams(0, -1, 1f))
+            body.addView(row1, LinearLayout.LayoutParams(-1, 0, 1.25f).apply { bottomMargin = u.i(16f) })
 
-            val grid = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL }
-            val tiles = listOf(
-                "Humidity" to "${w.humidity}%", "Wind" to ("${w.windKmh} km/h " + compass(w.windDirDeg)).trim(),
-                "Pressure" to (if (w.pressureHpa > 0) "${w.pressureHpa} hPa" else "—"), "UV Index" to uvText(w.uvIndex),
-                "Sunrise" to (if (w.sunrise.isEmpty()) "—" else TimeFmt.display(w.sunrise, is24, L.locale())),
-                "Sunset" to (if (w.sunset.isEmpty()) "—" else TimeFmt.display(w.sunset, is24, L.locale()))
+            // Row 2: four big cards.
+            val row2 = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL }
+            val cards = listOf(
+                Triple("gauge", "Pressure", if (w.pressureHpa > 0) "${w.pressureHpa} hPa" else "—"),
+                Triple("uv", "UV Index", uvText(w.uvIndex)),
+                Triple("sunrise", "Sunrise", clockText(w.sunrise)),
+                Triple("sunset", "Sunset", clockText(w.sunset))
             )
-            for (r in 0 until 3) {
-                val rowL = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL }
-                for (c in 0 until 2) {
-                    val (lb, vl) = tiles[r * 2 + c]
-                    rowL.addView(infoTile(lb, vl), LinearLayout.LayoutParams(0, -1, 1f).apply { if (c == 0) marginEnd = u.i(14f) })
-                }
-                grid.addView(rowL, LinearLayout.LayoutParams(-1, 0, 1f).apply { if (r < 2) bottomMargin = u.i(14f) })
-            }
-            row1.addView(grid, LinearLayout.LayoutParams(0, -1, 1f))
-            body.addView(row1, LinearLayout.LayoutParams(-1, 0, 1.55f).apply { bottomMargin = u.i(14f) })
+            for ((i, c) in cards.withIndex()) row2.addView(bigCard(c.first, c.second, c.third), LinearLayout.LayoutParams(0, -1, 1f).apply { if (i < 3) marginEnd = u.i(16f) })
+            body.addView(row2, LinearLayout.LayoutParams(-1, 0, 1f).apply { bottomMargin = u.i(16f) })
 
-            // The next hours.
-            val hours = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL }
-            for (hp in w.hourly.take(8)) hours.addView(
-                cell(TimeFmt.display(hp.hhmm, is24, L.locale()), hp.code, !hp.isDay, "${hp.tempC}°", if (hp.rainPct > 0) "${hp.rainPct}%" else " "),
-                LinearLayout.LayoutParams(0, -1, 1f)
-            )
-            if (w.hourly.isNotEmpty()) body.addView(titled("Next hours", 0.95f, hours))
-
-            // The coming days.
+            // Row 3: the coming days, one big picture each.
             val fmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ENGLISH)
             val dayFmt = java.text.SimpleDateFormat("EEE", L.locale())
-            val days = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL }
-            for ((i, d) in w.days.take(5).withIndex()) {
-                val name = if (i == 0) L.t("Today") else try { dayFmt.format(fmt.parse(d.date)!!) } catch (_: Exception) { d.date }
-                days.addView(cell(name, d.code, false, "${d.maxC}° / ${d.minC}°", L.t("Rain") + " ${d.rainPct}%"), LinearLayout.LayoutParams(0, -1, 1f))
+            val row3 = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL }
+            val list = if (w.days.isNotEmpty()) w.days.take(5) else listOf(w.today, w.tomorrow)
+            for ((i, d) in list.withIndex()) {
+                val name = if (i == 0) L.t("Today") else try { dayFmt.format(fmt.parse(d.date)!!) } catch (_: Exception) { L.t("Tomorrow") }
+                val card = glassCard(40f).apply { gravity = Gravity.CENTER; setPadding(u.i(10f), u.i(8f), u.i(10f), u.i(8f)) }
+                card.addView(text(name, 28f, Contrast.boost(0xCCFFFFFF.toInt())).apply { gravity = Gravity.CENTER; maxLines = 1 })
+                card.addView(WeatherGlyph(a).apply { set(d.code, false) }, LinearLayout.LayoutParams(u.i(130f), u.i(130f)))
+                card.addView(text("${d.maxC}° / ${d.minC}°", 36f, 0xFFFFFFFF.toInt(), true).apply { gravity = Gravity.CENTER; maxLines = 1 })
+                card.addView(text(L.t("Rain") + " ${d.rainPct}%", 24f, Contrast.boost(0x99FFFFFF.toInt())).apply { gravity = Gravity.CENTER; maxLines = 1 })
+                row3.addView(card, LinearLayout.LayoutParams(0, -1, 1f).apply { if (i < list.size - 1) marginEnd = u.i(16f) })
             }
-            if (w.days.isNotEmpty()) body.addView(titled("5-day forecast", 1.05f, days, 0))
-            else {
-                val two = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL }
-                two.addView(dayCard("Today", w.today), LinearLayout.LayoutParams(0, -1, 1f).apply { marginEnd = u.i(14f) })
-                two.addView(dayCard("Tomorrow", w.tomorrow), LinearLayout.LayoutParams(0, -1, 1f))
-                body.addView(two, LinearLayout.LayoutParams(-1, 0, 1f))
-            }
+            body.addView(row3, LinearLayout.LayoutParams(-1, 0, 1.45f))
         }
 
         fun load() {

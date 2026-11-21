@@ -393,10 +393,11 @@ object ClockCustomizer {
             preview.invalidate()
         }
 
-        class RowDef(val title: String, val value: () -> String, val step: (Int) -> Unit)
+        class RowDef(val title: String, val value: () -> String, val onEnter: (() -> Unit)? = null, val step: (Int) -> Unit)
 
         fun <T> cycle(items: List<T>, cur: T, dir: Int): T = items[(items.indexOf(cur).let { if (it < 0) 0 else it } + dir + items.size) % items.size]
 
+        var afterPick: () -> Unit = {}
         val defs = listOf(
             RowDef("Style", { L.t(ClockCfg.KIND_LABEL[work.kind] ?: work.kind) }) { dir -> work.kind = cycle(ClockCfg.KINDS, work.kind, dir) },
             RowDef("Size", { "${work.pct}%" }) { dir -> work.pct = cycle(sizes, work.pct.let { v -> sizes.minByOrNull { Math.abs(it - v) } ?: 100 }, dir) },
@@ -405,6 +406,9 @@ object ClockCustomizer {
                 val i = ClockCfg.COLORS.indexOfFirst { it.first == work.color }.let { if (it < 0) 0 else it }
                 work.color = ClockCfg.COLORS[(i + dir + ClockCfg.COLORS.size) % ClockCfg.COLORS.size].first
             },
+            RowDef("Custom Color", { if (ClockCfg.COLORS.any { it.first == work.color }) "—" else ColorPicker.hex(work.color) }, onEnter = {
+                ColorPicker.show(a, work.color) { c -> work.color = c; afterPick() }
+            }) { },
             RowDef("Position", { L.t(ClockCfg.POS_LABEL[work.pos] ?: work.pos) }) { dir -> if (!sleep) work.pos = cycle(ClockCfg.POSITIONS, work.pos, dir) },
             RowDef("Seconds", { L.t(if (work.seconds) "On" else "Off") }) { work.seconds = !work.seconds },
             RowDef("Show Date", { L.t(if (work.date) "On" else "Off") }) { work.date = !work.date },
@@ -433,13 +437,13 @@ object ClockCustomizer {
             fun sync() { v.text = def.value() }
             fun move(dir: Int) { def.step(dir); sync(); refreshPreview() }
             sync()
-            row.setOnClickListener { move(1) }
+            row.setOnClickListener { val en = def.onEnter; if (en != null) en() else move(1) }
             row.setOnKeyListener { _, code, ev ->
                 if (ev.action != KeyEvent.ACTION_DOWN) false
                 else when (code) { KeyEvent.KEYCODE_DPAD_LEFT -> { move(-1); true }; KeyEvent.KEYCODE_DPAD_RIGHT -> { move(1); true }; else -> false }
             }
             rows.add(row)
-            list.addView(row, LinearLayout.LayoutParams(-1, u.i(66f)).apply { bottomMargin = u.i(10f) })
+            list.addView(row, LinearLayout.LayoutParams(-1, u.i(58f)).apply { bottomMargin = u.i(8f) })
         }
 
         fun button(label: String, action: () -> Unit) = TextView(a).apply {
@@ -449,6 +453,7 @@ object ClockCustomizer {
             setOnClickListener { action() }
         }
 
+        afterPick = { shown.forEachIndexed { i, _ -> ((rows[i] as LinearLayout).getChildAt(1) as TextView).text = shown[i].value() }; refreshPreview() }
         val bar = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL }
         bar.addView(button("Save") {
             work.save(sp, prefix); prefs.timeFormat = fmt; prefs.numerals = Digits.mode; saved = true; d.dismiss(); onSaved()

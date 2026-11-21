@@ -61,6 +61,7 @@ object GlassStyle {
         tint = sp.getInt("glass_tint", 0).coerceIn(0, TINTS.size - 1)
         level = sp.getInt("glass_level", 2).coerceIn(0, LEVELS.size - 1)
         shade = sp.getInt("glass_shade", 1).coerceIn(0, SHADES.size - 1)
+        Contrast.load(sp)
     }
 
     fun tintRgb() = TINTS[tint].second and 0xFFFFFF
@@ -68,7 +69,8 @@ object GlassStyle {
     fun shadeAlpha(lightBackdrop: Boolean): Int {
         val chosen = intArrayOf(0, 0x30, 0x58)[shade] + (if (lightBackdrop && shade > 0) 0x14 else 0)
         // A pale tint (Frost White, Amber ...) under white text would show nothing: the darker the glass body, the more shade it gets.
-        return if (isPale(tintRgb())) max(chosen, (bodyAlpha() * 0.6f).toInt() + 0x08) else chosen
+        val base = if (isPale(tintRgb())) max(chosen, (bodyAlpha() * 0.6f).toInt() + 0x08) else chosen
+        return (base + Contrast.extraShade()).coerceAtMost(0xB0)
     }
     /** How much of the blurred picture the glass shows (the rest is the live screen behind it): the clearer the glass, the more you see through it. */
     fun seeThrough() = floatArrayOf(0.18f, 0.32f, 0.5f, 0.72f)[level]
@@ -84,8 +86,8 @@ object Glass {
     private val FOCUSED = intArrayOf(android.R.attr.state_focused)
 
     fun states(focused: Int, normal: Int) = ColorStateList(arrayOf(FOCUSED, intArrayOf()), intArrayOf(focused, normal))
-    fun text() = states(0xFF000000.toInt(), 0xF2FFFFFF.toInt())
-    fun dim() = states(0x8C000000.toInt(), 0x80FFFFFF.toInt())
+    fun text() = states(0xFF000000.toInt(), Contrast.boost(0xF2FFFFFF.toInt()))
+    fun dim() = states(0xCC000000.toInt(), Contrast.boost(0xB3FFFFFF.toInt()))
 
     private fun shape(color: Int, r: Float) = GradientDrawable().apply { setColor(color); cornerRadius = r }
 
@@ -638,4 +640,91 @@ class WeatherGlyph(context: Context) : View(context) {
             else -> if (night) moon(c, s * 0.5f, s * 0.5f, s * 0.34f) else sun(c, s * 0.5f, s * 0.5f, s * 0.22f)
         }
     }
+}
+
+/** Large pictures for the weather cards: water drop, wind, pressure gauge, UV sun, sunrise, sunset - drawn in code. */
+class InfoGlyph(context: Context) : View(context) {
+    var kind = "drop"
+    private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val path = Path()
+
+    override fun onDraw(c: Canvas) {
+        val s = min(width, height).toFloat()
+        val cx = width / 2f; val cy = height / 2f
+        p.style = Paint.Style.FILL; p.strokeCap = Paint.Cap.ROUND; p.strokeJoin = Paint.Join.ROUND
+        when (kind) {
+            "drop" -> {
+                path.reset()
+                path.moveTo(cx, cy - s * 0.42f)
+                path.cubicTo(cx + s * 0.40f, cy - s * 0.02f, cx + s * 0.34f, cy + s * 0.40f, cx, cy + s * 0.40f)
+                path.cubicTo(cx - s * 0.34f, cy + s * 0.40f, cx - s * 0.40f, cy - s * 0.02f, cx, cy - s * 0.42f)
+                p.color = 0xFF5AC8FA.toInt(); c.drawPath(path, p)
+                p.color = 0x66FFFFFF; c.drawCircle(cx - s * 0.12f, cy + s * 0.14f, s * 0.07f, p)
+            }
+            "wind" -> {
+                p.style = Paint.Style.STROKE; p.strokeWidth = s * 0.075f; p.color = 0xFFE6ECF5.toInt()
+                for ((i, dy) in listOf(-0.22f, 0f, 0.22f).withIndex()) {
+                    val y = cy + s * dy; val w = s * (0.62f - 0.10f * (i % 2))
+                    path.reset(); path.moveTo(cx - s * 0.40f, y)
+                    path.lineTo(cx - s * 0.40f + w, y)
+                    path.arcTo(RectF(cx - s * 0.40f + w - s * 0.09f, y - s * 0.18f, cx - s * 0.40f + w + s * 0.09f, y), 90f, -270f)
+                    c.drawPath(path, p)
+                }
+            }
+            "gauge" -> {
+                p.style = Paint.Style.STROKE; p.strokeWidth = s * 0.09f; p.color = 0x55FFFFFF
+                val r = RectF(cx - s * 0.40f, cy - s * 0.40f, cx + s * 0.40f, cy + s * 0.40f)
+                c.drawArc(r, 150f, 240f, false, p)
+                p.color = 0xFFFF9F0A.toInt(); c.drawArc(r, 150f, 150f, false, p)
+                p.strokeWidth = s * 0.06f; p.color = 0xFFFFFFFF.toInt()
+                val a = Math.toRadians(300.0)
+                c.drawLine(cx, cy, cx + (s * 0.30f * Math.cos(a)).toFloat(), cy + (s * 0.30f * Math.sin(a)).toFloat(), p)
+                p.style = Paint.Style.FILL; c.drawCircle(cx, cy, s * 0.06f, p)
+            }
+            "uv" -> sun(c, cx, cy, s * 0.20f, 0xFFFFB300.toInt())
+            "sunrise", "sunset" -> {
+                val horizon = cy + s * 0.14f
+                sun(c, cx, horizon - s * 0.02f, s * 0.17f, if (kind == "sunrise") 0xFFFFD60A.toInt() else 0xFFFF7A33.toInt())
+                p.style = Paint.Style.FILL; p.color = 0x00000000
+                p.style = Paint.Style.STROKE; p.strokeWidth = s * 0.06f; p.color = 0xFFE6ECF5.toInt()
+                c.drawLine(cx - s * 0.42f, horizon, cx + s * 0.42f, horizon, p)
+                // arrow: up for sunrise, down for sunset
+                val dir = if (kind == "sunrise") -1f else 1f
+                val ay = cy + s * 0.32f
+                c.drawLine(cx, ay - dir * s * 0.07f, cx, ay + dir * s * 0.07f, p)
+                c.drawLine(cx - s * 0.07f, ay + dir * s * 0.01f, cx, ay + dir * s * 0.08f, p)
+                c.drawLine(cx + s * 0.07f, ay + dir * s * 0.01f, cx, ay + dir * s * 0.08f, p)
+            }
+        }
+    }
+
+    private fun sun(c: Canvas, cx: Float, cy: Float, r: Float, color: Int) {
+        p.style = Paint.Style.FILL; p.color = color
+        c.drawCircle(cx, cy, r, p)
+        p.style = Paint.Style.STROKE; p.strokeWidth = r * 0.3f; p.color = color
+        for (i in 0 until 8) {
+            val a = Math.toRadians(i * 45.0)
+            c.drawLine(cx + (r * 1.45f * Math.cos(a)).toFloat(), cy + (r * 1.45f * Math.sin(a)).toFloat(),
+                cx + (r * 1.95f * Math.cos(a)).toFloat(), cy + (r * 1.95f * Math.sin(a)).toFloat(), p)
+        }
+        p.style = Paint.Style.FILL
+    }
+}
+
+/** Text contrast: 0 = normal, 1 = high, 2 = maximum. It makes translucent white text more solid and darkens the glass behind it. */
+object Contrast {
+    @Volatile var level = 0
+    val LABELS = listOf("Normal", "High", "Maximum")
+
+    fun load(sp: android.content.SharedPreferences) { level = sp.getInt("contrast", 0).coerceIn(0, 2) }
+
+    fun boost(color: Int): Int {
+        if (level == 0) return color
+        val a = Color.alpha(color)
+        val na = (a + (255 - a) * (if (level == 1) 0.6f else 1f)).toInt().coerceAtMost(255)
+        return Color.argb(na, Color.red(color), Color.green(color), Color.blue(color))
+    }
+
+    /** Extra darkness for the glass, so light text stands out against bright wallpapers. */
+    fun extraShade() = level * 0x1C
 }

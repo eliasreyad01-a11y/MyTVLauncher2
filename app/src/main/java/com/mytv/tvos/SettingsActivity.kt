@@ -113,7 +113,10 @@ class SettingsActivity : Activity() {
             Row.Nav("Glass Shade", { L.t(GlassStyle.SHADES[GlassStyle.shade]) }) {
                 choose("Glass Shade", GlassStyle.SHADES.mapIndexed { i, n -> n to { prefs.edit().putInt("glass_shade", i).apply(); glassChanged() } })
             },
-            Row.Nav("Reset Glass") { prefs.edit().remove("glass_tint").remove("glass_level").remove("glass_shade").apply(); glassChanged() }
+            Row.Nav("Text Contrast", { L.t(Contrast.LABELS[Contrast.level]) }) {
+                choose("Text Contrast", Contrast.LABELS.mapIndexed { i, n -> n to { prefs.edit().putInt("contrast", i).apply(); glassChanged() } })
+            },
+            Row.Nav("Reset Glass") { prefs.edit().remove("glass_tint").remove("glass_level").remove("glass_shade").remove("contrast").apply(); glassChanged() }
         )
     }
 
