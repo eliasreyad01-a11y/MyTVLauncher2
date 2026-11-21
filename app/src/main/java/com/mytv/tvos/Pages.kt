@@ -35,7 +35,7 @@ class OnlineWp(val title: String, val thumb: String, val full: String)
 object Thumbs {
     private val pool = Executors.newFixedThreadPool(3)
     private val main = Handler(Looper.getMainLooper())
-    private val cache = object : LruCache<String, Bitmap>(40) {}
+    private val cache = object : LruCache<String, Bitmap>(64 * 1024 * 1024) { override fun sizeOf(key: String, value: Bitmap) = value.byteCount }
 
     fun get(url: String): Bitmap? = cache.get(url)
 
@@ -50,8 +50,8 @@ object Thumbs {
                     val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                     BitmapFactory.decodeByteArray(b, 0, b.size, o)
                     var s = 1
-                    while (o.outWidth / (s * 2) >= 520) s *= 2
-                    BitmapFactory.decodeByteArray(b, 0, b.size, BitmapFactory.Options().apply { inSampleSize = s })
+                    while (o.outWidth / (s * 2) >= 1100) s *= 2   // sharp on a 4K screen; 16-bit colour keeps each one at about 2 MB
+                    BitmapFactory.decodeByteArray(b, 0, b.size, BitmapFactory.Options().apply { inSampleSize = s; inPreferredConfig = Bitmap.Config.RGB_565 })
                 } catch (_: Throwable) { null }
             }
             if (bmp != null) cache.put(url, bmp)
@@ -107,13 +107,13 @@ object Net2 {
             for (i in 0 until arr.length()) {
                 val o = arr.getJSONObject(i)
                 val base = "https://www.bing.com" + o.getString("urlbase")
-                out.add(OnlineWp(o.optString("title", "Bing"), base + "_400x240.jpg", base + "_UHD.jpg"))
+                out.add(OnlineWp(o.optString("title", "Bing"), base + "_1280x720.jpg", base + "_UHD.jpg"))
             }
         } catch (_: Exception) {}
         return out
     }
 
-    /** Wikimedia Commons: files of a category that are at least 3840 x 2160, with a 3840-wide and a 500-wide address each. */
+    /** Wikimedia Commons: files of a category that are at least 3840 x 2160, with a 3840-wide and a 1280-wide address each. */
     fun commons(category: String): List<OnlineWp> {
         val url = "https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=categorymembers&gcmtitle=Category:$category" +
             "&gcmtype=file&gcmsort=timestamp&gcmdir=descending&gcmlimit=60&prop=imageinfo&iiprop=url|size|mime&iiurlwidth=3840"
@@ -133,7 +133,7 @@ object Net2 {
                 val full = info.optString("thumburl")
                 if (!full.contains("/3840px-")) continue
                 val title = pg.optString("title", "").removePrefix("File:").substringBeforeLast('.').replace('_', ' ').take(46)
-                out.add(OnlineWp(title, full.replace("/3840px-", "/500px-"), full))
+                out.add(OnlineWp(title, full.replace("/3840px-", "/1280px-"), full))
                 if (out.size >= max) break
             }
         } catch (_: Exception) {}
@@ -393,7 +393,7 @@ class Pages(private val a: MainActivity) {
         Toast.makeText(a, L.t("Downloading…"), Toast.LENGTH_LONG).show()
         Thread {
             val bytes = Net2.download(w.full, 40_000_000)
-            val bmp = bytes?.let { b -> WallpaperPicker.decodeStream({ java.io.ByteArrayInputStream(b) }, 1280) }
+            val bmp = bytes?.let { b -> WallpaperPicker.decodeStream({ java.io.ByteArrayInputStream(b) }, Wallpapers.fullWidth(a)) }
             ui.post {
                 if (a.isDestroyed) return@post
                 if (bmp == null) Toast.makeText(a, L.t("Download failed (check internet)"), Toast.LENGTH_LONG).show()

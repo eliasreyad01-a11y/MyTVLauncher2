@@ -11,7 +11,7 @@ android {
         applicationId = "com.mytv.tvos"
         minSdk = 26
         targetSdk = 34
-        versionCode = 26
+        versionCode = 27
         versionName = "2.9.3"
     }
 
