@@ -1109,6 +1109,14 @@ class MainActivity : Activity() {
     internal var wrapDebug = "not reached"
     private fun wrapRow(code: Int): Boolean {
         val f = window?.decorView?.findFocus() ?: currentFocus ?: return false
+        // The top ring: the six pages and the clock capsule, in screen order. Right from the last one goes to the first (and back).
+        val ring = (pageItems + capsule).filter { it.visibility == View.VISIBLE }.sortedBy { v -> IntArray(2).also { v.getLocationInWindow(it) }[0] }
+        val ri = ring.indexOf(f)
+        if (ri >= 0) {
+            if (code == KeyEvent.KEYCODE_DPAD_RIGHT && ri == ring.size - 1) { ring.first().requestFocus(); return true }
+            if (code == KeyEvent.KEYCODE_DPAD_LEFT && ri == 0) { ring.last().requestFocus(); return true }
+            return false
+        }
         // A horizontal row of buttons (the pages bar, the wallpaper buttons): last -> first, first -> last.
         (f.parent as? LinearLayout)?.takeIf { it.orientation == LinearLayout.HORIZONTAL }?.let { row ->
             val items = (0 until row.childCount).map { row.getChildAt(it) }.filter { it.isFocusable && it.visibility == View.VISIBLE }

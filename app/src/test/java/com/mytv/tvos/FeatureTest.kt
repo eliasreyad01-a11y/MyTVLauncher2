@@ -403,6 +403,25 @@ class FeatureTest {
         assertTrue("Up from the first row returns to the pages bar", a.window.decorView.findFocus() === bar.getChildAt(1))
     }
 
+    @Test fun weatherBoxFitsTheScreenInArabic() {
+        val wasAr = L.ar
+        try {
+            L.ar = true
+            val a = home()
+            val hours = (0 until 8).map { HourPoint(String.format("%02d:00", 4 + it), 12 + it, 1, if (it > 5) 30 else 0, it > 2) }
+            val days = (0 until 5).map { DayDetail("2026-11-2${1 + it}", 1 + it, 25 - it, 12, 10 * it) }
+            setField(a, "weather", Weather(13, 0, false, 11, 63, 5, DayForecast(0, 25, 12, 0), DayForecast(1, 21, 14, 0), 923, 200, 4, "06:09", "16:33", hours, days))
+            val bar: LinearLayout = field(a, "pagesBar")
+            bar.getChildAt(2).performClick(); idle(); layout(a.window.decorView); idle()
+            val page: View = field(a, "pageView")
+            val big = allViews(page).filterIsInstance<LinearLayout>().maxByOrNull { it.height * it.width }!!
+            assertTrue("the weather box ends above the bottom edge (bottom=${big.bottom}/1080)", big.bottom + (page.height - big.bottom).coerceAtLeast(0) <= 1080)
+            val boxBottom = IntArray(2).also { big.getLocationInWindow(it) }[1] + big.height
+            assertTrue("the box fits above the Refresh button ($boxBottom)", boxBottom < 1000)
+            save("f17_weather_ar", render(a.window.decorView))
+        } finally { L.ar = wasAr }
+    }
+
     @Test fun weatherIsOneBoxAndNoNextPrayerCapsule() {
         val a = home()
         val pill: View = field(a, "prPill")
@@ -413,11 +432,11 @@ class FeatureTest {
     @Test fun pagesBarWrapsAround() {
         val a = home()
         val bar: LinearLayout = field(a, "pagesBar")
-        bar.getChildAt(5).requestFocus(); idle()
-        a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)); idle()
-        assertTrue("RIGHT on the last item wraps to Home", a.window.decorView.findFocus() === bar.getChildAt(0))
+        bar.getChildAt(0).requestFocus(); idle()
         a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_LEFT)); idle()
-        assertTrue("LEFT on the first item wraps to Settings", a.window.decorView.findFocus() === bar.getChildAt(5))
+        assertTrue("LEFT on the first item wraps to the clock capsule, the end of the ring", a.window.decorView.findFocus() === field<View>(a, "capsule"))
+        a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)); idle()
+        assertTrue("RIGHT on the capsule goes back to the first item", a.window.decorView.findFocus() === bar.getChildAt(0))
     }
 
     @Test fun cursorStaysNearWhereItWasWhenTheListChanges() {

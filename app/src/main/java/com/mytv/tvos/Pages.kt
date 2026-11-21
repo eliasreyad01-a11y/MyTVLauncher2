@@ -308,15 +308,15 @@ class Pages(private val a: MainActivity) {
             val is24 = TimeFmt.is24(a, Prefs(a))
             fun clockText(s: String) = if (s.isEmpty()) "—" else TimeFmt.display(s, is24, L.locale())
             val soft = Contrast.boost(0xB3FFFFFF.toInt())
-            val big = glassCard(44f).apply { setPadding(u.i(40f), u.i(20f), u.i(40f), u.i(16f)) }
+            val big = glassCard(44f).apply { setPadding(u.i(40f), u.i(14f), u.i(40f), u.i(14f)) }
 
             // Top: the big picture, the temperature and the details.
             val top = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-            top.addView(WeatherGlyph(a).apply { set(w.code, !w.isDay) }, LinearLayout.LayoutParams(u.i(260f), u.i(260f)).apply { marginEnd = u.i(30f) })
+            top.addView(WeatherGlyph(a).apply { set(w.code, !w.isDay) }, LinearLayout.LayoutParams(u.i(190f), u.i(190f)).apply { marginEnd = u.i(30f); marginStart = u.i(10f) })
             val nowCol = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL }
-            nowCol.addView(text("${w.tempC}°", 150f, 0xFFFFFFFF.toInt()).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL); includeFontPadding = false })
-            nowCol.addView(text(L.t(a.getString(Weather.labelRes(w.code))), 42f))
-            nowCol.addView(text("${L.t("High")} ${w.today.maxC}°   ${L.t("Low")} ${w.today.minC}°   ·   " + L.t("Feels like") + " ${w.feelsC}°", 28f, soft))
+            nowCol.addView(text("${w.tempC}°", 112f, 0xFFFFFFFF.toInt()).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL); includeFontPadding = false })
+            nowCol.addView(text(L.t(a.getString(Weather.labelRes(w.code))), 38f))
+            nowCol.addView(text("${L.t("High")} ${w.today.maxC}°   ${L.t("Low")} ${w.today.minC}°   ·   " + L.t("Feels like") + " ${w.feelsC}°", 26f, soft))
             top.addView(nowCol, LinearLayout.LayoutParams(0, -2, 1f))
 
             // The air and the sun: six facts in two rows.
@@ -331,8 +331,8 @@ class Pages(private val a: MainActivity) {
                     val (lb, vl) = facts[r * 3 + c]
                     rowL.addView(LinearLayout(a).apply {
                         orientation = LinearLayout.VERTICAL
-                        addView(text(L.t(lb), 24f, soft))
-                        addView(text(vl, 38f, 0xFFFFFFFF.toInt(), true).apply { maxLines = 1 })
+                        addView(text(L.t(lb), 22f, soft))
+                        addView(text(vl, 32f, 0xFFFFFFFF.toInt(), true).apply { maxLines = 1 })
                     }, LinearLayout.LayoutParams(0, -2, 1f))
                 }
                 factsGrid.addView(rowL, LinearLayout.LayoutParams(-1, 0, 1f))
@@ -344,8 +344,8 @@ class Pages(private val a: MainActivity) {
             val hours = LinearLayout(a).apply { orientation = LinearLayout.HORIZONTAL }
             for (hp in w.hourly.take(8)) hours.addView(LinearLayout(a).apply {
                 orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
-                addView(text(TimeFmt.display(hp.hhmm, is24, L.locale()), 24f, soft).apply { gravity = Gravity.CENTER; maxLines = 1 })
-                addView(text("${hp.tempC}°", 36f, 0xFFFFFFFF.toInt(), true).apply { gravity = Gravity.CENTER })
+                addView(text(TimeFmt.display(hp.hhmm, is24, L.locale()), 22f, soft).apply { gravity = Gravity.CENTER; maxLines = 1 })
+                addView(text("${hp.tempC}°", 32f, 0xFFFFFFFF.toInt(), true).apply { gravity = Gravity.CENTER })
                 addView(text(if (hp.rainPct > 0) "${hp.rainPct}%" else " ", 22f, soft).apply { gravity = Gravity.CENTER })
             }, LinearLayout.LayoutParams(0, -2, 1f))
 
@@ -358,23 +358,24 @@ class Pages(private val a: MainActivity) {
                 val name = if (i == 0) L.t("Today") else try { dayFmt.format(fmt.parse(d.date)!!) } catch (_: Exception) { L.t("Tomorrow") }
                 days.addView(LinearLayout(a).apply {
                     orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
-                    addView(text(name, 26f, soft).apply { gravity = Gravity.CENTER; maxLines = 1 })
-                    addView(text("${d.maxC}° / ${d.minC}°", 34f, 0xFFFFFFFF.toInt(), true).apply { gravity = Gravity.CENTER; maxLines = 1 })
+                    addView(text(name, 24f, soft).apply { gravity = Gravity.CENTER; maxLines = 1 })
+                    addView(text("${d.maxC}° / ${d.minC}°", 30f, 0xFFFFFFFF.toInt(), true).apply { gravity = Gravity.CENTER; maxLines = 1 })
                     addView(text(L.t(a.getString(Weather.labelRes(d.code))), 22f, soft).apply { gravity = Gravity.CENTER; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END })
                     addView(text(L.t("Rain") + " ${d.rainPct}%", 22f, soft).apply { gravity = Gravity.CENTER; maxLines = 1 })
                 }, LinearLayout.LayoutParams(0, -2, 1f))
             }
 
-            big.addView(top, LinearLayout.LayoutParams(-1, 0, 2.6f))
-            big.addView(divider(), LinearLayout.LayoutParams(-1, 2).apply { topMargin = u.i(6f); bottomMargin = u.i(10f) })
-            big.addView(factsGrid, LinearLayout.LayoutParams(-1, 0, 1.6f))
+            // Every row takes the height of its own content (nothing is squeezed or cut); the sizes are chosen so all of it fits one screen.
+            big.addView(top, LinearLayout.LayoutParams(-1, -2))
+            big.addView(divider(), LinearLayout.LayoutParams(-1, 2).apply { topMargin = u.i(8f); bottomMargin = u.i(10f) })
+            big.addView(factsGrid, LinearLayout.LayoutParams(-1, -2))
             if (w.hourly.isNotEmpty()) {
-                big.addView(divider(), LinearLayout.LayoutParams(-1, 2).apply { topMargin = u.i(6f); bottomMargin = u.i(10f) })
-                big.addView(hours, LinearLayout.LayoutParams(-1, 0, 1.2f))
+                big.addView(divider(), LinearLayout.LayoutParams(-1, 2).apply { topMargin = u.i(8f); bottomMargin = u.i(10f) })
+                big.addView(hours, LinearLayout.LayoutParams(-1, -2))
             }
-            big.addView(divider(), LinearLayout.LayoutParams(-1, 2).apply { topMargin = u.i(6f); bottomMargin = u.i(10f) })
-            big.addView(days, LinearLayout.LayoutParams(-1, 0, 1.5f))
-            body.addView(big, LinearLayout.LayoutParams(-1, -1))
+            big.addView(divider(), LinearLayout.LayoutParams(-1, 2).apply { topMargin = u.i(8f); bottomMargin = u.i(10f) })
+            big.addView(days, LinearLayout.LayoutParams(-1, -2))
+            body.addView(big, LinearLayout.LayoutParams(-1, -2))
         }
 
         fun load() {
