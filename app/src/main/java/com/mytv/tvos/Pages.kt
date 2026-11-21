@@ -84,14 +84,35 @@ object Net2 {
     }
 
     /**
-     * The online wallpaper list, all of it real 4K (3840 x 2160 or larger) and from a safe, curated source only: the "Featured pictures"
-     * of Wikimedia Commons, which the community reviews and votes on one by one (no anonymous uploads, nothing unreviewed).
+     * The online wallpaper list, all of it 4K and from curated sources only (nobody can upload to them):
+     * Bing's "Image of the day" archive (chosen by Microsoft's editors, 3840 x 2160 "UHD" files), then the "Featured pictures" of
+     * Wikimedia Commons, which the community reviews and votes on one by one.
      */
     fun wallpapers(): List<OnlineWp> {
         val out = ArrayList<OnlineWp>()
+        for (idx in listOf(0, 8)) {
+            val body = try { download("https://www.bing.com/HPImageArchive.aspx?format=js&idx=$idx&n=8&mkt=en-US", 200_000)?.toString(Charsets.UTF_8) } catch (_: Exception) { null }
+            if (body != null) out.addAll(parseBing(body))
+        }
         val cats = listOf("Featured_pictures_of_landscapes", "Featured_pictures_of_skies", "Featured_pictures_of_mountains",
             "Featured_pictures_of_sunsets", "Featured_pictures_of_lakes", "Featured_pictures_of_beaches")
         for (cat in cats) for (w in commons(cat)) if (out.none { it.full == w.full }) out.add(w)
+        return out
+    }
+
+    /** Bing HPImageArchive: {"images":[{"urlbase":"/th?id=OHR.Name_EN-US123","title":"..."}]}; "_UHD.jpg" is the 3840 x 2160 file. */
+    fun parseBing(json: String): List<OnlineWp> {
+        val out = ArrayList<OnlineWp>()
+        try {
+            val arr = JSONObject(json).getJSONArray("images")
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                val base = o.optString("urlbase")
+                if (!base.startsWith("/th?id=OHR.")) continue
+                val title = o.optString("title").ifEmpty { base.substringAfter("OHR.").substringBefore('_') }.take(46)
+                out.add(OnlineWp(title, "https://www.bing.com${base}_1920x1080.jpg", "https://www.bing.com${base}_UHD.jpg"))
+            }
+        } catch (_: Exception) {}
         return out
     }
 

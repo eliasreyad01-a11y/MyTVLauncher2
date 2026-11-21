@@ -184,8 +184,8 @@ class MainActivity : Activity() {
             visibility = View.GONE
         }
         for (name in listOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")) {
-            val n = smallText(21f, 0xB3FFFFFF.toInt()).apply { gravity = Gravity.CENTER }
-            val tm = smallText(27f, 0xFFFFFFFF.toInt()).apply { gravity = Gravity.CENTER; typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL) }
+            val n = smallText(26f, 0xFFFFFFFF.toInt()).apply { gravity = Gravity.CENTER; typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD); setShadowLayer(u.px(6f), 0f, u.px(2f), 0xB3000000.toInt()) }
+            val tm = smallText(28f, 0xFFFFFFFF.toInt()).apply { gravity = Gravity.CENTER; setShadowLayer(u.px(6f), 0f, u.px(2f), 0xB3000000.toInt()); typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL) }
             val cell = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
                 setPadding(u.i(18f), u.i(8f), u.i(18f), u.i(8f))
@@ -1126,7 +1126,8 @@ class MainActivity : Activity() {
             return false
         }
         // A horizontal row of buttons (the pages bar, the wallpaper buttons): last -> first, first -> last.
-        (f.parent as? LinearLayout)?.takeIf { it.orientation == LinearLayout.HORIZONTAL }?.let { row ->
+        // (Not inside Control Center: there Right from the volume bar must reach the Wi-Fi tile, not jump back to Sleep.)
+        (f.parent as? LinearLayout)?.takeIf { it.orientation == LinearLayout.HORIZONTAL && !(ccView != null && isInside(f, ccView)) }?.let { row ->
             val items = (0 until row.childCount).map { row.getChildAt(it) }.filter { it.isFocusable && it.visibility == View.VISIBLE }
             val i = items.indexOf(f)
             if (items.size >= 2 && i >= 0) {

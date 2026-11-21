@@ -326,6 +326,37 @@ class FeatureTest {
         assertTrue(Net2.parseCommons("not json").isEmpty())
     }
 
+    @Test fun bingListGivesUhdFiles() {
+        val json = """{"images":[{"urlbase":"/th?id=OHR.AlpineLake_EN-US123","title":"Alpine lake"},{"urlbase":"/other","title":"x"}]}"""
+        val l = Net2.parseBing(json)
+        assertEquals(1, l.size)
+        assertEquals("https://www.bing.com/th?id=OHR.AlpineLake_EN-US123_UHD.jpg", l[0].full)
+        assertTrue(Net2.parseBing("nope").isEmpty())
+    }
+
+    @Test fun rightFromTheVolumeBarDoesNotJumpBackToSleep() {
+        val a = home()
+        call(a, "openCC"); idle(); layout(a.window.decorView); idle()
+        val cc: View = field(a, "ccView")
+        val vol = allViews(cc).first { it is VolumePill }
+        vol.requestFocus(); idle()
+        a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_RIGHT)); idle()
+        assertTrue("the cursor is still on the volume bar (the system moves it right, we do not wrap it)", a.window.decorView.findFocus() === vol)
+    }
+
+    @Test fun chosenGlassColourIsVisible() {
+        val s = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>().getSharedPreferences("t", 0)
+        try {
+            s.edit().putInt("glass_tint", 1).putInt("glass_level", 0).apply(); GlassStyle.load(s)
+            val g = GlossDrawable(40f, 0x1FFFFFFF, 1f, false)
+            g.setBounds(0, 0, 100, 60)
+            val bmp = android.graphics.Bitmap.createBitmap(100, 60, android.graphics.Bitmap.Config.ARGB_8888)
+            g.draw(android.graphics.Canvas(bmp))
+            val px = bmp.getPixel(50, 30)
+            assertTrue("Ice Blue glass is clearly tinted even at the clearest level (alpha=${android.graphics.Color.alpha(px)})", android.graphics.Color.alpha(px) >= 0x50)
+        } finally { s.edit().clear().apply(); GlassStyle.load(s) }
+    }
+
     @Test fun contrastMakesTextSolidAndGlassDarker() {
         try {
             Contrast.level = 0

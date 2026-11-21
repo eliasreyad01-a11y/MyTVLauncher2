@@ -547,10 +547,17 @@ class GlossDrawable(private val radius: Float, private val base: Int, private va
         if (bd != null) {
             drawBackdrop(c, bd)
         }
+        // A chosen colour (anything but Frost White) has to be seen: its glass is never fainter than a visible wash of that colour.
+        val coloured = GlassStyle.tint != 0
+        val wash = if (GlassStyle.isPale(GlassStyle.tintRgb())) 0x66 else 0x78
         if (bd != null) {
-            body = (GlassStyle.bodyAlpha() shl 24) or GlassStyle.tintRgb()
+            body = (maxOf(GlassStyle.bodyAlpha(), if (coloured) wash else 0) shl 24) or GlassStyle.tintRgb()
         } else if (Color.alpha(base) in 1..249 && GlassStyle.isLightBase(base)) {
-            body = Color.argb((Color.alpha(base) * GlassStyle.scale()).toInt().coerceIn(8, 215), Color.red(GlassStyle.tintRgb()), Color.green(GlassStyle.tintRgb()), Color.blue(GlassStyle.tintRgb()))
+            val a = (Color.alpha(base) * GlassStyle.scale()).toInt().coerceIn(8, 215)
+            body = Color.argb(if (coloured) maxOf(a, wash - 0x10) else a, Color.red(GlassStyle.tintRgb()), Color.green(GlassStyle.tintRgb()), Color.blue(GlassStyle.tintRgb()))
+        } else if (coloured && Color.alpha(base) in 1..0xCC) {
+            // The dark translucent panels (top capsule, Control Center) take the colour too.
+            body = Color.argb(maxOf(Color.alpha(base), wash), Color.red(GlassStyle.tintRgb()), Color.green(GlassStyle.tintRgb()), Color.blue(GlassStyle.tintRgb()))
         }
         fill.color = body
         c.drawRoundRect(r, radius, radius, fill)
