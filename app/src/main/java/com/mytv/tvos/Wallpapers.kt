@@ -40,7 +40,8 @@ object Wallpapers {
     fun fullWidth(ctx: Context): Int {
         val mem = (ctx.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager)?.memoryClass ?: 128
         return when {
-            ctx.resources.displayMetrics.widthPixels >= 3000 && mem >= 256 -> 3840
+            // 2560 wide fills a 4K screen sharply enough, and keeps the picture's texture small: a full 3840 x 2160 one (33 MB)
+            // made every scroll and focus move heavier on weak TV chips.
             mem >= 192 -> 2560
             else -> 1920
         }
