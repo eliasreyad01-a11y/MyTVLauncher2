@@ -345,11 +345,10 @@ class FeatureTest {
         assertTrue("saved colour is not one of the presets", ClockCfg.load(sp()).color.let { c -> ClockCfg.COLORS.none { it.first == c } })
     }
 
-    @Test fun weatherPageHasBigCardsWithOneGlyphEach() {
+    @Test fun weatherPageBuilds() {
         val a = home()
         val page = Pages(a).weather()
         assertNotNull(page)
-        assertEquals("InfoGlyph kinds", 6, listOf("drop", "wind", "gauge", "uv", "sunrise", "sunset").size)
     }
 
     @Test fun clearGlassLetsTheScreenShowThrough() {

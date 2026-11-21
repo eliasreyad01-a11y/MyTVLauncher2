@@ -240,19 +240,6 @@ class Pages(private val a: MainActivity) {
         background = Glass.glass(0x2EFFFFFF, u.px(radius), 0.9f, true)
     }
 
-    private fun dayCard(label: String, f: DayForecast): View = LinearLayout(a).apply {
-        orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-        background = Glass.glass(0x2EFFFFFF, u.px(40f), 0.8f, true)
-        setPadding(u.i(34f), u.i(20f), u.i(34f), u.i(20f))
-        addView(WeatherGlyph(a).apply { set(f.code, false) }, LinearLayout.LayoutParams(u.i(130f), u.i(130f)).apply { marginEnd = u.i(26f) })
-        addView(LinearLayout(a).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(text(L.t(label), 30f, 0xB3FFFFFF.toInt()))
-            addView(text("${f.maxC}° / ${f.minC}°", 56f, 0xFFFFFFFF.toInt(), true))
-            addView(text(L.t(a.getString(Weather.labelRes(f.code))) + "  ·  " + L.t("Rain") + " " + f.rainPct + "%", 28f, 0xB3FFFFFF.toInt()))
-        })
-    }
-
     fun weather(): View {
         val root = scrim()
         val col = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL; setPadding(safe, u.i(140f), safe, u.i(60f)) }
@@ -264,14 +251,6 @@ class Pages(private val a: MainActivity) {
         val refresh = chip("Refresh") { }
         col.addView(refresh, LinearLayout.LayoutParams(u.i(360f), u.i(66f)).apply { topMargin = u.i(16f) })
 
-        fun infoTile(label: String, value: String): View = LinearLayout(a).apply {
-            orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_VERTICAL
-            background = Glass.glass(0x24FFFFFF, u.px(30f), 0.7f, true)
-            setPadding(u.i(26f), u.i(8f), u.i(26f), u.i(8f))
-            addView(text(L.t(label), 24f, 0xB3FFFFFF.toInt()))
-            addView(text(value, 38f, 0xFFFFFFFF.toInt(), true).apply { maxLines = 1 })
-        }
-
         fun compass(deg: Int): String {
             if (deg < 0) return ""
             val names = if (L.ar) listOf("ش", "ش.ق", "ق", "ج.ق", "ج", "ج.غ", "غ", "ش.غ") else listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
@@ -280,23 +259,6 @@ class Pages(private val a: MainActivity) {
 
         fun uvText(uv: Int): String =
             if (uv < 0) "—" else "$uv · " + L.t(when { uv <= 2 -> "Low"; uv <= 5 -> "Moderate"; uv <= 7 -> "High"; uv <= 10 -> "Very high"; else -> "Extreme" })
-
-        fun titled(title: String, weight: Float, content: View, bottom: Int = 14): View = LinearLayout(a).apply {
-            orientation = LinearLayout.VERTICAL
-            background = Glass.glass(0x24FFFFFF, u.px(36f), 0.8f, true)
-            setPadding(u.i(30f), u.i(14f), u.i(30f), u.i(10f))
-            addView(text(L.t(title), 24f, 0xB3FFFFFF.toInt()))
-            addView(content, LinearLayout.LayoutParams(-1, 0, 1f))
-            layoutParams = LinearLayout.LayoutParams(-1, 0, weight).apply { bottomMargin = u.i(bottom.toFloat()) }
-        }
-
-        fun cell(top: String, glyphCode: Int, night: Boolean, main: String, sub: String): View = LinearLayout(a).apply {
-            orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
-            addView(text(top, 26f, 0xCCFFFFFF.toInt()).apply { gravity = Gravity.CENTER_HORIZONTAL; maxLines = 1 })
-            addView(WeatherGlyph(a).apply { set(glyphCode, night) }, LinearLayout.LayoutParams(u.i(72f), u.i(72f)))
-            addView(text(main, 32f, 0xFFFFFFFF.toInt(), true).apply { gravity = Gravity.CENTER_HORIZONTAL; maxLines = 1 })
-            addView(text(sub, 22f, 0x99FFFFFF.toInt()).apply { gravity = Gravity.CENTER_HORIZONTAL; maxLines = 1 })
-        }
 
         // Everything in ONE box: one big picture for the weather now, and the rest as clear text (no rows of small icons).
         fun fill(w: Weather?, loading: Boolean) {

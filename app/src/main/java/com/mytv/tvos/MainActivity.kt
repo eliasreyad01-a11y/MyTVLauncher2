@@ -1106,7 +1106,6 @@ class MainActivity : Activity() {
     }
 
     /** Last app of a row + Right goes to the first app of the row, and the other way round. */
-    internal var wrapDebug = "not reached"
     private fun wrapRow(code: Int): Boolean {
         val f = window?.decorView?.findFocus() ?: currentFocus ?: return false
         // The top ring: the six pages and the clock capsule, in screen order. Right from the last one goes to the first (and back).
@@ -1121,7 +1120,6 @@ class MainActivity : Activity() {
         (f.parent as? LinearLayout)?.takeIf { it.orientation == LinearLayout.HORIZONTAL }?.let { row ->
             val items = (0 until row.childCount).map { row.getChildAt(it) }.filter { it.isFocusable && it.visibility == View.VISIBLE }
             val i = items.indexOf(f)
-            wrapDebug = "f=$f items=${items.size} i=$i code=$code"
             if (items.size >= 2 && i >= 0) {
                 if (code == KeyEvent.KEYCODE_DPAD_RIGHT && i == items.size - 1) { items.first().requestFocus(); return true }
                 if (code == KeyEvent.KEYCODE_DPAD_LEFT && i == 0) { items.last().requestFocus(); return true }
